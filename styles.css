@@ -14,3 +14,13 @@
 .mini-progress span{display:block;height:100%;background:#708b63}
 .coordinate-label{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem}
 @media(min-width:720px){.planner-grid{grid-template-columns:repeat(2,1fr)}}
+
+.timeline-card{border-left:5px solid #b57d2c}
+.section-header.compact{margin-bottom:8px}
+.timeline-month{margin:12px 0}
+.timeline-month h4{margin:0 0 8px}
+.timeline-items{display:grid;gap:6px}
+.timeline-item{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:10px;background:#f2f4ef}
+.timeline-item.rest{background:#e8eef6}
+.timeline-item.completed{opacity:.65}
+.timeline-date{font-weight:800;min-width:92px}

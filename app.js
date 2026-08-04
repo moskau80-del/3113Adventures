@@ -1,8 +1,8 @@
 (() => {
 "use strict";
-const STORAGE_KEY="3113-adventures-v210";
+const STORAGE_KEY="3113-adventures-v220";
 const KNOWN_LEGACY_KEYS=[
-  "3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
+  "3113-adventures-v210","3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
   "a3113-v14","a3113-v141","a3113-v13","a3113-v12","a3113-v121","a3113-v11",
   "adventures3113_v1","3113Adventures","3113-adventures"
 ];
@@ -335,6 +335,172 @@ function renderPlannerInfo(){
     : `GPX bereit: ${state.gpx.points.length} Trackpunkte, ca. ${Number(state.gpx.distanceKm||0).toFixed(1)} km.`;
 }
 
+
+function sortStages(){
+  state.stages.sort((a,b)=>(a.date||"").localeCompare(b.date||"") || Number(a.id)-Number(b.id));
+}
+
+function recalculateDates(startDate=state.tour.startDate){
+  sortStages();
+  let date=startDate;
+  state.stages.forEach(stage=>{
+    stage.date=date;
+    date=addDays(date,1);
+  });
+  save();
+}
+
+function insertRestDay(stageId,position){
+  sortStages();
+  const index=state.stages.findIndex(stage=>stage.id===stageId);
+  if(index<0) return;
+  const reference=state.stages[index];
+  const insertIndex=position==="before"?index:index+1;
+
+  state.stages.splice(insertIndex,0,{
+    id:Date.now(),
+    date:reference.date,
+    section:reference.section||state.sections[0],
+    from:"Ruhetag",
+    to:"Ruhetag",
+    km:0,
+    up:0,
+    down:0,
+    overnight:reference.overnight||"",
+    notes:"Manuell eingefügter Ruhetag",
+    completed:false,
+    restDay:true,
+    generated:false
+  });
+
+  recalculateDates();
+  renderAll();
+}
+
+function deleteRestDay(stageId){
+  const stage=state.stages.find(item=>item.id===stageId);
+  if(!stage?.restDay) return;
+  state.stages=state.stages.filter(item=>item.id!==stageId);
+  recalculateDates();
+  renderAll();
+}
+
+function openSplitStage(stageId){
+  const stage=state.stages.find(item=>item.id===stageId);
+  if(!stage || stage.restDay) return;
+  $("splitStageId").value=stageId;
+  $("splitLocation").value="";
+  $("splitKm").value=(Number(stage.km||0)/2).toFixed(1);
+  $("splitDialog").showModal();
+}
+
+function splitStage(event){
+  event.preventDefault();
+  const stageId=Number($("splitStageId").value);
+  const location=$("splitLocation").value.trim();
+  const firstKm=Number($("splitKm").value);
+  const index=state.stages.findIndex(stage=>stage.id===stageId);
+  if(index<0 || !location) return;
+
+  const original=state.stages[index];
+  const totalKm=Number(original.km||0);
+  if(firstKm<=0 || firstKm>=totalKm){
+    alert("Die Distanz des ersten Teils muss zwischen 0 und der Gesamtdistanz liegen.");
+    return;
+  }
+
+  const ratio=firstKm/totalKm;
+  const secondKm=totalKm-firstKm;
+
+  const first={
+    ...original,
+    id:Date.now(),
+    to:location,
+    km:Number(firstKm.toFixed(1)),
+    up:Math.round(Number(original.up||0)*ratio),
+    down:Math.round(Number(original.down||0)*ratio),
+    notes:(original.notes?original.notes+" · ":"")+"Erster Teil einer geteilten Etappe"
+  };
+
+  const second={
+    ...original,
+    id:Date.now()+1,
+    from:location,
+    km:Number(secondKm.toFixed(1)),
+    up:Number(original.up||0)-first.up,
+    down:Number(original.down||0)-first.down,
+    notes:"Zweiter Teil einer geteilten Etappe",
+    completed:false
+  };
+
+  state.stages.splice(index,1,first,second);
+  recalculateDates();
+  $("splitDialog").close();
+  renderAll();
+}
+
+function mergeWithNext(stageId){
+  sortStages();
+  const index=state.stages.findIndex(stage=>stage.id===stageId);
+  if(index<0 || index>=state.stages.length-1) return;
+
+  const first=state.stages[index];
+  const second=state.stages[index+1];
+
+  if(first.restDay || second.restDay){
+    alert("Ruhetage können nicht mit einer Wanderetappe zusammengelegt werden.");
+    return;
+  }
+
+  if(!confirm(`${first.from} → ${first.to} mit der nächsten Etappe zusammenlegen?`)) return;
+
+  const merged={
+    ...first,
+    id:Date.now(),
+    to:second.to,
+    km:Number((Number(first.km||0)+Number(second.km||0)).toFixed(1)),
+    up:Number(first.up||0)+Number(second.up||0),
+    down:Number(first.down||0)+Number(second.down||0),
+    overnight:second.overnight||first.overnight,
+    notes:[first.notes,second.notes,"Zusammengelegte Etappe"].filter(Boolean).join(" · "),
+    completed:first.completed&&second.completed
+  };
+
+  state.stages.splice(index,2,merged);
+  recalculateDates();
+  renderAll();
+}
+
+function renderTimeline(){
+  const container=$("timelineSummary");
+  if(!container) return;
+
+  const stages=[...state.stages].sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  if(!stages.length){
+    container.innerHTML='<p class="muted">Noch keine Etappen vorhanden.</p>';
+    return;
+  }
+
+  const grouped={};
+  stages.forEach(stage=>{
+    const month=(stage.date||"").slice(0,7)||"ohne-datum";
+    (grouped[month] ||= []).push(stage);
+  });
+
+  container.innerHTML=Object.entries(grouped).map(([month,items])=>{
+    const monthLabel=month==="ohne-datum"?"Ohne Datum":new Intl.DateTimeFormat("de-CH",{month:"long",year:"numeric"}).format(new Date(month+"-01T12:00:00"));
+    return `<div class="timeline-month">
+      <h4>${monthLabel}</h4>
+      <div class="timeline-items">
+        ${items.map(stage=>`<div class="timeline-item ${stage.restDay?"rest":""} ${stage.completed?"completed":""}">
+          <span class="timeline-date">${formatDate(stage.date)}</span>
+          <span>${stage.restDay?"Ruhetag":`${escapeHtml(stage.from)} → ${escapeHtml(stage.to)} · ${Number(stage.km||0).toFixed(1)} km`}</span>
+        </div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+}
+
 function renderStages(){
   const search=$("stageSearch").value.trim().toLowerCase();
   const filter=$("stageFilter").value;
@@ -351,7 +517,18 @@ function renderStages(){
       <p>↑ ${Number(s.up||0)} m · ↓ ${Number(s.down||0)} m</p>
       <p><strong>Übernachtung:</strong> ${escapeHtml(s.overnight||"–")}</p>
       ${s.notes?`<p class="muted">${escapeHtml(s.notes)}</p>`:""}
-      <div class="card-actions">${s.startCoord?`<button data-show-stage="${s.id}">Auf Karte</button>`:""}<button data-edit-stage="${s.id}">Bearbeiten</button><button data-toggle-stage="${s.id}">${s.completed?"Wieder öffnen":"Abschliessen"}</button><button class="danger" data-delete-stage="${s.id}">Löschen</button></div>
+      <div class="card-actions">
+        ${s.startCoord?`<button data-show-stage="${s.id}">Auf Karte</button>`:""}
+        ${s.restDay
+          ? `<button data-delete-rest="${s.id}" class="danger">Ruhetag entfernen</button>`
+          : `<button data-rest-before="${s.id}">Ruhetag davor</button>
+             <button data-rest-after="${s.id}">Ruhetag danach</button>
+             <button data-split-stage="${s.id}">Teilen</button>
+             <button data-merge-stage="${s.id}">Mit nächster verbinden</button>
+             <button data-edit-stage="${s.id}">Bearbeiten</button>
+             <button data-toggle-stage="${s.id}">${s.completed?"Wieder öffnen":"Abschliessen"}</button>
+             <button class="danger" data-delete-stage="${s.id}">Löschen</button>`}
+      </div>
     </article>`).join(""):'<div class="empty">Keine passenden Etappen.</div>';
 }
 function renderPlaces(){
@@ -375,7 +552,7 @@ function fillSettings(){
   $("targetInput").value=state.tour.targetDate;
   $("restDaysInput").value=state.tour.restDays;
 }
-function renderAll(){renderDashboard();renderSections();renderStages();renderPlaces();fillSettings();renderPlannerInfo();if(map)renderMap()}
+function renderAll(){renderDashboard();renderSections();renderStages();renderPlaces();fillSettings();renderPlannerInfo();renderTimeline();if(map)renderMap()}
 
 function openStage(stage={}){
   $("stageId").value=stage.id||"";
@@ -503,6 +680,11 @@ function bindEvents(){
   $("stageSection").innerHTML=state.sections.map(section=>`<option>${escapeHtml(section)}</option>`).join("");
   $("addStageBtn").addEventListener("click",()=>openStage());
   $("generateStagesBtn").addEventListener("click",generateStagesFromGpx);
+  $("recalculateDatesBtn").addEventListener("click",()=>{
+    recalculateDates();
+    renderAll();
+  });
+  $("splitForm").addEventListener("submit",splitStage);
   $("deleteGeneratedBtn").addEventListener("click",()=>{
     const count=state.stages.filter(stage=>stage.generated).length;
     if(!count){alert("Keine automatisch erzeugten Etappen vorhanden.");return}
@@ -516,7 +698,15 @@ function bindEvents(){
   $("stageSearch").addEventListener("input",renderStages);
   $("stageFilter").addEventListener("change",renderStages);
   $("stageList").addEventListener("click",event=>{
-    const show=event.target.dataset.showStage,edit=event.target.dataset.editStage,toggle=event.target.dataset.toggleStage,remove=event.target.dataset.deleteStage;
+    const show=event.target.dataset.showStage,
+      edit=event.target.dataset.editStage,
+      toggle=event.target.dataset.toggleStage,
+      remove=event.target.dataset.deleteStage,
+      restBefore=event.target.dataset.restBefore,
+      restAfter=event.target.dataset.restAfter,
+      deleteRest=event.target.dataset.deleteRest,
+      split=event.target.dataset.splitStage,
+      merge=event.target.dataset.mergeStage;
     if(show){
       const stage=state.stages.find(s=>s.id===Number(show));
       if(stage?.startCoord){
@@ -528,9 +718,14 @@ function bindEvents(){
         },150);
       }
     }
+    if(restBefore)insertRestDay(Number(restBefore),"before");
+    if(restAfter)insertRestDay(Number(restAfter),"after");
+    if(deleteRest)deleteRestDay(Number(deleteRest));
+    if(split)openSplitStage(Number(split));
+    if(merge)mergeWithNext(Number(merge));
     if(edit)openStage(state.stages.find(s=>s.id===Number(edit)));
     if(toggle){const stage=state.stages.find(s=>s.id===Number(toggle));stage.completed=!stage.completed;save();renderAll()}
-    if(remove&&confirm("Etappe wirklich löschen?")){state.stages=state.stages.filter(s=>s.id!==Number(remove));save();renderAll()}
+    if(remove&&confirm("Etappe wirklich löschen?")){state.stages=state.stages.filter(s=>s.id!==Number(remove));recalculateDates();renderAll()}
   });
   $("addPlaceBtn").addEventListener("click",()=>openPlace());
   $("placeForm").addEventListener("submit",savePlace);
@@ -578,12 +773,12 @@ function bindEvents(){
   $("refreshBtn").addEventListener("click",async()=>{
     if("serviceWorker"in navigator){for(const reg of await navigator.serviceWorker.getRegistrations())await reg.unregister()}
     if("caches"in window){for(const name of await caches.keys())await caches.delete(name)}
-    location.href="./?v=210";
+    location.href="./?v=220";
   });
 }
 function start(){
   initNavigation();bindEvents();renderAll();renderGpxInfo();
-  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=210");
+  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=220");
 }
 document.addEventListener("DOMContentLoaded",start);
 })();
