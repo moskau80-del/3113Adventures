@@ -1,13 +1,14 @@
-# 3113 Adventures Version 1.1
+# 3113 Adventures Version 1.2
 
-Direkt hochladbare PWA ohne Node.js.
+## Neu
+- sichtbare Versionsnummer
+- neuer Cache mit automatischer Bereinigung
+- Schaltfläche zum Aktualisieren der App-Dateien
+- Suche in NST-Abschnitten
+- Suche und Filter in Etappen
+- verbesserte Zeitplanberechnung mit Ruhetagen
+- nächste offene Etappe auf dem Dashboard
+- Höhenmeter pro Etappe
 
-## Korrektur
-- offizieller Nord-Süd-Trail: Ellenbogen/Sylt bis Haldenwanger Eck
-- 3'700 km
-- offizielle Abschnittsstruktur
-- Heidschnuckenweg speziell markiert
-- keine erfundenen vorinstallierten Tagesetappen
-
-## GitHub
-Alle Dateien im Repository durch den Inhalt dieses ZIP-Pakets ersetzen.
+## Installation
+Alle Dateien aus diesem Paket in das Hauptverzeichnis des GitHub-Repositorys hochladen und vorhandene Dateien ersetzen.
