@@ -1,1 +1,0 @@
-export default function App(){return <div style={{fontFamily:'Arial',padding:24}}><h1>3113 Adventures</h1><p>Sprint 1A gestartet.</p></div>}
