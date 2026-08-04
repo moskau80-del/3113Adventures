@@ -1,13 +1,13 @@
-# 3113 Adventures – Version 1.0
+# 3113 Adventures Version 1.1
 
-Direkt lauffähige PWA ohne Node.js.
+Direkt hochladbare PWA ohne Node.js.
 
-## Enthalten
-- Deutsch/Englisch
-- NST 2027 als bearbeitbarer Grundplan
-- Etappen hinzufügen, bearbeiten, löschen und abschliessen
-- Heidschnuckenweg-Markierung
-- lokale Speicherung und Backup
-- Offline-PWA
+## Korrektur
+- offizieller Nord-Süd-Trail: Ellenbogen/Sylt bis Haldenwanger Eck
+- 3'700 km
+- offizielle Abschnittsstruktur
+- Heidschnuckenweg speziell markiert
+- keine erfundenen vorinstallierten Tagesetappen
 
-Hinweis: Die vorinstallierten Etappen sind noch keine verifizierte Komplettplanung des NST.
+## GitHub
+Alle Dateien im Repository durch den Inhalt dieses ZIP-Pakets ersetzen.
