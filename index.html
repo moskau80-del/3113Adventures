@@ -6,19 +6,19 @@
   <meta name="theme-color" content="#43513d">
   <meta name="description" content="3113 Adventures – Fernwanderplanung für den Nord-Süd-Trail.">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=201">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css?v=202">
   <title>3113 Adventures</title>
 </head>
 <body>
 <header class="topbar">
   <div><span class="brand-number">3113</span><h1>Adventures</h1></div>
-  <span class="version">v2.0.1</span>
+  <span class="version">v2.0.2</span>
 </header>
 
 <nav id="mainNav" class="main-nav" aria-label="Hauptnavigation">
   <button data-page="dashboard" class="active">Übersicht</button>
+  <button data-page="sections">NST-Abschnitte</button>
   <button data-page="stages">Etappen</button>
   <button data-page="map">Karte</button>
   <button data-page="places">Orte</button>
@@ -67,6 +67,24 @@
   </article>
 </section>
 
+
+<section id="sections" class="page">
+  <div class="section-header">
+    <div>
+      <h2>NST-Abschnitte</h2>
+      <p class="muted">Die offizielle Abschnittsstruktur des Nord-Süd-Trails. Der Heidschnuckenweg ist besonders markiert.</p>
+    </div>
+  </div>
+  <div class="toolbar sections-toolbar">
+    <input id="sectionSearch" placeholder="Abschnitt suchen">
+    <select id="sectionFilter">
+      <option value="all">Alle Abschnitte</option>
+      <option value="heid">Nur Heidschnuckenweg</option>
+    </select>
+  </div>
+  <div id="sectionList"></div>
+</section>
+
 <section id="stages" class="page">
   <div class="section-header">
     <div><h2>Etappen</h2><p class="muted">Tagesetappen planen, bearbeiten und abschliessen.</p></div>
@@ -96,6 +114,7 @@
     </div>
     <div id="gpxInfo" class="info-strip">Noch kein GPX-Track importiert.</div>
   </article>
+  <div id="mapError" class="card map-error" hidden></div>
   <div id="mapCanvas"></div>
   <p class="small muted">Die Hintergrundkarte benötigt Internet. Importierter Track, Etappen und Orte bleiben lokal gespeichert.</p>
 </section>
@@ -176,8 +195,7 @@
   </form>
 </dialog>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
- integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="data.js?v=201"></script>
-<script src="app.js?v=201"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js?v=202"></script>
+<script src="app.js?v=202"></script>
 </body></html>

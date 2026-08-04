@@ -1,8 +1,8 @@
 (() => {
 "use strict";
-const STORAGE_KEY="3113-adventures-v201";
+const STORAGE_KEY="3113-adventures-v202";
 const KNOWN_LEGACY_KEYS=[
-  "3113-adventures-v2",
+  "3113-adventures-v201","3113-adventures-v2",
   "a3113-v14","a3113-v141","a3113-v13","a3113-v12","a3113-v121","a3113-v11",
   "adventures3113_v1","3113Adventures","3113-adventures"
 ];
@@ -112,7 +112,7 @@ function initNavigation(){
     button.addEventListener("click",()=>{
       document.querySelectorAll("#mainNav button").forEach(item=>item.classList.toggle("active",item===button));
       document.querySelectorAll(".page").forEach(page=>page.classList.toggle("active",page.id===button.dataset.page));
-      if(button.dataset.page==="map") setTimeout(()=>{initMap();map?.invalidateSize();renderMap()},60);
+      if(button.dataset.page==="map") setTimeout(()=>{if(initMap()){map.invalidateSize();renderMap()}},100);
     });
   });
 }
@@ -135,6 +135,31 @@ function renderDashboard(){
   const next=[...state.stages].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).find(s=>!s.completed);
   $("nextStage").innerHTML=next?`<strong>${formatDate(next.date)} · ${escapeHtml(next.from)} → ${escapeHtml(next.to)}</strong><p>${Number(next.km||0).toFixed(1)} km · ↑ ${Number(next.up||0)} m · ↓ ${Number(next.down||0)} m</p><p class="muted">${escapeHtml(next.overnight||"Keine Übernachtung eingetragen")}</p>`:"Noch keine offene Etappe.";
 }
+
+function renderSections(){
+  const searchElement=$("sectionSearch");
+  const filterElement=$("sectionFilter");
+  if(!searchElement || !filterElement || !$("sectionList")) return;
+
+  const search=searchElement.value.trim().toLowerCase();
+  const filter=filterElement.value;
+  let sections=[...(state.sections||[])];
+
+  sections=sections.filter(section=>section.toLowerCase().includes(search));
+  if(filter==="heid") sections=sections.filter(section=>section==="Heidschnuckenweg");
+
+  $("sectionList").innerHTML=sections.length
+    ? sections.map(section=>{
+        const originalIndex=(state.sections||[]).indexOf(section)+1;
+        const isHeid=section==="Heidschnuckenweg";
+        return `<article class="section-card ${isHeid?"heid":""}">
+          <h3><span class="section-number">${originalIndex}</span>${escapeHtml(section)}</h3>
+          ${isHeid?'<span class="pill verified">Speziell markiert</span>':""}
+        </article>`;
+      }).join("")
+    : '<div class="empty">Keine passenden Abschnitte.</div>';
+}
+
 function renderStages(){
   const search=$("stageSearch").value.trim().toLowerCase();
   const filter=$("stageFilter").value;
@@ -175,7 +200,7 @@ function fillSettings(){
   $("targetInput").value=state.tour.targetDate;
   $("restDaysInput").value=state.tour.restDays;
 }
-function renderAll(){renderDashboard();renderStages();renderPlaces();fillSettings();if(map)renderMap()}
+function renderAll(){renderDashboard();renderSections();renderStages();renderPlaces();fillSettings();if(map)renderMap()}
 
 function openStage(stage={}){
   $("stageId").value=stage.id||"";
@@ -221,17 +246,52 @@ function savePlace(event){
 }
 
 function initMap(){
-  if(map||typeof L==="undefined")return;
-  map=L.map("mapCanvas").setView([51.2,10.4],6);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap-Mitwirkende"}).addTo(map);
-  trackLayer=L.layerGroup().addTo(map);
-  markerLayer=L.layerGroup().addTo(map);
-  map.on("click",event=>{
-    if(confirm("An dieser Stelle einen neuen Ort anlegen?"))openPlace({lat:event.latlng.lat,lng:event.latlng.lng});
-  });
+  const mapError=$("mapError");
+
+  if(typeof window.L==="undefined"){
+    if(mapError){
+      mapError.hidden=false;
+      mapError.innerHTML="<strong>Karte konnte nicht geladen werden.</strong><p>Die Kartenbibliothek ist nicht erreichbar. Bitte Internetverbindung prüfen und unter Einstellungen die App-Dateien aktualisieren.</p>";
+    }
+    return false;
+  }
+
+  if(map){
+    map.invalidateSize();
+    return true;
+  }
+
+  if(mapError) mapError.hidden=true;
+
+  try{
+    map=L.map("mapCanvas",{zoomControl:true}).setView([51.2,10.4],6);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      maxZoom:19,
+      attribution:"&copy; OpenStreetMap-Mitwirkende"
+    }).addTo(map);
+
+    trackLayer=L.layerGroup().addTo(map);
+    markerLayer=L.layerGroup().addTo(map);
+
+    map.on("click",event=>{
+      if(confirm("An dieser Stelle einen neuen Ort anlegen?")){
+        openPlace({lat:event.latlng.lat,lng:event.latlng.lng});
+      }
+    });
+
+    setTimeout(()=>map.invalidateSize(),100);
+    return true;
+  }catch(error){
+    if(mapError){
+      mapError.hidden=false;
+      mapError.innerHTML=`<strong>Kartenfehler</strong><p>${escapeHtml(error.message||"Unbekannter Fehler")}</p>`;
+    }
+    return false;
+  }
 }
 function renderMap(){
-  if(!map)return;
+  if(!map || !trackLayer || !markerLayer)return;
   trackLayer.clearLayers();markerLayer.clearLayers();
   if(state.gpx?.points?.length){
     const coords=state.gpx.points.map(p=>[p.lat,p.lng]);
@@ -263,6 +323,8 @@ function renderGpxInfo(){
 }
 
 function bindEvents(){
+  if($("sectionSearch")) $("sectionSearch").addEventListener("input",renderSections);
+  if($("sectionFilter")) $("sectionFilter").addEventListener("change",renderSections);
   $("stageSection").innerHTML=state.sections.map(section=>`<option>${escapeHtml(section)}</option>`).join("");
   $("addStageBtn").addEventListener("click",()=>openStage());
   $("stageForm").addEventListener("submit",saveStage);
@@ -320,12 +382,12 @@ function bindEvents(){
   $("refreshBtn").addEventListener("click",async()=>{
     if("serviceWorker"in navigator){for(const reg of await navigator.serviceWorker.getRegistrations())await reg.unregister()}
     if("caches"in window){for(const name of await caches.keys())await caches.delete(name)}
-    location.href="./?v=201";
+    location.href="./?v=202";
   });
 }
 function start(){
   initNavigation();bindEvents();renderAll();renderGpxInfo();
-  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=201");
+  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=202");
 }
 document.addEventListener("DOMContentLoaded",start);
 })();
