@@ -1,7 +1,30 @@
-const KEY="a3113-v14";
-let state=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(DEFAULT_STATE);
+const KEY="a3113-v141";
+const OLD_KEYS=["a3113-v14","a3113-v13","a3113-v121","a3113-v12","a3113-v11","adventures3113_v1"];
+
+function readStoredState(){
+  const current=localStorage.getItem(KEY);
+  if(current){
+    try{return JSON.parse(current)}catch{}
+  }
+
+  for(const oldKey of OLD_KEYS){
+    const raw=localStorage.getItem(oldKey);
+    if(!raw)continue;
+    try{
+      const migrated=JSON.parse(raw);
+      localStorage.setItem(KEY,JSON.stringify(migrated));
+      return migrated;
+    }catch{}
+  }
+
+  return structuredClone(DEFAULT_STATE);
+}
+
+let state=readStoredState();
 if(!state.gpx) state.gpx=null;
 if(!Array.isArray(state.places)) state.places=[];
+if(!Array.isArray(state.stages)) state.stages=[];
+if(state.restDays===undefined) state.restDays=8;
 
 const $=id=>document.getElementById(id);
 const saveLocal=()=>localStorage.setItem(KEY,JSON.stringify(state));
@@ -185,7 +208,7 @@ $("locateBtn").addEventListener("click",()=>{
 $("refreshApp").addEventListener("click",async()=>{
  if("serviceWorker"in navigator){for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}
  for(const name of await caches.keys())await caches.delete(name);
- location.href="./?v=14";
+ location.href="./?v=141";
 });
-if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=14");
+if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=141");
 render();

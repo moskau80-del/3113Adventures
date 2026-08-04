@@ -1,16 +1,13 @@
-# 3113 Adventures Version 1.4
+# 3113 Adventures Version 1.4.1
 
-## Neu
-- Orte und Versorgung verwalten
-- Kategorien Camping, Wasser, Einkauf, ÖV, Sehenswürdigkeit und Andere
-- Punkte direkt durch Tippen auf die Karte setzen
-- eigene Position auf der Karte anzeigen
-- Orte suchen und filtern
-- Punkte als selbst geprüft markieren
-- alle Orte werden im Backup mitgesichert
-
-## Installation
-Alle Dateien und den Ordner `icons` ins Hauptverzeichnis des GitHub-Repositorys hochladen und bestehende Dateien ersetzen.
+## Fehlerkorrektur
+- GPX-Import und Kartenroute sind weiterhin enthalten.
+- Bereits importierte GPX-Tracks aus Version 1.3 werden automatisch übernommen.
+- Etappen, Einstellungen und Orte aus älteren Versionen werden ebenfalls migriert.
+- Neuer Cache `v1.4.1` verhindert die Anzeige alter Dateien.
 
 ## Kontrolle
-Oben rechts muss `v1.4` stehen.
+Oben rechts muss `v1.4.1` stehen. Unter **Karte** muss der GPX-Import sichtbar sein. Ein früher importierter Track sollte automatisch wieder erscheinen.
+
+## GitHub
+Alle Dateien und den Ordner `icons` in das Hauptverzeichnis des Repositorys hochladen und vorhandene Dateien ersetzen.
