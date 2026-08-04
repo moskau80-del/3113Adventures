@@ -7,13 +7,13 @@
   <meta name="description" content="3113 Adventures – Fernwanderplanung für den Nord-Süd-Trail.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=220">
+  <link rel="stylesheet" href="styles.css?v=300">
   <title>3113 Adventures</title>
 </head>
 <body>
 <header class="topbar">
   <div><span class="brand-number">3113</span><h1>Adventures</h1></div>
-  <span class="version">v2.2</span>
+  <span class="version">v3.0</span>
 </header>
 
 <nav id="mainNav" class="main-nav" aria-label="Hauptnavigation">
@@ -51,6 +51,11 @@
     <article class="card">
       <h3>Nächste Etappe</h3>
       <div id="nextStage" class="muted">Noch keine Etappe angelegt.</div>
+    </article>
+
+    <article class="card">
+      <h3>Nächste gespeicherte Orte</h3>
+      <div id="nearestPlaces" class="muted">Noch keine Orte gespeichert.</div>
     </article>
 
     <article class="card">
@@ -162,6 +167,37 @@
     <div><h2>Orte und Versorgung</h2><p class="muted">Camping, Wasser, Einkauf, ÖV und weitere Punkte verwalten.</p></div>
     <button id="addPlaceBtn" class="primary">+ Ort</button>
   </div>
+  <article class="card poi-search-card">
+    <h3>OpenStreetMap-Orte suchen</h3>
+    <p class="muted">Die Suche verwendet das aktuelle Kartenzentrum. Treffer werden erst nach deiner Auswahl dauerhaft gespeichert.</p>
+    <div class="poi-category-grid">
+      <label class="checkbox"><input class="poi-category" type="checkbox" value="camping" checked> Camping und Hütten</label>
+      <label class="checkbox"><input class="poi-category" type="checkbox" value="water" checked> Trinkwasser und Quellen</label>
+      <label class="checkbox"><input class="poi-category" type="checkbox" value="shop" checked> Einkauf und Bäckereien</label>
+      <label class="checkbox"><input class="poi-category" type="checkbox" value="transport"> ÖV</label>
+      <label class="checkbox"><input class="poi-category" type="checkbox" value="toilet"> Toiletten</label>
+      <label class="checkbox"><input class="poi-category" type="checkbox" value="pharmacy"> Apotheken</label>
+    </div>
+    <div class="poi-options">
+      <label>Suchradius
+        <select id="poiRadius"><option value="2000">2 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="20000">20 km</option></select>
+      </label>
+      <label>Max. Entfernung zum GPX-Track
+        <select id="poiTrackDistance"><option value="0">nicht filtern</option><option value="0.5">500 m</option><option value="1" selected>1 km</option><option value="2">2 km</option><option value="5">5 km</option></select>
+      </label>
+      <label>Overpass-Server
+        <select id="overpassEndpoint"><option value="https://overpass-api.de/api/interpreter">overpass-api.de</option><option value="https://overpass.kumi.systems/api/interpreter">overpass.kumi.systems</option></select>
+      </label>
+    </div>
+    <div class="button-row">
+      <button id="centerNextStageBtn" class="secondary">Karte auf nächste Etappe</button>
+      <button id="searchPoisBtn" class="primary">Orte suchen</button>
+      <button id="importSelectedPoisBtn" class="secondary">Ausgewählte speichern</button>
+    </div>
+    <div id="poiSearchStatus" class="info-strip">Öffne zuerst die Karte oder zentriere sie auf eine Etappe.</div>
+    <div id="poiResults"></div>
+  </article>
+
   <div class="toolbar">
     <input id="placeSearch" placeholder="Ort oder Notiz suchen">
     <select id="placeFilter">
@@ -234,8 +270,8 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data.js?v=220"></script>
-<script src="app.js?v=220"></script>
+<script src="data.js?v=300"></script>
+<script src="app.js?v=300"></script>
 
 <dialog id="splitDialog">
   <form id="splitForm">

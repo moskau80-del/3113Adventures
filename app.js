@@ -1,14 +1,15 @@
 (() => {
 "use strict";
-const STORAGE_KEY="3113-adventures-v220";
+const STORAGE_KEY="3113-adventures-v300";
 const KNOWN_LEGACY_KEYS=[
-  "3113-adventures-v210","3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
+  "3113-adventures-v220","3113-adventures-v210","3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
   "a3113-v14","a3113-v141","a3113-v13","a3113-v12","a3113-v121","a3113-v11",
   "adventures3113_v1","3113Adventures","3113-adventures"
 ];
 const $=id=>document.getElementById(id);
 let state=loadState();
 let map=null,trackLayer=null,markerLayer=null,userMarker=null;
+let poiSearchResults=[];
 
 function clone(v){return JSON.parse(JSON.stringify(v))}
 function loadState(){
@@ -132,6 +133,7 @@ function renderDashboard(){
   $("stageCount").textContent=state.stages.length;
   $("placeCount").textContent=state.places.length;
   $("gpxStatus").textContent=state.gpx?`${state.gpx.points.length} Punkte`:"nicht importiert";
+  renderNearestPlaces();
   const next=[...state.stages].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).find(s=>!s.completed);
   $("nextStage").innerHTML=next?`<strong>${formatDate(next.date)} · ${escapeHtml(next.from)} → ${escapeHtml(next.to)}</strong><p>${Number(next.km||0).toFixed(1)} km · ↑ ${Number(next.up||0)} m · ↓ ${Number(next.down||0)} m</p><p class="muted">${escapeHtml(next.overnight||"Keine Übernachtung eingetragen")}</p>`:"Noch keine offene Etappe.";
 }
@@ -531,6 +533,147 @@ function renderStages(){
       </div>
     </article>`).join(""):'<div class="empty">Keine passenden Etappen.</div>';
 }
+
+function poiCategoryLabel(category){
+  return ({camping:"Camping/Hütte",water:"Wasser",shop:"Einkauf",transport:"ÖV",toilet:"Toilette",pharmacy:"Apotheke",sight:"Sehenswürdigkeit",other:"Weitere"})[category]||category;
+}
+
+function renderNearestPlaces(){
+  const container=$("nearestPlaces");
+  if(!container) return;
+  if(!state.places.length){container.textContent="Noch keine Orte gespeichert.";return}
+
+  let reference=null;
+  const next=[...state.stages].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).find(stage=>!stage.completed && stage.startCoord);
+  if(next?.startCoord) reference=next.startCoord;
+  else if(state.gpx?.points?.length) reference=state.gpx.points[0];
+
+  if(!reference){container.textContent=`${state.places.length} Orte gespeichert. Für Entfernungen wird ein GPX-Track benötigt.`;return}
+
+  const nearest=state.places.map(place=>({...place,distance:haversine(reference,place)})).sort((a,b)=>a.distance-b.distance).slice(0,4);
+  container.innerHTML=nearest.map(place=>`<div class="metric-row"><span>${markerIcon(place.category)} ${escapeHtml(place.name)}</span><strong>${place.distance.toFixed(1)} km</strong></div>`).join("");
+}
+
+function buildOverpassClauses(category,radius,lat,lng){
+  const around=`(around:${radius},${lat},${lng})`;
+  const selectors={
+    camping:[`["tourism"~"^(camp_site|caravan_site|alpine_hut|wilderness_hut)$"]`,`["amenity"="shelter"]["shelter_type"~"^(basic_hut|weather_shelter)$"]`],
+    water:[`["amenity"="drinking_water"]`,`["natural"="spring"]`,`["drinking_water"="yes"]`],
+    shop:[`["shop"~"^(supermarket|convenience|bakery|general)$"]`,`["amenity"="marketplace"]`],
+    transport:[`["railway"~"^(station|halt)$"]`,`["highway"="bus_stop"]`,`["public_transport"="station"]`],
+    toilet:[`["amenity"="toilets"]`],
+    pharmacy:[`["amenity"="pharmacy"]`]
+  };
+  const result=[];
+  (selectors[category]||[]).forEach(selector=>{
+    ["node","way","relation"].forEach(type=>result.push(`${type}${around}${selector};`));
+  });
+  return result;
+}
+
+function identifyPoiCategory(tags={}){
+  if(["camp_site","caravan_site","alpine_hut","wilderness_hut"].includes(tags.tourism)||tags.amenity==="shelter") return "camping";
+  if(tags.amenity==="drinking_water"||tags.natural==="spring"||tags.drinking_water==="yes") return "water";
+  if(tags.shop||tags.amenity==="marketplace") return "shop";
+  if(tags.railway||tags.highway==="bus_stop"||tags.public_transport==="station") return "transport";
+  if(tags.amenity==="toilets") return "toilet";
+  if(tags.amenity==="pharmacy") return "pharmacy";
+  return "other";
+}
+
+function poiName(tags,category,id){
+  return tags.name||tags["name:de"]||tags.operator||`${poiCategoryLabel(category)} ${id}`;
+}
+
+function distanceToTrack(point){
+  if(!state.gpx?.points?.length) return null;
+  const track=state.gpx.points;
+  const step=Math.max(1,Math.floor(track.length/1800));
+  let minimum=Infinity;
+  for(let i=0;i<track.length;i+=step){
+    const distance=haversine(point,track[i]);
+    if(distance<minimum) minimum=distance;
+  }
+  return minimum;
+}
+
+async function searchOsmPois(){
+  if(!initMap()){
+    alert("Die Karte konnte nicht geöffnet werden.");
+    return;
+  }
+  const selected=[...document.querySelectorAll(".poi-category:checked")].map(input=>input.value);
+  if(!selected.length){alert("Bitte mindestens eine Kategorie wählen.");return}
+
+  const center=map.getCenter();
+  const radius=Number($("poiRadius").value||5000);
+  const maxTrackDistance=Number($("poiTrackDistance").value||0);
+  const endpoint=$("overpassEndpoint").value;
+  const clauses=selected.flatMap(category=>buildOverpassClauses(category,radius,center.lat,center.lng));
+  const query=`[out:json][timeout:45];(${clauses.join("")});out center tags;`;
+  $("poiSearchStatus").innerHTML='<span class="poi-loading"></span> OpenStreetMap wird durchsucht …';
+  $("searchPoisBtn").disabled=true;
+
+  try{
+    const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:"data="+encodeURIComponent(query)});
+    if(!response.ok) throw new Error(`Serverantwort ${response.status}`);
+    const data=await response.json();
+    const seen=new Set();
+    poiSearchResults=(data.elements||[]).map(element=>{
+      const lat=Number(element.lat??element.center?.lat);
+      const lng=Number(element.lon??element.center?.lon);
+      if(!Number.isFinite(lat)||!Number.isFinite(lng)) return null;
+      const category=identifyPoiCategory(element.tags||{});
+      const sourceKey=`${element.type}/${element.id}`;
+      if(seen.has(sourceKey)) return null;
+      seen.add(sourceKey);
+      const trackDistance=distanceToTrack({lat,lng});
+      return {id:sourceKey,osmId:element.id,osmType:element.type,name:poiName(element.tags||{},category,element.id),category,lat,lng,tags:element.tags||{},trackDistance};
+    }).filter(Boolean);
+
+    if(maxTrackDistance>0 && state.gpx?.points?.length){
+      poiSearchResults=poiSearchResults.filter(result=>result.trackDistance!==null&&result.trackDistance<=maxTrackDistance);
+    }
+    poiSearchResults.sort((a,b)=>(a.trackDistance??999)-(b.trackDistance??999)||a.name.localeCompare(b.name));
+    renderPoiResults();
+    $("poiSearchStatus").textContent=`${poiSearchResults.length} Treffer im Umkreis von ${(radius/1000).toFixed(0)} km gefunden.`;
+  }catch(error){
+    $("poiSearchStatus").innerHTML=`<strong>Suche fehlgeschlagen.</strong> ${escapeHtml(error.message)}. Versuche den anderen Overpass-Server oder einen kleineren Radius.`;
+  }finally{
+    $("searchPoisBtn").disabled=false;
+  }
+}
+
+function renderPoiResults(){
+  const box=$("poiResults");
+  if(!box) return;
+  box.innerHTML=poiSearchResults.length?`<div class="poi-results-list">${poiSearchResults.slice(0,150).map((result,index)=>`<label class="poi-result"><input type="checkbox" data-poi-index="${index}" checked><div><h4>${markerIcon(result.category)} ${escapeHtml(result.name)}</h4><div class="poi-meta"><span class="pill">${poiCategoryLabel(result.category)}</span>${result.trackDistance!==null?`<span class="pill">${result.trackDistance.toFixed(2)} km zum Track</span>`:""}</div><div class="poi-source">OpenStreetMap ${result.osmType}/${result.osmId} · ${result.lat.toFixed(5)}, ${result.lng.toFixed(5)}</div></div></label>`).join("")}</div>`:'<p class="muted">Keine passenden Treffer.</p>';
+}
+
+function importSelectedPois(){
+  const indexes=[...document.querySelectorAll("[data-poi-index]:checked")].map(input=>Number(input.dataset.poiIndex));
+  if(!indexes.length){alert("Keine Treffer ausgewählt.");return}
+  let imported=0;
+  indexes.forEach(index=>{
+    const result=poiSearchResults[index];
+    if(!result) return;
+    const duplicate=state.places.some(place=>place.osmType===result.osmType&&String(place.osmId)===String(result.osmId));
+    if(duplicate) return;
+    state.places.push({id:Date.now()+imported,name:result.name,category:result.category,lat:result.lat,lng:result.lng,notes:`Aus OpenStreetMap importiert${result.trackDistance!==null?` · ${result.trackDistance.toFixed(2)} km zum GPX-Track`:""}`,verified:false,source:"OpenStreetMap",osmType:result.osmType,osmId:result.osmId,lastChecked:new Date().toISOString(),distanceToTrackKm:result.trackDistance});
+    imported++;
+  });
+  save();renderAll();
+  $("poiSearchStatus").textContent=`${imported} neue Orte gespeichert. Bereits vorhandene OSM-Orte wurden übersprungen.`;
+}
+
+function centerMapOnNextStage(){
+  if(!initMap()) return;
+  const next=[...state.stages].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).find(stage=>!stage.completed&&stage.startCoord);
+  if(next?.startCoord){map.setView([next.startCoord.lat,next.startCoord.lng],12);document.querySelector('[data-page="map"]').click();}
+  else if(state.gpx?.points?.length){map.setView([state.gpx.points[0].lat,state.gpx.points[0].lng],11);document.querySelector('[data-page="map"]').click();}
+  else alert("Kein Etappen-Startpunkt und kein GPX-Track vorhanden.");
+}
+
 function renderPlaces(){
   const search=$("placeSearch").value.trim().toLowerCase();
   const filter=$("placeFilter").value;
@@ -541,7 +684,7 @@ function renderPlaces(){
       <h3>${markerIcon(p.category)} ${escapeHtml(p.name)}</h3>
       <span class="pill">${categoryName(p.category)}</span>${p.verified?'<span class="pill verified">Selbst geprüft</span>':""}
       <p>${Number(p.lat).toFixed(5)}, ${Number(p.lng).toFixed(5)}</p>
-      ${p.notes?`<p class="muted">${escapeHtml(p.notes)}</p>`:""}
+      ${p.notes?`<p class="muted">${escapeHtml(p.notes)}</p>`:""}${p.source?`<p class="poi-source">Quelle: ${escapeHtml(p.source)}${p.distanceToTrackKm!==null&&p.distanceToTrackKm!==undefined?` · ${Number(p.distanceToTrackKm).toFixed(2)} km zum Track`:""}</p>`:""}
       <div class="card-actions"><button data-show-place="${p.id}">Auf Karte</button><button data-edit-place="${p.id}">Bearbeiten</button><button class="danger" data-delete-place="${p.id}">Löschen</button></div>
     </article>`).join(""):'<div class="empty">Noch keine Orte erfasst.</div>';
 }
@@ -728,6 +871,9 @@ function bindEvents(){
     if(remove&&confirm("Etappe wirklich löschen?")){state.stages=state.stages.filter(s=>s.id!==Number(remove));recalculateDates();renderAll()}
   });
   $("addPlaceBtn").addEventListener("click",()=>openPlace());
+  $("searchPoisBtn").addEventListener("click",searchOsmPois);
+  $("importSelectedPoisBtn").addEventListener("click",importSelectedPois);
+  $("centerNextStageBtn").addEventListener("click",centerMapOnNextStage);
   $("placeForm").addEventListener("submit",savePlace);
   $("placeSearch").addEventListener("input",renderPlaces);
   $("placeFilter").addEventListener("change",renderPlaces);
@@ -773,12 +919,12 @@ function bindEvents(){
   $("refreshBtn").addEventListener("click",async()=>{
     if("serviceWorker"in navigator){for(const reg of await navigator.serviceWorker.getRegistrations())await reg.unregister()}
     if("caches"in window){for(const name of await caches.keys())await caches.delete(name)}
-    location.href="./?v=220";
+    location.href="./?v=300";
   });
 }
 function start(){
   initNavigation();bindEvents();renderAll();renderGpxInfo();
-  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=220");
+  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=300");
 }
 document.addEventListener("DOMContentLoaded",start);
 })();
