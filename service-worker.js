@@ -1,9 +1,1 @@
-const CACHE_NAME="3113-v13";
-const LOCAL=["./?v=13","./index.html","./styles.css?v=13","./data.js?v=13","./app.js?v=13","./manifest.webmanifest","./icons/icon.svg"];
-self.addEventListener("install",event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(LOCAL)))});
-self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
-self.addEventListener("fetch",event=>{
- event.respondWith(fetch(event.request).then(response=>{
-   const copy=response.clone();caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));return response;
- }).catch(()=>caches.match(event.request)));
-});
+const C="3113-v14";const A=["./?v=14","index.html","styles.css?v=14","data.js?v=14","app.js?v=14","manifest.webmanifest","icons/icon.svg"];self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(A)))});self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))));self.clients.claim()});self.addEventListener("fetch",e=>e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));return r}).catch(()=>caches.match(e.request))));

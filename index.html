@@ -6,20 +6,20 @@
   <meta name="theme-color" content="#44523f">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=14">
   <title>3113 Adventures</title>
 </head>
 <body>
 <header>
   <div><small>3113</small><h1>Adventures</h1></div>
-  <div class="version">v1.3</div>
+  <div class="version">v1.4</div>
 </header>
 
 <nav>
   <button class="active" data-page="overview">Übersicht</button>
   <button data-page="sections">NST-Abschnitte</button>
   <button data-page="stages">Etappen</button>
-  <button data-page="mapPage">Karte</button>
+  <button data-page="mapPage">Karte</button><button data-page="places">Orte</button>
   <button data-page="settings">Einstellungen</button>
 </nav>
 
@@ -60,13 +60,20 @@
     <p id="gpxInfo" class="muted">Noch kein GPX-Track importiert.</p>
     <p class="muted">Offizielle GPX-Dateien: Downloadbereich der Initiative Nord-Süd-Trail.</p>
   </div>
-  <div id="map"></div>
+  <div class="map-toolbar"><button id="locateBtn">Eigene Position</button><button id="mapAddBtn">Punkt auf Karte setzen</button></div><div id="map"></div><p id="mapHint" class="muted"></p>
   <div class="card map-stats">
     <div><b id="gpxPoints">0</b><span>Punkte</span></div>
     <div><b id="gpxDistance">0 km</b><span>berechnete Distanz</span></div>
     <div><b id="gpxStart">–</b><span>Start</span></div>
     <div><b id="gpxEnd">–</b><span>Ziel</span></div>
   </div>
+</section>
+
+
+<section id="places" class="page">
+  <div class="head"><div><h2>Orte und Versorgung</h2><p class="muted">Camping, Wasser, Einkauf und weitere eigene Punkte.</p></div><button id="addPlace">+ Ort</button></div>
+  <div class="filters"><input id="placeSearch" placeholder="Ort suchen"><select id="placeFilter"><option value="all">Alle Kategorien</option><option value="camp">Camping</option><option value="water">Wasser</option><option value="shop">Einkauf</option><option value="transport">ÖV</option><option value="sight">Sehenswürdigkeit</option><option value="other">Andere</option></select></div>
+  <div id="placeList"></div>
 </section>
 
 <section id="settings" class="page">
@@ -101,7 +108,15 @@
 <div class="buttons"><button type="button" id="saveStage">Speichern</button><button value="cancel">Abbrechen</button></div>
 </form></dialog>
 
+
+<dialog id="placeDlg"><form method="dialog"><h2>Ort</h2><input id="placeId" type="hidden">
+<label>Kategorie<select id="placeType"><option value="camp">Camping</option><option value="water">Wasser</option><option value="shop">Einkauf</option><option value="transport">ÖV</option><option value="sight">Sehenswürdigkeit</option><option value="other">Andere</option></select></label>
+<label>Name<input id="placeName"></label><label>Abschnitt<select id="placeSection"></select></label>
+<div class="coord-grid"><label>Breitengrad<input id="placeLat" type="number" step="0.000001"></label><label>Längengrad<input id="placeLon" type="number" step="0.000001"></label></div>
+<label>Notizen<textarea id="placeNotes"></textarea></label><label class="check"><input id="placeVerified" type="checkbox"> Selbst geprüft</label>
+<div class="buttons"><button type="button" id="savePlace">Speichern</button><button value="cancel">Abbrechen</button></div></form></dialog>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="data.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body></html>

@@ -5,3 +5,5 @@
 .map-stats b,.map-stats span{display:block}.map-stats span{font-size:.8rem;color:#687067;margin-top:4px}
 .primary-upload{display:inline-block;background:#44523f;color:#fff;margin-right:8px}
 @media(min-width:720px){.map-stats{grid-template-columns:repeat(4,1fr)}}
+
+.map-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.place{background:#fff;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 8px 24px #0000000c}.place.camp{border-left:6px solid #7b5e3d}.place.water{border-left:6px solid #3e78a5}.place.shop{border-left:6px solid #b07a2b}.place.transport{border-left:6px solid #6a5da8}.place.sight{border-left:6px solid #a64f71}.place.other{border-left:6px solid #777}.place h3{margin:0 0 6px}.coord-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.verified{background:#dfeedd;color:#355332}.unverified{background:#f1e6d5;color:#755821}.leaflet-popup-content button{padding:7px 9px;border-radius:8px}.map-crosshair{cursor:crosshair!important}@media(max-width:600px){.coord-grid{grid-template-columns:1fr}}

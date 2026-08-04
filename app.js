@@ -1,11 +1,15 @@
-const KEY="a3113-v13";
+const KEY="a3113-v14";
 let state=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(DEFAULT_STATE);
 if(!state.gpx) state.gpx=null;
+if(!Array.isArray(state.places)) state.places=[];
 
 const $=id=>document.getElementById(id);
 const saveLocal=()=>localStorage.setItem(KEY,JSON.stringify(state));
 let map;
 let routeLayer;
+let placeLayer;
+let userMarker;
+let mapAddMode=false;
 
 function days(a,b){return Math.max(1,Math.round((new Date(b)-new Date(a))/86400000)+1)}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -38,16 +42,25 @@ function initMap(){
  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
    maxZoom:19,attribution:"© OpenStreetMap-Mitwirkende"
  }).addTo(map);
+ map.on("click",event=>{
+   if(!mapAddMode)return;
+   mapAddMode=false;
+   $("mapHint").textContent="";
+   map.getContainer().classList.remove("map-crosshair");
+   openPlace({lat:event.latlng.lat,lon:event.latlng.lng});
+ });
 }
 function drawRoute(){
  initMap();
  if(!map)return;
  if(routeLayer){map.removeLayer(routeLayer);routeLayer=null}
+ if(placeLayer){map.removeLayer(placeLayer);placeLayer=null}
  const pts=state.gpx?.points||[];
  if(pts.length){
    routeLayer=L.polyline(pts,{weight:4}).addTo(map);
    map.fitBounds(routeLayer.getBounds(),{padding:[20,20]});
  }
+ drawPlaces();
  renderGpxStats();
 }
 function renderGpxStats(){
@@ -83,6 +96,32 @@ $("clearGpx").addEventListener("click",()=>{
  if(confirm("Importierten GPX-Track löschen?")){state.gpx=null;saveLocal();drawRoute()}
 });
 
+
+const PLACE_LABELS={camp:"Camping",water:"Wasser",shop:"Einkauf",transport:"ÖV",sight:"Sehenswürdigkeit",other:"Andere"};
+const PLACE_ICONS={camp:"⛺",water:"💧",shop:"🛒",transport:"🚉",sight:"📷",other:"📍"};
+function drawPlaces(){
+  if(!map)return;
+  if(placeLayer){map.removeLayer(placeLayer);placeLayer=null}
+  placeLayer=L.layerGroup().addTo(map);
+  state.places.forEach(place=>{
+    if(!Number.isFinite(Number(place.lat))||!Number.isFinite(Number(place.lon)))return;
+    const marker=L.marker([Number(place.lat),Number(place.lon)]).addTo(placeLayer);
+    marker.bindPopup(`<b>${PLACE_ICONS[place.type]||"📍"} ${esc(place.name)}</b><br>${PLACE_LABELS[place.type]||"Andere"}<br>${esc(place.notes||"")}<br><button onclick="editPlace(${place.id})">Bearbeiten</button>`);
+  });
+}
+function renderPlaces(){
+  const q=$("placeSearch").value.toLowerCase(),filter=$("placeFilter").value;
+  let list=state.places.filter(p=>`${p.name} ${p.notes} ${p.section}`.toLowerCase().includes(q));
+  if(filter!=="all")list=list.filter(p=>p.type===filter);
+  $("placeList").innerHTML=list.length?list.sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<article class="place ${p.type}"><h3>${PLACE_ICONS[p.type]||"📍"} ${esc(p.name)}</h3><span class="pill">${PLACE_LABELS[p.type]||"Andere"}</span><span class="pill ${p.verified?"verified":"unverified"}">${p.verified?"selbst geprüft":"nicht geprüft"}</span><p>${esc(p.section||"–")}</p><p class="muted">${Number(p.lat).toFixed(5)}, ${Number(p.lon).toFixed(5)}</p><p>${esc(p.notes||"")}</p><div class="buttons"><button onclick="showPlace(${p.id})">Auf Karte</button><button onclick="editPlace(${p.id})">Bearbeiten</button><button class="danger" onclick="deletePlace(${p.id})">Löschen</button></div></article>`).join(""):'<div class="card">Noch keine Orte erfasst.</div>';
+}
+function openPlace(place={}){
+  $("placeId").value=place.id||"";$("placeType").value=place.type||"camp";$("placeName").value=place.name||"";$("placeSection").innerHTML=NST_SECTIONS.map(x=>`<option>${x}</option>`).join("");$("placeSection").value=place.section||NST_SECTIONS[0];$("placeLat").value=place.lat??"";$("placeLon").value=place.lon??"";$("placeNotes").value=place.notes||"";$("placeVerified").checked=!!place.verified;$("placeDlg").showModal();
+}
+window.editPlace=id=>openPlace(state.places.find(p=>p.id===id));
+window.deletePlace=id=>{if(confirm("Ort löschen?")){state.places=state.places.filter(p=>p.id!==id);saveLocal();render();drawRoute()}};
+window.showPlace=id=>{const p=state.places.find(x=>x.id===id);if(!p)return;document.querySelector('[data-page="mapPage"]').click();setTimeout(()=>{map.setView([Number(p.lat),Number(p.lon)],15)},120)};
+
 function render(){
  $("arrival").value=state.arrival;$("start").value=state.start;$("target").value=state.target;
  $("lang").value=state.lang;$("restDays").value=state.restDays;
@@ -95,7 +134,7 @@ function render(){
  $("bar").style.width=Math.min(100,total/3700*100)+"%";
  const n=state.stages.find(s=>!s.done);
  $("next").innerHTML=n?`<b>${esc(n.date)} · ${esc(n.from)} → ${esc(n.to)}</b><p>${Number(n.km||0).toFixed(1)} km · ↑ ${n.up||0} m · ↓ ${n.down||0} m</p>`:'<p class="muted">Noch keine offene Etappe.</p>';
- renderSections();renderStages();renderGpxStats();
+ renderSections();renderStages();renderPlaces();renderGpxStats();
 }
 function renderSections(){
  const q=$("sectionSearch").value.toLowerCase();
@@ -107,7 +146,7 @@ function renderStages(){
  if(f==="open")list=list.filter(s=>!s.done);if(f==="done")list=list.filter(s=>s.done);if(f==="heid")list=list.filter(s=>s.section==="Heidschnuckenweg");
  $("stageList").innerHTML=list.length?list.sort((a,b)=>a.date.localeCompare(b.date)).map(s=>`<article class="stage"><h3>${esc(s.date)} · ${esc(s.from)} → ${esc(s.to)}</h3><span class="pill">${esc(s.section)}</span><span class="pill">${Number(s.km||0).toFixed(1)} km</span>${s.done?'<span class="pill">Erledigt</span>':""}<p>↑ ${s.up||0} m · ↓ ${s.down||0} m</p><p><b>Übernachtung:</b> ${esc(s.sleep||"–")}</p><p class="muted">${esc(s.notes||"")}</p><div class="buttons"><button onclick="editStage(${s.id})">Bearbeiten</button><button onclick="delStage(${s.id})" class="danger">Löschen</button></div></article>`).join(""):'<div class="card">Keine passenden Etappen.</div>';
 }
-$("sectionSearch").addEventListener("input",renderSections);$("stageSearch").addEventListener("input",renderStages);$("stageFilter").addEventListener("change",renderStages);
+$("sectionSearch").addEventListener("input",renderSections);$("placeSearch").addEventListener("input",renderPlaces);$("placeFilter").addEventListener("change",renderPlaces);$("stageSearch").addEventListener("input",renderStages);$("stageFilter").addEventListener("change",renderStages);
 $("add").addEventListener("click",()=>openStage());
 window.editStage=id=>openStage(state.stages.find(s=>s.id===id));
 window.delStage=id=>{if(confirm("Etappe löschen?")){state.stages=state.stages.filter(s=>s.id!==id);saveLocal();render()}};
@@ -126,14 +165,27 @@ $("save").addEventListener("click",()=>{
  state.lang=$("lang").value;state.arrival=$("arrival").value;state.start=$("start").value;state.target=$("target").value;state.restDays=Number($("restDays").value||0);saveLocal();render();
 });
 $("exportBtn").addEventListener("click",()=>{
- const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));a.download="3113-adventures-v1.3-backup.json";a.click();URL.revokeObjectURL(a.href);
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));a.download="3113-adventures-v1.4-backup.json";a.click();URL.revokeObjectURL(a.href);
 });
 $("importInput").addEventListener("change",async e=>{try{const file=e.target.files[0];if(!file)return;state=JSON.parse(await file.text());if(!state.gpx)state.gpx=null;saveLocal();render();drawRoute()}catch{alert("Backup ungültig")}});
 $("reset").addEventListener("click",()=>{if(confirm("Alle Änderungen zurücksetzen?")){state=structuredClone(DEFAULT_STATE);state.gpx=null;saveLocal();render();drawRoute()}});
+
+$("addPlace").addEventListener("click",()=>openPlace());
+$("savePlace").addEventListener("click",()=>{
+ const obj={id:Number($("placeId").value)||Date.now(),type:$("placeType").value,name:$("placeName").value.trim(),section:$("placeSection").value,lat:Number($("placeLat").value),lon:Number($("placeLon").value),notes:$("placeNotes").value.trim(),verified:$("placeVerified").checked};
+ if(!obj.name||!Number.isFinite(obj.lat)||!Number.isFinite(obj.lon))return;
+ const i=state.places.findIndex(p=>p.id===obj.id);i>=0?state.places[i]=obj:state.places.push(obj);saveLocal();$("placeDlg").close();render();drawRoute();
+});
+$("mapAddBtn").addEventListener("click",()=>{initMap();mapAddMode=true;$("mapHint").textContent="Tippe auf die gewünschte Stelle der Karte.";map.getContainer().classList.add("map-crosshair")});
+$("locateBtn").addEventListener("click",()=>{
+ if(!navigator.geolocation)return alert("Standort ist nicht verfügbar.");
+ navigator.geolocation.getCurrentPosition(position=>{initMap();const lat=position.coords.latitude,lon=position.coords.longitude;if(userMarker)map.removeLayer(userMarker);userMarker=L.marker([lat,lon]).addTo(map).bindPopup("Eigene Position").openPopup();map.setView([lat,lon],14)},()=>alert("Standort konnte nicht bestimmt werden."),{enableHighAccuracy:true,timeout:12000});
+});
+
 $("refreshApp").addEventListener("click",async()=>{
  if("serviceWorker"in navigator){for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}
  for(const name of await caches.keys())await caches.delete(name);
- location.href="./?v=13";
+ location.href="./?v=14";
 });
-if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=13");
+if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=14");
 render();

@@ -1,17 +1,16 @@
-# 3113 Adventures Version 1.3
+# 3113 Adventures Version 1.4
 
 ## Neu
-- Kartenansicht mit OpenStreetMap
-- lokaler GPX-Import
-- GPX-Track wird auf der Karte dargestellt
-- Distanzberechnung aus den importierten Trackpunkten
-- Anzeige von Start, Ziel und Anzahl Trackpunkte
-- importierter Track wird lokal gespeichert
-- sichtbare Versionsnummer v1.3
-- neuer Cache `3113-v13`
+- Orte und Versorgung verwalten
+- Kategorien Camping, Wasser, Einkauf, ÖV, Sehenswürdigkeit und Andere
+- Punkte direkt durch Tippen auf die Karte setzen
+- eigene Position auf der Karte anzeigen
+- Orte suchen und filtern
+- Punkte als selbst geprüft markieren
+- alle Orte werden im Backup mitgesichert
 
-## Offizielle Route
-Die GPX-Datei kann aus dem offiziellen Downloadbereich der Initiative Nord-Süd-Trail heruntergeladen und danach in der App importiert werden.
+## Installation
+Alle Dateien und den Ordner `icons` ins Hauptverzeichnis des GitHub-Repositorys hochladen und bestehende Dateien ersetzen.
 
-## Hinweis
-Die Kartenkacheln benötigen beim ersten Aufruf Internet. Der importierte Track und die App-Daten bleiben lokal gespeichert.
+## Kontrolle
+Oben rechts muss `v1.4` stehen.
