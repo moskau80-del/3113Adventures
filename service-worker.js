@@ -1,10 +1,10 @@
-const CACHE="3113-adventures-v202";
+const CACHE="3113-adventures-v210";
 const LOCAL=[
-  "./?v=202",
+  "./?v=210",
   "./index.html",
-  "./styles.css?v=202",
-  "./data.js?v=202",
-  "./app.js?v=202",
+  "./styles.css?v=210",
+  "./data.js?v=210",
+  "./app.js?v=210",
   "./manifest.webmanifest",
   "./icons/icon.svg"
 ];
@@ -24,7 +24,6 @@ self.addEventListener("activate",event=>{
 
 self.addEventListener("fetch",event=>{
   if(event.request.method!=="GET") return;
-
   event.respondWith(
     fetch(event.request)
       .then(response=>{

@@ -5,3 +5,12 @@
 .section-number{display:inline-flex;min-width:30px;height:30px;border-radius:999px;background:#edf0ea;align-items:center;justify-content:center;font-weight:800;margin-right:8px}
 .sections-toolbar{margin-bottom:14px}
 .map-error{border-left:5px solid #a44339;color:#7b302a}
+
+.planner-card{border-left:5px solid #708b63}
+.planner-grid{display:grid;gap:10px}
+.section-progress-row{margin:12px 0}
+.section-progress-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:5px}
+.mini-progress{height:8px;background:#e6e8e2;border-radius:999px;overflow:hidden}
+.mini-progress span{display:block;height:100%;background:#708b63}
+.coordinate-label{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem}
+@media(min-width:720px){.planner-grid{grid-template-columns:repeat(2,1fr)}}

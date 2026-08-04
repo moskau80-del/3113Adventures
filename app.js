@@ -1,8 +1,8 @@
 (() => {
 "use strict";
-const STORAGE_KEY="3113-adventures-v202";
+const STORAGE_KEY="3113-adventures-v210";
 const KNOWN_LEGACY_KEYS=[
-  "3113-adventures-v201","3113-adventures-v2",
+  "3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
   "a3113-v14","a3113-v141","a3113-v13","a3113-v12","a3113-v121","a3113-v11",
   "adventures3113_v1","3113Adventures","3113-adventures"
 ];
@@ -137,6 +137,7 @@ function renderDashboard(){
 }
 
 function renderSections(){
+  renderSectionProgress();
   const searchElement=$("sectionSearch");
   const filterElement=$("sectionFilter");
   if(!searchElement || !filterElement || !$("sectionList")) return;
@@ -160,6 +161,180 @@ function renderSections(){
     : '<div class="empty">Keine passenden Abschnitte.</div>';
 }
 
+
+function renderSectionProgress(){
+  const container=$("sectionProgress");
+  if(!container) return;
+
+  const groups=(state.sections||[]).map(section=>{
+    const stages=state.stages.filter(stage=>stage.section===section && !stage.restDay);
+    const planned=totalStageKm(stages);
+    const completed=totalStageKm(stages.filter(stage=>stage.completed));
+    return {section,planned,completed,count:stages.length};
+  }).filter(group=>group.count>0);
+
+  container.innerHTML=groups.length
+    ? groups.map(group=>{
+        const percent=group.planned?Math.min(100,group.completed/group.planned*100):0;
+        return `<div class="section-progress-row">
+          <div class="section-progress-head">
+            <strong>${escapeHtml(group.section)}</strong>
+            <span>${group.completed.toFixed(1)} / ${group.planned.toFixed(1)} km</span>
+          </div>
+          <div class="mini-progress"><span style="width:${percent}%"></span></div>
+        </div>`;
+      }).join("")
+    : '<p class="muted">Noch keine Etappen einem Abschnitt zugeordnet.</p>';
+}
+
+function pointDistance(a,b){
+  return haversine({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng});
+}
+
+function interpolatePoint(a,b,fraction){
+  return {
+    lat:a.lat+(b.lat-a.lat)*fraction,
+    lng:a.lng+(b.lng-a.lng)*fraction
+  };
+}
+
+function splitTrackByDistance(points,targetKm){
+  if(!Array.isArray(points)||points.length<2) return [];
+  const segments=[];
+  let current=[points[0]];
+  let accumulated=0;
+
+  for(let i=1;i<points.length;i++){
+    let previous=points[i-1];
+    const next=points[i];
+    let remainingSegment=pointDistance(previous,next);
+
+    while(accumulated+remainingSegment>=targetKm && remainingSegment>0){
+      const needed=targetKm-accumulated;
+      const fraction=needed/remainingSegment;
+      const cut=interpolatePoint(previous,next,fraction);
+      current.push(cut);
+      segments.push(current);
+      current=[cut];
+      previous=cut;
+      remainingSegment=pointDistance(previous,next);
+      accumulated=0;
+    }
+
+    current.push(next);
+    accumulated+=remainingSegment;
+  }
+
+  if(current.length>1) segments.push(current);
+  return segments;
+}
+
+function addDays(dateString,days){
+  const date=new Date(dateString+"T12:00:00");
+  date.setDate(date.getDate()+days);
+  return date.toISOString().slice(0,10);
+}
+
+function nearestSectionForIndex(index,total){
+  const sections=state.sections||[];
+  if(!sections.length) return "";
+  const ratio=total<=1?0:index/(total-1);
+  return sections[Math.min(sections.length-1,Math.floor(ratio*sections.length))];
+}
+
+function generateStagesFromGpx(){
+  if(!state.gpx?.points?.length){
+    alert("Bitte zuerst unter Karte einen GPX-Track importieren.");
+    return;
+  }
+
+  const targetKm=Number($("plannerKm").value||28);
+  const restEvery=Number($("plannerRestEvery").value||0);
+  if(targetKm<5){
+    alert("Bitte mindestens 5 km als Tagesdistanz wählen.");
+    return;
+  }
+
+  const existingGenerated=state.stages.filter(stage=>stage.generated);
+  if(existingGenerated.length && !confirm("Bereits automatisch erzeugte Etappen ersetzen?")){
+    return;
+  }
+
+  state.stages=state.stages.filter(stage=>!stage.generated);
+  const chunks=splitTrackByDistance(state.gpx.points,targetKm);
+  let date=state.tour.startDate;
+  let walkingCounter=0;
+  let number=1;
+
+  chunks.forEach((chunk,index)=>{
+    if(restEvery>0 && walkingCounter>0 && walkingCounter%restEvery===0){
+      state.stages.push({
+        id:Date.now()+number++,
+        date,
+        section:nearestSectionForIndex(index,chunks.length),
+        from:"Ruhetag",
+        to:"Ruhetag",
+        km:0,
+        up:0,
+        down:0,
+        overnight:"",
+        notes:"Automatisch eingefügter Ruhetag",
+        completed:false,
+        restDay:true,
+        generated:true
+      });
+      date=addDays(date,1);
+    }
+
+    const startPoint=chunk[0];
+    const endPoint=chunk[chunk.length-1];
+    let km=0;
+    for(let i=1;i<chunk.length;i++) km+=pointDistance(chunk[i-1],chunk[i]);
+
+    state.stages.push({
+      id:Date.now()+number++,
+      date,
+      section:nearestSectionForIndex(index,chunks.length),
+      from:`Etappe ${index+1} Start`,
+      to:`Etappe ${index+1} Ziel`,
+      km:Number(km.toFixed(1)),
+      up:0,
+      down:0,
+      overnight:"",
+      notes:`Start: ${startPoint.lat.toFixed(5)}, ${startPoint.lng.toFixed(5)} · Ziel: ${endPoint.lat.toFixed(5)}, ${endPoint.lng.toFixed(5)}`,
+      completed:false,
+      restDay:false,
+      generated:true,
+      startCoord:startPoint,
+      endCoord:endPoint
+    });
+
+    walkingCounter++;
+    date=addDays(date,1);
+  });
+
+  save();
+  renderAll();
+  renderPlannerInfo();
+}
+
+function renderPlannerInfo(){
+  const box=$("plannerInfo");
+  if(!box) return;
+
+  if(!state.gpx?.points?.length){
+    box.textContent="Für die automatische Planung zuerst einen GPX-Track importieren.";
+    return;
+  }
+
+  const generated=state.stages.filter(stage=>stage.generated);
+  const walking=generated.filter(stage=>!stage.restDay);
+  const rest=generated.filter(stage=>stage.restDay);
+  box.innerHTML=generated.length
+    ? `<strong>${walking.length} automatische Wandertage</strong> und ${rest.length} Ruhetage · ${totalStageKm(walking).toFixed(1)} km`
+    : `GPX bereit: ${state.gpx.points.length} Trackpunkte, ca. ${Number(state.gpx.distanceKm||0).toFixed(1)} km.`;
+}
+
 function renderStages(){
   const search=$("stageSearch").value.trim().toLowerCase();
   const filter=$("stageFilter").value;
@@ -172,11 +347,11 @@ function renderStages(){
     <article class="stage-card ${s.section==="Heidschnuckenweg"?"heid":""} ${s.completed?"completed":""}">
       <h3>${formatDate(s.date)} · ${escapeHtml(s.from)} → ${escapeHtml(s.to)}</h3>
       <span class="pill">${escapeHtml(s.section)}</span><span class="pill">${Number(s.km||0).toFixed(1)} km</span>
-      ${s.completed?'<span class="pill verified">Abgeschlossen</span>':""}
+      ${s.completed?'<span class="pill verified">Abgeschlossen</span>':""}${s.generated?'<span class="pill">Automatisch</span>':""}${s.restDay?'<span class="pill">Ruhetag</span>':""}
       <p>↑ ${Number(s.up||0)} m · ↓ ${Number(s.down||0)} m</p>
       <p><strong>Übernachtung:</strong> ${escapeHtml(s.overnight||"–")}</p>
       ${s.notes?`<p class="muted">${escapeHtml(s.notes)}</p>`:""}
-      <div class="card-actions"><button data-edit-stage="${s.id}">Bearbeiten</button><button data-toggle-stage="${s.id}">${s.completed?"Wieder öffnen":"Abschliessen"}</button><button class="danger" data-delete-stage="${s.id}">Löschen</button></div>
+      <div class="card-actions">${s.startCoord?`<button data-show-stage="${s.id}">Auf Karte</button>`:""}<button data-edit-stage="${s.id}">Bearbeiten</button><button data-toggle-stage="${s.id}">${s.completed?"Wieder öffnen":"Abschliessen"}</button><button class="danger" data-delete-stage="${s.id}">Löschen</button></div>
     </article>`).join(""):'<div class="empty">Keine passenden Etappen.</div>';
 }
 function renderPlaces(){
@@ -200,7 +375,7 @@ function fillSettings(){
   $("targetInput").value=state.tour.targetDate;
   $("restDaysInput").value=state.tour.restDays;
 }
-function renderAll(){renderDashboard();renderSections();renderStages();renderPlaces();fillSettings();if(map)renderMap()}
+function renderAll(){renderDashboard();renderSections();renderStages();renderPlaces();fillSettings();renderPlannerInfo();if(map)renderMap()}
 
 function openStage(stage={}){
   $("stageId").value=stage.id||"";
@@ -327,11 +502,32 @@ function bindEvents(){
   if($("sectionFilter")) $("sectionFilter").addEventListener("change",renderSections);
   $("stageSection").innerHTML=state.sections.map(section=>`<option>${escapeHtml(section)}</option>`).join("");
   $("addStageBtn").addEventListener("click",()=>openStage());
+  $("generateStagesBtn").addEventListener("click",generateStagesFromGpx);
+  $("deleteGeneratedBtn").addEventListener("click",()=>{
+    const count=state.stages.filter(stage=>stage.generated).length;
+    if(!count){alert("Keine automatisch erzeugten Etappen vorhanden.");return}
+    if(confirm(`${count} automatisch erzeugte Einträge löschen?`)){
+      state.stages=state.stages.filter(stage=>!stage.generated);
+      save();
+      renderAll();
+    }
+  });
   $("stageForm").addEventListener("submit",saveStage);
   $("stageSearch").addEventListener("input",renderStages);
   $("stageFilter").addEventListener("change",renderStages);
   $("stageList").addEventListener("click",event=>{
-    const edit=event.target.dataset.editStage,toggle=event.target.dataset.toggleStage,remove=event.target.dataset.deleteStage;
+    const show=event.target.dataset.showStage,edit=event.target.dataset.editStage,toggle=event.target.dataset.toggleStage,remove=event.target.dataset.deleteStage;
+    if(show){
+      const stage=state.stages.find(s=>s.id===Number(show));
+      if(stage?.startCoord){
+        document.querySelector('[data-page="map"]').click();
+        setTimeout(()=>{
+          initMap();
+          map.setView([stage.startCoord.lat,stage.startCoord.lng],13);
+          L.marker([stage.startCoord.lat,stage.startCoord.lng]).addTo(map).bindPopup(`${escapeHtml(stage.from)} → ${escapeHtml(stage.to)}`).openPopup();
+        },150);
+      }
+    }
     if(edit)openStage(state.stages.find(s=>s.id===Number(edit)));
     if(toggle){const stage=state.stages.find(s=>s.id===Number(toggle));stage.completed=!stage.completed;save();renderAll()}
     if(remove&&confirm("Etappe wirklich löschen?")){state.stages=state.stages.filter(s=>s.id!==Number(remove));save();renderAll()}
@@ -382,12 +578,12 @@ function bindEvents(){
   $("refreshBtn").addEventListener("click",async()=>{
     if("serviceWorker"in navigator){for(const reg of await navigator.serviceWorker.getRegistrations())await reg.unregister()}
     if("caches"in window){for(const name of await caches.keys())await caches.delete(name)}
-    location.href="./?v=202";
+    location.href="./?v=210";
   });
 }
 function start(){
   initNavigation();bindEvents();renderAll();renderGpxInfo();
-  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=202");
+  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=210");
 }
 document.addEventListener("DOMContentLoaded",start);
 })();

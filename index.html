@@ -7,13 +7,13 @@
   <meta name="description" content="3113 Adventures – Fernwanderplanung für den Nord-Süd-Trail.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=202">
+  <link rel="stylesheet" href="styles.css?v=210">
   <title>3113 Adventures</title>
 </head>
 <body>
 <header class="topbar">
   <div><span class="brand-number">3113</span><h1>Adventures</h1></div>
-  <span class="version">v2.0.2</span>
+  <span class="version">v2.1</span>
 </header>
 
 <nav id="mainNav" class="main-nav" aria-label="Hauptnavigation">
@@ -82,6 +82,7 @@
       <option value="heid">Nur Heidschnuckenweg</option>
     </select>
   </div>
+  <div class="card"><h3>Abschnittsfortschritt</h3><p class="muted">Die Zuordnung basiert auf dem Abschnitt, den du bei jeder Etappe auswählst.</p><div id="sectionProgress"></div></div>
   <div id="sectionList"></div>
 </section>
 
@@ -99,6 +100,31 @@
       <option value="heid">Heidschnuckenweg</option>
     </select>
   </div>
+  
+  <article class="card planner-card">
+    <h3>Etappen automatisch aus GPX erstellen</h3>
+    <p class="muted">Der importierte Track wird nach der gewünschten Tagesdistanz aufgeteilt. Start- und Zielnamen können danach manuell ergänzt werden.</p>
+    <div class="planner-grid">
+      <label>Zielkilometer pro Wandertag
+        <input id="plannerKm" type="number" min="5" max="60" step="1" value="28">
+      </label>
+      <label>Ruhetag nach jeweils
+        <select id="plannerRestEvery">
+          <option value="0">Keine automatischen Ruhetage</option>
+          <option value="6">6 Wandertagen</option>
+          <option value="7" selected>7 Wandertagen</option>
+          <option value="8">8 Wandertagen</option>
+          <option value="10">10 Wandertagen</option>
+        </select>
+      </label>
+    </div>
+    <div class="button-row">
+      <button id="generateStagesBtn" class="primary">Etappen aus GPX generieren</button>
+      <button id="deleteGeneratedBtn" class="secondary">Nur automatisch erzeugte Etappen löschen</button>
+    </div>
+    <div id="plannerInfo" class="info-strip">Für die automatische Planung zuerst einen GPX-Track importieren.</div>
+  </article>
+
   <div id="stageList"></div>
 </section>
 
@@ -196,6 +222,6 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data.js?v=202"></script>
-<script src="app.js?v=202"></script>
+<script src="data.js?v=210"></script>
+<script src="app.js?v=210"></script>
 </body></html>
