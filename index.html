@@ -1,32 +1,107 @@
-<!doctype html><html lang="de"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#44523f"><link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=121"><title>3113 Adventures</title></head><body>
-<header><div><small>3113</small><h1>Adventures</h1></div><div class="version">v1.2.1</div></header>
-<nav><button class="active" data-page="overview">Übersicht</button><button data-page="sections">NST-Abschnitte</button><button data-page="stages">Etappen</button><button data-page="settings">Einstellungen</button></nav>
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#44523f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css?v=13">
+  <title>3113 Adventures</title>
+</head>
+<body>
+<header>
+  <div><small>3113</small><h1>Adventures</h1></div>
+  <div class="version">v1.3</div>
+</header>
+
+<nav>
+  <button class="active" data-page="overview">Übersicht</button>
+  <button data-page="sections">NST-Abschnitte</button>
+  <button data-page="stages">Etappen</button>
+  <button data-page="mapPage">Karte</button>
+  <button data-page="settings">Einstellungen</button>
+</nav>
+
 <main>
 <section id="overview" class="page active">
-<div class="hero"><span class="badge">OFFIZIELLER NST</span><h2>Nord-Süd-Trail 2027</h2><p>Ellenbogen, Sylt → Haldenwanger Eck</p>
-<div class="grid"><div><b>3’700 km</b><span>offizielle Länge</span></div><div><b>140</b><span>Kalendertage</span></div><div><b id="needKm">–</b><span>notwendiger Schnitt</span></div><div><b id="buffer">–</b><span>Puffertage</span></div></div></div>
-<div class="card"><h3>Planungsstatus</h3><p id="status"></p><div class="progress"><i id="bar"></i></div></div>
-<div class="card"><h3>Nächste Etappe</h3><div id="next"></div></div>
-<div class="card warning"><h3>Datenhinweis</h3><p>Die App verwendet die offizielle NST-Grundroute. Tagesetappen, Campingplätze und Versorgung werden erst nach Prüfung als verifiziert gekennzeichnet.</p></div>
+  <div class="hero">
+    <span class="badge">OFFIZIELLER NST</span>
+    <h2>Nord-Süd-Trail 2027</h2>
+    <p>Ellenbogen, Sylt → Haldenwanger Eck</p>
+    <div class="grid">
+      <div><b>3’700 km</b><span>offizielle Länge</span></div>
+      <div><b>140</b><span>Kalendertage</span></div>
+      <div><b id="needKm">–</b><span>notwendiger Schnitt</span></div>
+      <div><b id="buffer">–</b><span>Puffertage</span></div>
+    </div>
+  </div>
+  <div class="card"><h3>Planungsstatus</h3><p id="status"></p><div class="progress"><i id="bar"></i></div></div>
+  <div class="card"><h3>Nächste Etappe</h3><div id="next"></div></div>
+  <div class="card warning"><h3>Datenhinweis</h3><p>Die App verwendet die offizielle NST-Grundroute. Tagesetappen, Campingplätze und Versorgung werden erst nach Prüfung als verifiziert gekennzeichnet.</p></div>
 </section>
-<section id="sections" class="page"><div class="head"><div><h2>Offizielle NST-Abschnitte</h2><p class="muted">Heidschnuckenweg ist besonders markiert.</p></div><input id="sectionSearch" placeholder="Abschnitt suchen"></div><div id="sectionList"></div></section>
-<section id="stages" class="page"><div class="head"><div><h2>Eigene Etappen</h2><p class="muted">Suchen, filtern und manuell anpassen.</p></div><button id="add">+ Etappe</button></div>
-<div class="filters"><input id="stageSearch" placeholder="Etappe suchen"><select id="stageFilter"><option value="all">Alle</option><option value="open">Offen</option><option value="done">Erledigt</option><option value="heid">Heidschnuckenweg</option></select></div><div id="stageList"></div></section>
-<section id="settings" class="page"><div class="card"><h2>Einstellungen</h2>
-<label>Sprache<select id="lang"><option value="de">Deutsch</option><option value="en">English</option></select></label>
-<label>Anreise<input id="arrival" type="date"></label><label>Wanderstart<input id="start" type="date"></label><label>Zieldatum<input id="target" type="date"></label>
-<label>Geplante Ruhetage<input id="restDays" type="number" min="0"></label>
-<div class="buttons"><button id="save">Speichern</button><button id="exportBtn">Backup exportieren</button><label class="upload">Backup importieren<input id="importInput" type="file" accept=".json"></label><button id="reset" class="danger">Zurücksetzen</button></div></div>
-<div class="card"><h3>Cache</h3><p>Version 1.2 verwendet einen neuen Cache-Namen und aktualisiert alte Offline-Dateien automatisch.</p><button id="refreshApp">App-Dateien aktualisieren</button></div></section>
+
+<section id="sections" class="page">
+  <div class="head"><div><h2>Offizielle NST-Abschnitte</h2><p class="muted">Heidschnuckenweg ist besonders markiert.</p></div><input id="sectionSearch" placeholder="Abschnitt suchen"></div>
+  <div id="sectionList"></div>
+</section>
+
+<section id="stages" class="page">
+  <div class="head"><div><h2>Eigene Etappen</h2><p class="muted">Suchen, filtern und manuell anpassen.</p></div><button id="add">+ Etappe</button></div>
+  <div class="filters"><input id="stageSearch" placeholder="Etappe suchen"><select id="stageFilter"><option value="all">Alle</option><option value="open">Offen</option><option value="done">Erledigt</option><option value="heid">Heidschnuckenweg</option></select></div>
+  <div id="stageList"></div>
+</section>
+
+<section id="mapPage" class="page">
+  <div class="head"><div><h2>Karte und GPX</h2><p class="muted">Importiere den offiziellen NST-GPX-Track oder eigene Touren.</p></div></div>
+  <div class="card">
+    <label class="upload primary-upload">GPX-Datei auswählen<input id="gpxInput" type="file" accept=".gpx,application/gpx+xml"></label>
+    <button id="clearGpx" class="danger">GPX löschen</button>
+    <p id="gpxInfo" class="muted">Noch kein GPX-Track importiert.</p>
+    <p class="muted">Offizielle GPX-Dateien: Downloadbereich der Initiative Nord-Süd-Trail.</p>
+  </div>
+  <div id="map"></div>
+  <div class="card map-stats">
+    <div><b id="gpxPoints">0</b><span>Punkte</span></div>
+    <div><b id="gpxDistance">0 km</b><span>berechnete Distanz</span></div>
+    <div><b id="gpxStart">–</b><span>Start</span></div>
+    <div><b id="gpxEnd">–</b><span>Ziel</span></div>
+  </div>
+</section>
+
+<section id="settings" class="page">
+  <div class="card"><h2>Einstellungen</h2>
+    <label>Sprache<select id="lang"><option value="de">Deutsch</option><option value="en">English</option></select></label>
+    <label>Anreise<input id="arrival" type="date"></label>
+    <label>Wanderstart<input id="start" type="date"></label>
+    <label>Zieldatum<input id="target" type="date"></label>
+    <label>Geplante Ruhetage<input id="restDays" type="number" min="0"></label>
+    <div class="buttons">
+      <button id="save">Speichern</button>
+      <button id="exportBtn">Backup exportieren</button>
+      <label class="upload">Backup importieren<input id="importInput" type="file" accept=".json"></label>
+      <button id="reset" class="danger">Zurücksetzen</button>
+    </div>
+  </div>
+  <div class="card"><h3>Cache</h3><p>Bei Anzeigeproblemen können alte Offline-Dateien vollständig entfernt werden.</p><button id="refreshApp">App-Dateien aktualisieren</button></div>
+</section>
 </main>
+
 <dialog id="dlg"><form method="dialog"><h2>Etappe</h2><input id="sid" type="hidden">
-<label>Datum<input id="date" type="date"></label><label>Abschnitt<select id="section"></select></label>
-<label>Start<input id="from"></label><label>Ziel<input id="to"></label><label>Distanz km<input id="km" type="number" step="0.1"></label>
-<label>Aufstieg m<input id="up" type="number"></label><label>Abstieg m<input id="down" type="number"></label>
-<label>Übernachtung<input id="sleep"></label><label>Notizen<textarea id="notes"></textarea></label>
+<label>Datum<input id="date" type="date"></label>
+<label>Abschnitt<select id="section"></select></label>
+<label>Start<input id="from"></label>
+<label>Ziel<input id="to"></label>
+<label>Distanz km<input id="km" type="number" step="0.1"></label>
+<label>Aufstieg m<input id="up" type="number"></label>
+<label>Abstieg m<input id="down" type="number"></label>
+<label>Übernachtung<input id="sleep"></label>
+<label>Notizen<textarea id="notes"></textarea></label>
 <label class="check"><input id="done" type="checkbox"> Abgeschlossen</label>
-<div class="buttons"><button type="button" id="saveStage">Speichern</button><button value="cancel">Abbrechen</button></div></form></dialog>
-<script src="data.js?v=121"></script><script src="app.js?v=121"></script></body></html>
+<div class="buttons"><button type="button" id="saveStage">Speichern</button><button value="cancel">Abbrechen</button></div>
+</form></dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js?v=13"></script>
+<script src="app.js?v=13"></script>
+</body></html>

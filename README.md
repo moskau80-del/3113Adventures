@@ -1,11 +1,17 @@
-# 3113 Adventures Version 1.2.1
+# 3113 Adventures Version 1.3
 
-## Fehlerkorrektur
-- Menüwechsel funktioniert wieder.
-- JavaScript-Syntaxfehler durch reservierte Wörter `import` und `export` behoben.
-- Neuer Cache-Schlüssel für die korrigierte Version.
+## Neu
+- Kartenansicht mit OpenStreetMap
+- lokaler GPX-Import
+- GPX-Track wird auf der Karte dargestellt
+- Distanzberechnung aus den importierten Trackpunkten
+- Anzeige von Start, Ziel und Anzahl Trackpunkte
+- importierter Track wird lokal gespeichert
+- sichtbare Versionsnummer v1.3
+- neuer Cache `3113-v13`
 
-## GitHub
-Alle Dateien und den Ordner `icons` hochladen und bestehende Dateien ersetzen.
+## Offizielle Route
+Die GPX-Datei kann aus dem offiziellen Downloadbereich der Initiative Nord-Süd-Trail heruntergeladen und danach in der App importiert werden.
 
-Oben rechts muss danach `v1.2.1` stehen.
+## Hinweis
+Die Kartenkacheln benötigen beim ersten Aufruf Internet. Der importierte Track und die App-Daten bleiben lokal gespeichert.
