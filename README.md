@@ -1,14 +1,11 @@
-# 3113 Adventures Version 1.2
+# 3113 Adventures Version 1.2.1
 
-## Neu
-- sichtbare Versionsnummer
-- neuer Cache mit automatischer Bereinigung
-- Schaltfläche zum Aktualisieren der App-Dateien
-- Suche in NST-Abschnitten
-- Suche und Filter in Etappen
-- verbesserte Zeitplanberechnung mit Ruhetagen
-- nächste offene Etappe auf dem Dashboard
-- Höhenmeter pro Etappe
+## Fehlerkorrektur
+- Menüwechsel funktioniert wieder.
+- JavaScript-Syntaxfehler durch reservierte Wörter `import` und `export` behoben.
+- Neuer Cache-Schlüssel für die korrigierte Version.
 
-## Installation
-Alle Dateien aus diesem Paket in das Hauptverzeichnis des GitHub-Repositorys hochladen und vorhandene Dateien ersetzen.
+## GitHub
+Alle Dateien und den Ordner `icons` hochladen und bestehende Dateien ersetzen.
+
+Oben rechts muss danach `v1.2.1` stehen.

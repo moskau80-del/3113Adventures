@@ -1,8 +1,8 @@
 <!doctype html><html lang="de"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#44523f"><link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=12"><title>3113 Adventures</title></head><body>
-<header><div><small>3113</small><h1>Adventures</h1></div><div class="version">v1.2</div></header>
+<link rel="stylesheet" href="styles.css?v=121"><title>3113 Adventures</title></head><body>
+<header><div><small>3113</small><h1>Adventures</h1></div><div class="version">v1.2.1</div></header>
 <nav><button class="active" data-page="overview">Übersicht</button><button data-page="sections">NST-Abschnitte</button><button data-page="stages">Etappen</button><button data-page="settings">Einstellungen</button></nav>
 <main>
 <section id="overview" class="page active">
@@ -19,7 +19,7 @@
 <label>Sprache<select id="lang"><option value="de">Deutsch</option><option value="en">English</option></select></label>
 <label>Anreise<input id="arrival" type="date"></label><label>Wanderstart<input id="start" type="date"></label><label>Zieldatum<input id="target" type="date"></label>
 <label>Geplante Ruhetage<input id="restDays" type="number" min="0"></label>
-<div class="buttons"><button id="save">Speichern</button><button id="export">Backup exportieren</button><label class="upload">Backup importieren<input id="import" type="file" accept=".json"></label><button id="reset" class="danger">Zurücksetzen</button></div></div>
+<div class="buttons"><button id="save">Speichern</button><button id="exportBtn">Backup exportieren</button><label class="upload">Backup importieren<input id="importInput" type="file" accept=".json"></label><button id="reset" class="danger">Zurücksetzen</button></div></div>
 <div class="card"><h3>Cache</h3><p>Version 1.2 verwendet einen neuen Cache-Namen und aktualisiert alte Offline-Dateien automatisch.</p><button id="refreshApp">App-Dateien aktualisieren</button></div></section>
 </main>
 <dialog id="dlg"><form method="dialog"><h2>Etappe</h2><input id="sid" type="hidden">
@@ -29,4 +29,4 @@
 <label>Übernachtung<input id="sleep"></label><label>Notizen<textarea id="notes"></textarea></label>
 <label class="check"><input id="done" type="checkbox"> Abgeschlossen</label>
 <div class="buttons"><button type="button" id="saveStage">Speichern</button><button value="cancel">Abbrechen</button></div></form></dialog>
-<script src="data.js?v=12"></script><script src="app.js?v=12"></script></body></html>
+<script src="data.js?v=121"></script><script src="app.js?v=121"></script></body></html>

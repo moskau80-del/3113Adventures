@@ -20,8 +20,8 @@ add.onclick=()=>openStage();window.editStage=id=>openStage(state.stages.find(s=>
 function openStage(s={}){sid.value=s.id||"";date.value=s.date||state.start;section.value=s.section||NST_SECTIONS[0];from.value=s.from||"";to.value=s.to||"";km.value=s.km||"";up.value=s.up||0;down.value=s.down||0;sleep.value=s.sleep||"";notes.value=s.notes||"";done.checked=!!s.done;dlg.showModal()}
 saveStage.onclick=()=>{const obj={id:Number(sid.value)||Date.now(),date:date.value,section:section.value,from:from.value.trim(),to:to.value.trim(),km:Number(km.value||0),up:Number(up.value||0),down:Number(down.value||0),sleep:sleep.value.trim(),notes:notes.value.trim(),done:done.checked};if(!obj.from||!obj.to)return;const i=state.stages.findIndex(x=>x.id===obj.id);i>=0?state.stages[i]=obj:state.stages.push(obj);saveLocal();dlg.close();render()};
 save.onclick=()=>{state.lang=lang.value;state.arrival=arrival.value;state.start=start.value;state.target=target.value;state.restDays=Number(restDays.value||0);saveLocal();render()};
-export.onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));a.download="3113-adventures-v1.2-backup.json";a.click()};
-import.onchange=async e=>{try{state=JSON.parse(await e.target.files[0].text());saveLocal();render()}catch{alert("Backup ungültig")}};
+document.getElementById("exportBtn").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));a.download="3113-adventures-v1.2-backup.json";a.click()};
+document.getElementById("importInput").onchange=async e=>{try{state=JSON.parse(await e.target.files[0].text());saveLocal();render()}catch{alert("Backup ungültig")}};
 reset.onclick=()=>{if(confirm("Alle Änderungen zurücksetzen?")){state=structuredClone(DEFAULT_STATE);saveLocal();render()}};
 refreshApp.onclick=async()=>{if("serviceWorker"in navigator){const regs=await navigator.serviceWorker.getRegistrations();for(const r of regs)await r.update()}location.reload(true)};
-if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=12");render();
+if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=121");render();
