@@ -1,7 +1,11 @@
 (() => {
 "use strict";
-const STORAGE_KEY="3113-adventures-v2";
-const LEGACY_KEYS=["a3113-v121","a3113-v12","a3113-v11","adventures3113_v1"];
+const STORAGE_KEY="3113-adventures-v201";
+const KNOWN_LEGACY_KEYS=[
+  "3113-adventures-v2",
+  "a3113-v14","a3113-v141","a3113-v13","a3113-v12","a3113-v121","a3113-v11",
+  "adventures3113_v1","3113Adventures","3113-adventures"
+];
 const $=id=>document.getElementById(id);
 let state=loadState();
 let map=null,trackLayer=null,markerLayer=null,userMarker=null;
@@ -9,23 +13,90 @@ let map=null,trackLayer=null,markerLayer=null,userMarker=null;
 function clone(v){return JSON.parse(JSON.stringify(v))}
 function loadState(){
   const current=localStorage.getItem(STORAGE_KEY);
-  if(current){try{return normalize(JSON.parse(current))}catch(e){}}
-  for(const key of LEGACY_KEYS){
-    const raw=localStorage.getItem(key);
-    if(raw){try{return normalize(JSON.parse(raw))}catch(e){}}
+  if(current){
+    try{return normalize(JSON.parse(current))}catch(e){}
   }
-  return clone(window.APP_DEFAULT_DATA);
+
+  const candidates=[];
+  for(const key of KNOWN_LEGACY_KEYS){
+    const raw=localStorage.getItem(key);
+    if(raw){
+      try{candidates.push(JSON.parse(raw))}catch(e){}
+    }
+  }
+
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(!key || key===STORAGE_KEY || KNOWN_LEGACY_KEYS.includes(key)) continue;
+    const raw=localStorage.getItem(key);
+    if(!raw) continue;
+    try{
+      const parsed=JSON.parse(raw);
+      if(parsed && typeof parsed==="object" && (
+        Array.isArray(parsed.stages) ||
+        Array.isArray(parsed.places) ||
+        parsed.gpx ||
+        parsed.tour
+      )){
+        candidates.push(parsed);
+      }
+    }catch(e){}
+  }
+
+  const merged=clone(window.APP_DEFAULT_DATA);
+  for(const candidate of candidates){
+    mergeLegacyInto(merged,candidate);
+  }
+  return merged;
 }
-function normalize(raw){
-  const base=clone(window.APP_DEFAULT_DATA);
-  if(raw.tour) base.tour={...base.tour,...raw.tour};
+function mergeLegacyInto(base,raw){
+  if(raw.tour && typeof raw.tour==="object"){
+    base.tour={...base.tour,...raw.tour};
+  }
   if(raw.arrival) base.tour.arrivalDate=raw.arrival;
   if(raw.start) base.tour.startDate=raw.start;
   if(raw.target) base.tour.targetDate=raw.target;
   if(Number.isFinite(Number(raw.restDays))) base.tour.restDays=Number(raw.restDays);
-  base.stages=Array.isArray(raw.stages)?raw.stages:[];
-  base.places=Array.isArray(raw.places)?raw.places:[];
-  base.gpx=raw.gpx||null;
+
+  if(Array.isArray(raw.stages) && raw.stages.length){
+    base.stages=raw.stages;
+  }
+  if(Array.isArray(raw.places) && raw.places.length){
+    base.places=raw.places;
+  }
+
+  if(raw.gpx){
+    base.gpx=normalizeGpx(raw.gpx);
+  }else if(raw.track && Array.isArray(raw.track)){
+    base.gpx=normalizeGpx({name:"Importierter Track",points:raw.track});
+  }else if(Array.isArray(raw.gpxPoints)){
+    base.gpx=normalizeGpx({name:"Importierter Track",points:raw.gpxPoints});
+  }
+}
+function normalizeGpx(gpx){
+  if(!gpx) return null;
+  const points=(gpx.points||gpx.trackPoints||gpx.coords||[]).map(p=>{
+    if(Array.isArray(p)) return {lat:Number(p[0]),lng:Number(p[1])};
+    return {
+      lat:Number(p.lat ?? p.latitude),
+      lng:Number(p.lng ?? p.lon ?? p.longitude)
+    };
+  }).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng));
+
+  let distanceKm=Number(gpx.distanceKm||gpx.distance||0);
+  if(!distanceKm && points.length>1){
+    for(let i=1;i<points.length;i++) distanceKm+=haversine(points[i-1],points[i]);
+  }
+
+  return points.length ? {
+    name:gpx.name||gpx.fileName||"Importierter Track",
+    points,
+    distanceKm
+  } : null;
+}
+function normalize(raw){
+  const base=clone(window.APP_DEFAULT_DATA);
+  mergeLegacyInto(base,raw||{});
   return base;
 }
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
@@ -249,12 +320,12 @@ function bindEvents(){
   $("refreshBtn").addEventListener("click",async()=>{
     if("serviceWorker"in navigator){for(const reg of await navigator.serviceWorker.getRegistrations())await reg.unregister()}
     if("caches"in window){for(const name of await caches.keys())await caches.delete(name)}
-    location.href="./?v=200";
+    location.href="./?v=201";
   });
 }
 function start(){
   initNavigation();bindEvents();renderAll();renderGpxInfo();
-  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=200");
+  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=201");
 }
 document.addEventListener("DOMContentLoaded",start);
 })();

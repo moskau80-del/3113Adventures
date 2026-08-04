@@ -1,23 +1,15 @@
-# 3113 Adventures – Version 2.0
+# 3113 Adventures – Version 2.0.1
 
-Vollständige Neuauflage ohne Node.js und ohne Build-Prozess.
+## Fehlerkorrektur
+- ältere GPX-Tracks werden aus mehreren früheren Speicherständen automatisch gesucht und übernommen
+- ältere Orte werden ebenfalls übernommen
+- Migration durchsucht zusätzlich weitere passende lokale Speicherstände
+- verschiedene ältere GPX-Datenformate werden vereinheitlicht
+- neuer Cache v2.0.1
 
-## Enthalten
-- Dashboard mit Zeitplan und Fortschritt
-- bearbeitbare NST-Etappen
-- Heidschnuckenweg-Markierung
-- Kartenansicht mit OpenStreetMap
-- lokaler GPX-Import
-- Camping-, Wasser-, Einkaufs-, ÖV- und weitere Orte
-- Orte auf der Karte
-- Standortanzeige
-- lokale Speicherung
-- Backup und Wiederherstellung
-- Offline-PWA und Cache-Aktualisierung
-- automatische Migration älterer lokaler Daten
-
-## GitHub
-Den gesamten Inhalt des ZIP-Pakets in das Hauptverzeichnis des Repositorys hochladen und alle bestehenden Dateien ersetzen.
+## Wichtig
+Die App enthält bewusst keine vorinstallierten Camping-, Wasser- oder Einkaufspunkte.
+Nur selbst eingetragene oder später verifizierte Orte erscheinen.
 
 ## Kontrolle
-Oben rechts muss `v2.0` angezeigt werden.
+Oben rechts muss `v2.0.1` stehen.
