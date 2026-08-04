@@ -1,14 +1,15 @@
 (() => {
 "use strict";
-const STORAGE_KEY="3113-adventures-v300";
+const STORAGE_KEY="3113-adventures-v301";
 const KNOWN_LEGACY_KEYS=[
-  "3113-adventures-v220","3113-adventures-v210","3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
+  "3113-adventures-v300","3113-adventures-v220","3113-adventures-v210","3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
   "a3113-v14","a3113-v141","a3113-v13","a3113-v12","a3113-v121","a3113-v11",
   "adventures3113_v1","3113Adventures","3113-adventures"
 ];
 const $=id=>document.getElementById(id);
 let state=loadState();
 let map=null,trackLayer=null,markerLayer=null,userMarker=null;
+let activeStageId=null;
 let poiSearchResults=[];
 
 function clone(v){return JSON.parse(JSON.stringify(v))}
@@ -308,7 +309,8 @@ function generateStagesFromGpx(){
       restDay:false,
       generated:true,
       startCoord:startPoint,
-      endCoord:endPoint
+      endCoord:endPoint,
+      trackPoints:chunk
     });
 
     walkingCounter++;
@@ -785,13 +787,64 @@ function initMap(){
     return false;
   }
 }
+function nearestTrackPointIndex(target){
+  if(!state.gpx?.points?.length || !target) return -1;
+  let bestIndex=0;
+  let bestDistance=Infinity;
+  state.gpx.points.forEach((point,index)=>{
+    const distance=haversine(point,target);
+    if(distance<bestDistance){bestDistance=distance;bestIndex=index;}
+  });
+  return bestIndex;
+}
+
+function getStageTrackPoints(stage){
+  if(Array.isArray(stage?.trackPoints) && stage.trackPoints.length>1){
+    return stage.trackPoints;
+  }
+  if(!stage?.startCoord || !stage?.endCoord || !state.gpx?.points?.length){
+    return [];
+  }
+  let startIndex=nearestTrackPointIndex(stage.startCoord);
+  let endIndex=nearestTrackPointIndex(stage.endCoord);
+  if(startIndex<0 || endIndex<0) return [];
+  if(endIndex<startIndex){
+    const temp=startIndex;startIndex=endIndex;endIndex=temp;
+  }
+  return state.gpx.points.slice(startIndex,endIndex+1);
+}
+
+function showStageOnMap(stage){
+  if(!stage) return;
+  activeStageId=stage.id;
+  document.querySelector('[data-page="map"]').click();
+  setTimeout(()=>{
+    if(!initMap()) return;
+    renderMap();
+  },160);
+}
+
+function showFullTrack(){
+  activeStageId=null;
+  if(initMap()) renderMap();
+}
+
 function renderMap(){
   if(!map || !trackLayer || !markerLayer)return;
   trackLayer.clearLayers();markerLayer.clearLayers();
   if(state.gpx?.points?.length){
-    const coords=state.gpx.points.map(p=>[p.lat,p.lng]);
-    const line=L.polyline(coords,{weight:4}).addTo(trackLayer);
-    map.fitBounds(line.getBounds(),{padding:[20,20]});
+    const activeStage=activeStageId?state.stages.find(stage=>stage.id===activeStageId):null;
+    const points=activeStage?getStageTrackPoints(activeStage):state.gpx.points;
+    if(points.length>1){
+      const coords=points.map(point=>[point.lat,point.lng]);
+      const line=L.polyline(coords,{weight:activeStage?6:4,opacity:activeStage?1:0.85}).addTo(trackLayer);
+      map.fitBounds(line.getBounds(),{padding:[28,28],maxZoom:15});
+      if(activeStage){
+        L.marker(coords[0]).addTo(trackLayer).bindPopup(`<strong>Start:</strong> ${escapeHtml(activeStage.from)}`);
+        L.marker(coords[coords.length-1]).addTo(trackLayer).bindPopup(`<strong>Ziel:</strong> ${escapeHtml(activeStage.to)}`);
+        $("gpxInfo").innerHTML=`<strong>Etappe:</strong> ${escapeHtml(activeStage.from)} → ${escapeHtml(activeStage.to)} · ${Number(activeStage.km||0).toFixed(1)} km`;
+      }
+    }
   }
   state.places.forEach(place=>{
     L.marker([place.lat,place.lng]).addTo(markerLayer).bindPopup(`<strong>${escapeHtml(place.name)}</strong><br>${categoryName(place.category)}${place.verified?"<br>Selbst geprüft":""}`);
@@ -851,15 +904,8 @@ function bindEvents(){
       split=event.target.dataset.splitStage,
       merge=event.target.dataset.mergeStage;
     if(show){
-      const stage=state.stages.find(s=>s.id===Number(show));
-      if(stage?.startCoord){
-        document.querySelector('[data-page="map"]').click();
-        setTimeout(()=>{
-          initMap();
-          map.setView([stage.startCoord.lat,stage.startCoord.lng],13);
-          L.marker([stage.startCoord.lat,stage.startCoord.lng]).addTo(map).bindPopup(`${escapeHtml(stage.from)} → ${escapeHtml(stage.to)}`).openPopup();
-        },150);
-      }
+      const stage=state.stages.find(item=>item.id===Number(show));
+      showStageOnMap(stage);
     }
     if(restBefore)insertRestDay(Number(restBefore),"before");
     if(restAfter)insertRestDay(Number(restAfter),"after");
@@ -894,9 +940,10 @@ function bindEvents(){
   });
   $("gpxInput").addEventListener("change",async event=>{
     const file=event.target.files[0];if(!file)return;
-    try{state.gpx=parseGpx(await file.text(),file.name);save();renderAll();renderGpxInfo();initMap();renderMap()}catch(error){alert(error.message)}
+    try{activeStageId=null;state.gpx=parseGpx(await file.text(),file.name);save();renderAll();renderGpxInfo();initMap();renderMap()}catch(error){alert(error.message)}
   });
-  $("clearGpxBtn").addEventListener("click",()=>{if(confirm("Importierten GPX-Track entfernen?")){state.gpx=null;save();renderAll();renderGpxInfo()}});
+  $("clearGpxBtn").addEventListener("click",()=>{if(confirm("Importierten GPX-Track entfernen?")){activeStageId=null;state.gpx=null;save();renderAll();renderGpxInfo()}});
+  $("showFullTrackBtn").addEventListener("click",showFullTrack);
   $("locateBtn").addEventListener("click",()=>{
     initMap();
     navigator.geolocation?.getCurrentPosition(position=>{
@@ -919,12 +966,12 @@ function bindEvents(){
   $("refreshBtn").addEventListener("click",async()=>{
     if("serviceWorker"in navigator){for(const reg of await navigator.serviceWorker.getRegistrations())await reg.unregister()}
     if("caches"in window){for(const name of await caches.keys())await caches.delete(name)}
-    location.href="./?v=300";
+    location.href="./?v=301";
   });
 }
 function start(){
   initNavigation();bindEvents();renderAll();renderGpxInfo();
-  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=300");
+  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=301");
 }
 document.addEventListener("DOMContentLoaded",start);
 })();

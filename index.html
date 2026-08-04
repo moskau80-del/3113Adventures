@@ -7,13 +7,13 @@
   <meta name="description" content="3113 Adventures – Fernwanderplanung für den Nord-Süd-Trail.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=300">
+  <link rel="stylesheet" href="styles.css?v=301">
   <title>3113 Adventures</title>
 </head>
 <body>
 <header class="topbar">
   <div><span class="brand-number">3113</span><h1>Adventures</h1></div>
-  <span class="version">v3.0</span>
+  <span class="version">v3.0.1</span>
 </header>
 
 <nav id="mainNav" class="main-nav" aria-label="Hauptnavigation">
@@ -154,6 +154,7 @@
       <label class="button-file primary">GPX importieren<input id="gpxInput" type="file" accept=".gpx,application/gpx+xml"></label>
       <button id="clearGpxBtn" class="secondary">GPX entfernen</button>
       <button id="locateBtn" class="secondary">Meine Position</button>
+      <button id="showFullTrackBtn" class="secondary">Gesamtroute anzeigen</button>
     </div>
     <div id="gpxInfo" class="info-strip">Noch kein GPX-Track importiert.</div>
   </article>
@@ -270,8 +271,8 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data.js?v=300"></script>
-<script src="app.js?v=300"></script>
+<script src="data.js?v=301"></script>
+<script src="app.js?v=301"></script>
 
 <dialog id="splitDialog">
   <form id="splitForm">
