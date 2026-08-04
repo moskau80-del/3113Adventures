@@ -3,120 +3,181 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#44523f">
+  <meta name="theme-color" content="#43513d">
+  <meta name="description" content="3113 Adventures – Fernwanderplanung für den Nord-Süd-Trail.">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=141">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="styles.css?v=200">
   <title>3113 Adventures</title>
 </head>
 <body>
-<header>
-  <div><small>3113</small><h1>Adventures</h1></div>
-  <div class="version">v1.4.1</div>
+<header class="topbar">
+  <div><span class="brand-number">3113</span><h1>Adventures</h1></div>
+  <span class="version">v2.0</span>
 </header>
 
-<nav>
-  <button class="active" data-page="overview">Übersicht</button>
-  <button data-page="sections">NST-Abschnitte</button>
+<nav id="mainNav" class="main-nav" aria-label="Hauptnavigation">
+  <button data-page="dashboard" class="active">Übersicht</button>
   <button data-page="stages">Etappen</button>
-  <button data-page="mapPage">Karte</button><button data-page="places">Orte</button>
+  <button data-page="map">Karte</button>
+  <button data-page="places">Orte</button>
   <button data-page="settings">Einstellungen</button>
 </nav>
 
 <main>
-<section id="overview" class="page active">
-  <div class="hero">
+<section id="dashboard" class="page active">
+  <article class="hero">
     <span class="badge">OFFIZIELLER NST</span>
-    <h2>Nord-Süd-Trail 2027</h2>
+    <h2 id="tourTitle">Nord-Süd-Trail 2027</h2>
     <p>Ellenbogen, Sylt → Haldenwanger Eck</p>
-    <div class="grid">
-      <div><b>3’700 km</b><span>offizielle Länge</span></div>
-      <div><b>140</b><span>Kalendertage</span></div>
-      <div><b id="needKm">–</b><span>notwendiger Schnitt</span></div>
-      <div><b id="buffer">–</b><span>Puffertage</span></div>
+    <div class="hero-grid">
+      <div><strong>3’700 km</strong><span>offizielle Länge</span></div>
+      <div><strong id="calendarDays">0</strong><span>Kalendertage</span></div>
+      <div><strong id="requiredAverage">0 km</strong><span>notwendiger Schnitt</span></div>
+      <div><strong id="plannedRestDays">0</strong><span>Ruhetage</span></div>
     </div>
-  </div>
-  <div class="card"><h3>Planungsstatus</h3><p id="status"></p><div class="progress"><i id="bar"></i></div></div>
-  <div class="card"><h3>Nächste Etappe</h3><div id="next"></div></div>
-  <div class="card warning"><h3>Datenhinweis</h3><p>Die App verwendet die offizielle NST-Grundroute. Tagesetappen, Campingplätze und Versorgung werden erst nach Prüfung als verifiziert gekennzeichnet.</p></div>
-</section>
+  </article>
 
-<section id="sections" class="page">
-  <div class="head"><div><h2>Offizielle NST-Abschnitte</h2><p class="muted">Heidschnuckenweg ist besonders markiert.</p></div><input id="sectionSearch" placeholder="Abschnitt suchen"></div>
-  <div id="sectionList"></div>
+  <div class="dashboard-grid">
+    <article class="card">
+      <h3>Fortschritt</h3>
+      <div class="progress"><span id="progressBar"></span></div>
+      <div class="metric-row"><span>Abgeschlossen</span><strong id="completedDistance">0 km</strong></div>
+      <div class="metric-row"><span>Geplant</span><strong id="plannedDistance">0 km</strong></div>
+      <div class="metric-row"><span>Noch nicht verplant</span><strong id="unplannedDistance">3’700 km</strong></div>
+    </article>
+
+    <article class="card">
+      <h3>Nächste Etappe</h3>
+      <div id="nextStage" class="muted">Noch keine Etappe angelegt.</div>
+    </article>
+
+    <article class="card">
+      <h3>Datenbestand</h3>
+      <div class="metric-row"><span>Etappen</span><strong id="stageCount">0</strong></div>
+      <div class="metric-row"><span>Orte</span><strong id="placeCount">0</strong></div>
+      <div class="metric-row"><span>GPX-Track</span><strong id="gpxStatus">nicht importiert</strong></div>
+    </article>
+  </div>
+
+  <article class="card warning">
+    <h3>Planungshinweis</h3>
+    <p>Die App verwendet die offizielle NST-Grundlage. Etappen, Campingplätze, Wasserstellen und Einkaufsmöglichkeiten werden von dir ergänzt und sind nur dann als geprüft gekennzeichnet, wenn du dies ausdrücklich auswählst.</p>
+  </article>
 </section>
 
 <section id="stages" class="page">
-  <div class="head"><div><h2>Eigene Etappen</h2><p class="muted">Suchen, filtern und manuell anpassen.</p></div><button id="add">+ Etappe</button></div>
-  <div class="filters"><input id="stageSearch" placeholder="Etappe suchen"><select id="stageFilter"><option value="all">Alle</option><option value="open">Offen</option><option value="done">Erledigt</option><option value="heid">Heidschnuckenweg</option></select></div>
+  <div class="section-header">
+    <div><h2>Etappen</h2><p class="muted">Tagesetappen planen, bearbeiten und abschliessen.</p></div>
+    <button id="addStageBtn" class="primary">+ Etappe</button>
+  </div>
+  <div class="toolbar">
+    <input id="stageSearch" placeholder="Start, Ziel oder Abschnitt suchen">
+    <select id="stageFilter">
+      <option value="all">Alle Etappen</option>
+      <option value="open">Offen</option>
+      <option value="completed">Abgeschlossen</option>
+      <option value="heid">Heidschnuckenweg</option>
+    </select>
+  </div>
   <div id="stageList"></div>
 </section>
 
-<section id="mapPage" class="page">
-  <div class="head"><div><h2>Karte und GPX</h2><p class="muted">Importiere den offiziellen NST-GPX-Track oder eigene Touren.</p></div></div>
-  <div class="card">
-    <label class="upload primary-upload">GPX-Datei auswählen<input id="gpxInput" type="file" accept=".gpx,application/gpx+xml"></label>
-    <button id="clearGpx" class="danger">GPX löschen</button>
-    <p id="gpxInfo" class="muted">Noch kein GPX-Track importiert.</p>
-    <p class="muted">Offizielle GPX-Dateien: Downloadbereich der Initiative Nord-Süd-Trail.</p>
+<section id="map" class="page">
+  <div class="section-header">
+    <div><h2>Karte und GPX</h2><p class="muted">Offiziellen Track lokal importieren und eigene Orte anzeigen.</p></div>
   </div>
-  <div class="map-toolbar"><button id="locateBtn">Eigene Position</button><button id="mapAddBtn">Punkt auf Karte setzen</button></div><div id="map"></div><p id="mapHint" class="muted"></p>
-  <div class="card map-stats">
-    <div><b id="gpxPoints">0</b><span>Punkte</span></div>
-    <div><b id="gpxDistance">0 km</b><span>berechnete Distanz</span></div>
-    <div><b id="gpxStart">–</b><span>Start</span></div>
-    <div><b id="gpxEnd">–</b><span>Ziel</span></div>
-  </div>
+  <article class="card">
+    <div class="button-row">
+      <label class="button-file primary">GPX importieren<input id="gpxInput" type="file" accept=".gpx,application/gpx+xml"></label>
+      <button id="clearGpxBtn" class="secondary">GPX entfernen</button>
+      <button id="locateBtn" class="secondary">Meine Position</button>
+    </div>
+    <div id="gpxInfo" class="info-strip">Noch kein GPX-Track importiert.</div>
+  </article>
+  <div id="mapCanvas"></div>
+  <p class="small muted">Die Hintergrundkarte benötigt Internet. Importierter Track, Etappen und Orte bleiben lokal gespeichert.</p>
 </section>
 
-
 <section id="places" class="page">
-  <div class="head"><div><h2>Orte und Versorgung</h2><p class="muted">Camping, Wasser, Einkauf und weitere eigene Punkte.</p></div><button id="addPlace">+ Ort</button></div>
-  <div class="filters"><input id="placeSearch" placeholder="Ort suchen"><select id="placeFilter"><option value="all">Alle Kategorien</option><option value="camp">Camping</option><option value="water">Wasser</option><option value="shop">Einkauf</option><option value="transport">ÖV</option><option value="sight">Sehenswürdigkeit</option><option value="other">Andere</option></select></div>
+  <div class="section-header">
+    <div><h2>Orte und Versorgung</h2><p class="muted">Camping, Wasser, Einkauf, ÖV und weitere Punkte verwalten.</p></div>
+    <button id="addPlaceBtn" class="primary">+ Ort</button>
+  </div>
+  <div class="toolbar">
+    <input id="placeSearch" placeholder="Ort oder Notiz suchen">
+    <select id="placeFilter">
+      <option value="all">Alle Kategorien</option>
+      <option value="camping">Camping</option>
+      <option value="water">Wasser</option>
+      <option value="shop">Einkauf</option>
+      <option value="transport">ÖV</option>
+      <option value="sight">Sehenswürdigkeit</option>
+      <option value="other">Weitere</option>
+    </select>
+  </div>
   <div id="placeList"></div>
 </section>
 
 <section id="settings" class="page">
-  <div class="card"><h2>Einstellungen</h2>
-    <label>Sprache<select id="lang"><option value="de">Deutsch</option><option value="en">English</option></select></label>
-    <label>Anreise<input id="arrival" type="date"></label>
-    <label>Wanderstart<input id="start" type="date"></label>
-    <label>Zieldatum<input id="target" type="date"></label>
-    <label>Geplante Ruhetage<input id="restDays" type="number" min="0"></label>
-    <div class="buttons">
-      <button id="save">Speichern</button>
-      <button id="exportBtn">Backup exportieren</button>
-      <label class="upload">Backup importieren<input id="importInput" type="file" accept=".json"></label>
-      <button id="reset" class="danger">Zurücksetzen</button>
+  <article class="card form-card">
+    <h2>Toureneinstellungen</h2>
+    <label>Tourname<input id="tourNameInput"></label>
+    <label>Anreise<input id="arrivalInput" type="date"></label>
+    <label>Wanderstart<input id="startInput" type="date"></label>
+    <label>Zieldatum<input id="targetInput" type="date"></label>
+    <label>Geplante Ruhetage<input id="restDaysInput" type="number" min="0"></label>
+    <button id="saveSettingsBtn" class="primary">Einstellungen speichern</button>
+  </article>
+
+  <article class="card">
+    <h3>Backup und Daten</h3>
+    <div class="button-row">
+      <button id="exportBtn" class="secondary">Backup exportieren</button>
+      <label class="button-file secondary">Backup importieren<input id="importInput" type="file" accept=".json,application/json"></label>
+      <button id="resetBtn" class="danger">Alle Daten zurücksetzen</button>
     </div>
-  </div>
-  <div class="card"><h3>Cache</h3><p>Bei Anzeigeproblemen können alte Offline-Dateien vollständig entfernt werden.</p><button id="refreshApp">App-Dateien aktualisieren</button></div>
+  </article>
+
+  <article class="card">
+    <h3>App-Aktualisierung</h3>
+    <p class="muted">Löscht alte Offline-Dateien und lädt die aktuelle Version neu.</p>
+    <button id="refreshBtn" class="secondary">App-Dateien aktualisieren</button>
+  </article>
 </section>
 </main>
 
-<dialog id="dlg"><form method="dialog"><h2>Etappe</h2><input id="sid" type="hidden">
-<label>Datum<input id="date" type="date"></label>
-<label>Abschnitt<select id="section"></select></label>
-<label>Start<input id="from"></label>
-<label>Ziel<input id="to"></label>
-<label>Distanz km<input id="km" type="number" step="0.1"></label>
-<label>Aufstieg m<input id="up" type="number"></label>
-<label>Abstieg m<input id="down" type="number"></label>
-<label>Übernachtung<input id="sleep"></label>
-<label>Notizen<textarea id="notes"></textarea></label>
-<label class="check"><input id="done" type="checkbox"> Abgeschlossen</label>
-<div class="buttons"><button type="button" id="saveStage">Speichern</button><button value="cancel">Abbrechen</button></div>
-</form></dialog>
+<dialog id="stageDialog">
+  <form id="stageForm">
+    <div class="dialog-header"><h2>Etappe</h2><button type="button" data-close="stageDialog" class="close-btn">×</button></div>
+    <input id="stageId" type="hidden">
+    <label>Datum<input id="stageDate" type="date" required></label>
+    <label>NST-Abschnitt<select id="stageSection"></select></label>
+    <div class="two-columns"><label>Start<input id="stageFrom" required></label><label>Ziel<input id="stageTo" required></label></div>
+    <div class="three-columns"><label>Distanz km<input id="stageKm" type="number" step="0.1" min="0"></label><label>Aufstieg m<input id="stageUp" type="number" min="0"></label><label>Abstieg m<input id="stageDown" type="number" min="0"></label></div>
+    <label>Übernachtung<input id="stageOvernight"></label>
+    <label>Notizen<textarea id="stageNotes" rows="3"></textarea></label>
+    <label class="checkbox"><input id="stageCompleted" type="checkbox"> Abgeschlossen</label>
+    <div class="button-row"><button id="saveStageBtn" type="submit" class="primary">Speichern</button><button type="button" data-close="stageDialog" class="secondary">Abbrechen</button></div>
+  </form>
+</dialog>
 
+<dialog id="placeDialog">
+  <form id="placeForm">
+    <div class="dialog-header"><h2>Ort</h2><button type="button" data-close="placeDialog" class="close-btn">×</button></div>
+    <input id="placeId" type="hidden">
+    <label>Name<input id="placeName" required></label>
+    <label>Kategorie<select id="placeCategory"><option value="camping">Camping</option><option value="water">Wasser</option><option value="shop">Einkauf</option><option value="transport">ÖV</option><option value="sight">Sehenswürdigkeit</option><option value="other">Weitere</option></select></label>
+    <div class="two-columns"><label>Breitengrad<input id="placeLat" type="number" step="any" required></label><label>Längengrad<input id="placeLng" type="number" step="any" required></label></div>
+    <label>Notizen<textarea id="placeNotes" rows="3"></textarea></label>
+    <label class="checkbox"><input id="placeVerified" type="checkbox"> Selbst geprüft</label>
+    <div class="button-row"><button type="submit" class="primary">Speichern</button><button type="button" data-close="placeDialog" class="secondary">Abbrechen</button></div>
+  </form>
+</dialog>
 
-<dialog id="placeDlg"><form method="dialog"><h2>Ort</h2><input id="placeId" type="hidden">
-<label>Kategorie<select id="placeType"><option value="camp">Camping</option><option value="water">Wasser</option><option value="shop">Einkauf</option><option value="transport">ÖV</option><option value="sight">Sehenswürdigkeit</option><option value="other">Andere</option></select></label>
-<label>Name<input id="placeName"></label><label>Abschnitt<select id="placeSection"></select></label>
-<div class="coord-grid"><label>Breitengrad<input id="placeLat" type="number" step="0.000001"></label><label>Längengrad<input id="placeLon" type="number" step="0.000001"></label></div>
-<label>Notizen<textarea id="placeNotes"></textarea></label><label class="check"><input id="placeVerified" type="checkbox"> Selbst geprüft</label>
-<div class="buttons"><button type="button" id="savePlace">Speichern</button><button value="cancel">Abbrechen</button></div></form></dialog>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data.js?v=141"></script>
-<script src="app.js?v=141"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+ integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="data.js?v=200"></script>
+<script src="app.js?v=200"></script>
 </body></html>

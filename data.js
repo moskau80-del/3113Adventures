@@ -1,2 +1,44 @@
-window.NST_SECTIONS=["Sylt–Flensburg", "Flensburg–Hamburg", "Hamburg", "Heidschnuckenweg", "Steinhuder Meer", "Sigwardsweg", "Weserbergland-Weg", "Kassel–Schwalm-Eder", "Waldeck–Frankenberg", "Rothaarsteig", "Lahn-Dill-Bergland-Pfad", "WesterwaldSteig", "Natursteig Sieg", "Rheinsteig", "Soonwaldsteig", "Saar-Hunsrück-Steig", "Merzig-Wadern–St. Wendel", "Kusel und Donnersberg", "Pfälzer Weinsteig", "Germersheim / Karlsruhe-Enzkreis", "Westweg", "Main-Neckar-Rhein-Weg", "Schluchtensteig", "Hegau", "Bodensee-Rundwanderweg", "Kreis Lindau", "Oberallgäu", "Haldenwanger Eck"];
-window.DEFAULT_STATE={"lang": "de", "arrival": "2027-03-26", "start": "2027-03-27", "target": "2027-08-13", "restDays": 8, "stages": [], "places": []};
+window.APP_DEFAULT_DATA = {
+  "version": "2.0",
+  "tour": {
+    "name": "Nord-Süd-Trail 2027",
+    "officialDistance": 3700,
+    "arrivalDate": "2027-03-26",
+    "startDate": "2027-03-27",
+    "targetDate": "2027-08-13",
+    "restDays": 8
+  },
+  "sections": [
+    "Sylt–Flensburg",
+    "Flensburg–Hamburg",
+    "Hamburg",
+    "Heidschnuckenweg",
+    "Steinhuder Meer",
+    "Sigwardsweg",
+    "Weserbergland-Weg",
+    "Kassel–Schwalm-Eder",
+    "Waldeck–Frankenberg",
+    "Rothaarsteig",
+    "Lahn-Dill-Bergland-Pfad",
+    "WesterwaldSteig",
+    "Natursteig Sieg",
+    "Rheinsteig",
+    "Soonwaldsteig",
+    "Saar-Hunsrück-Steig",
+    "Merzig-Wadern–St. Wendel",
+    "Kusel und Donnersberg",
+    "Pfälzer Weinsteig",
+    "Germersheim / Karlsruhe-Enzkreis",
+    "Westweg",
+    "Main-Neckar-Rhein-Weg",
+    "Schluchtensteig",
+    "Hegau",
+    "Bodensee-Rundwanderweg",
+    "Kreis Lindau",
+    "Oberallgäu",
+    "Haldenwanger Eck"
+  ],
+  "stages": [],
+  "places": [],
+  "gpx": null
+};

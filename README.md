@@ -1,13 +1,23 @@
-# 3113 Adventures Version 1.4.1
+# 3113 Adventures – Version 2.0
 
-## Fehlerkorrektur
-- GPX-Import und Kartenroute sind weiterhin enthalten.
-- Bereits importierte GPX-Tracks aus Version 1.3 werden automatisch übernommen.
-- Etappen, Einstellungen und Orte aus älteren Versionen werden ebenfalls migriert.
-- Neuer Cache `v1.4.1` verhindert die Anzeige alter Dateien.
+Vollständige Neuauflage ohne Node.js und ohne Build-Prozess.
 
-## Kontrolle
-Oben rechts muss `v1.4.1` stehen. Unter **Karte** muss der GPX-Import sichtbar sein. Ein früher importierter Track sollte automatisch wieder erscheinen.
+## Enthalten
+- Dashboard mit Zeitplan und Fortschritt
+- bearbeitbare NST-Etappen
+- Heidschnuckenweg-Markierung
+- Kartenansicht mit OpenStreetMap
+- lokaler GPX-Import
+- Camping-, Wasser-, Einkaufs-, ÖV- und weitere Orte
+- Orte auf der Karte
+- Standortanzeige
+- lokale Speicherung
+- Backup und Wiederherstellung
+- Offline-PWA und Cache-Aktualisierung
+- automatische Migration älterer lokaler Daten
 
 ## GitHub
-Alle Dateien und den Ordner `icons` in das Hauptverzeichnis des Repositorys hochladen und vorhandene Dateien ersetzen.
+Den gesamten Inhalt des ZIP-Pakets in das Hauptverzeichnis des Repositorys hochladen und alle bestehenden Dateien ersetzen.
+
+## Kontrolle
+Oben rechts muss `v2.0` angezeigt werden.
