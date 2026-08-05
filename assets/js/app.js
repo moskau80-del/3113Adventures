@@ -15,11 +15,11 @@ import {
   saveStages,
   deleteStage,
   deleteStagesForTour
-} from "./database.js?v=4051";
+} from "./database.js?v=40511";
 
-import { loadLanguage, translate } from "./i18n.js?v=4051";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4051";
-import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=4051";
+import { loadLanguage, translate } from "./i18n.js?v=40511";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40511";
+import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=40511";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -449,11 +449,9 @@ async function renderStages() {
     ? `${Math.min(...distances).toFixed(1)} km`
     : "0 km";
 
-  if (!generatorStatus.textContent) {
-    generatorStatus.textContent = stages.length
-      ? `${stages.length} ${translate("stages.count", "Etappen")}`
-      : translate("stages.noStages", "Noch keine Etappen vorhanden.");
-  }
+  generatorStatus.textContent = stages.length
+    ? `${stages.length} ${translate("stages.count", "Etappen")} · lokal gespeichert`
+    : translate("stages.noStages", "Noch keine Etappen vorhanden.");
 
   container.innerHTML = stages.length
     ? stages.map((stage) => `
@@ -587,6 +585,16 @@ document.getElementById("stageList")?.addEventListener("click", async (event) =>
 
   if (deleteId && confirm(translate("stages.confirmDelete", "Etappe wirklich löschen?"))) {
     await deleteStage(deleteId);
+
+    const remaining = await getStagesForTour(activeTour.id);
+    for (let index = 0; index < remaining.length; index++) {
+      await saveStage({
+        ...remaining[index],
+        order: index + 1,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
     await renderStages();
   }
 });
@@ -693,12 +701,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4051";
+  window.location.href = "./?v=40511";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4051");
+    navigator.serviceWorker.register("sw.js?v=40511");
   });
 }
 

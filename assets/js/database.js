@@ -1,5 +1,5 @@
 const DB_NAME = "3113AdventuresDB";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const SETTINGS_STORE = "settings";
 const TOURS_STORE = "tours";
 const TRACKS_STORE = "tracks";
@@ -17,21 +17,21 @@ export function openDatabase() {
       }
 
       if (!db.objectStoreNames.contains(TOURS_STORE)) {
-        const tours = db.createObjectStore(TOURS_STORE, { keyPath: "id" });
-        tours.createIndex("active", "active", { unique: false });
-        tours.createIndex("name", "name", { unique: false });
+        const store = db.createObjectStore(TOURS_STORE, { keyPath: "id" });
+        store.createIndex("active", "active", { unique: false });
+        store.createIndex("name", "name", { unique: false });
       }
 
       if (!db.objectStoreNames.contains(TRACKS_STORE)) {
-        const tracks = db.createObjectStore(TRACKS_STORE, { keyPath: "tourId" });
-        tracks.createIndex("name", "name", { unique: false });
+        const store = db.createObjectStore(TRACKS_STORE, { keyPath: "tourId" });
+        store.createIndex("name", "name", { unique: false });
       }
 
       if (!db.objectStoreNames.contains(STAGES_STORE)) {
-        const stages = db.createObjectStore(STAGES_STORE, { keyPath: "id" });
-        stages.createIndex("tourId", "tourId", { unique: false });
-        stages.createIndex("date", "date", { unique: false });
-        stages.createIndex("order", "order", { unique: false });
+        const store = db.createObjectStore(STAGES_STORE, { keyPath: "id" });
+        store.createIndex("tourId", "tourId", { unique: false });
+        store.createIndex("date", "date", { unique: false });
+        store.createIndex("order", "order", { unique: false });
       }
     };
 
@@ -40,63 +40,72 @@ export function openDatabase() {
   });
 }
 
-function withStore(storeName, mode, callback) {
-  return openDatabase().then((db) => new Promise((resolve, reject) => {
+async function runRequest(storeName, mode, operation) {
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, mode);
     const store = transaction.objectStore(storeName);
-    const request = callback(store);
+    const request = operation(store);
 
-    transaction.oncomplete = () => resolve(request?.result);
-    transaction.onerror = () => reject(transaction.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
     transaction.onabort = () => reject(transaction.error);
-  }));
+  });
 }
 
 export async function getSetting(key, fallback = null) {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(SETTINGS_STORE, "readonly");
-    const request = transaction.objectStore(SETTINGS_STORE).get(key);
-
-    request.onsuccess = () => resolve(request.result?.value ?? fallback);
-    request.onerror = () => reject(request.error);
-  });
+  const result = await runRequest(
+    SETTINGS_STORE,
+    "readonly",
+    (store) => store.get(key)
+  );
+  return result?.value ?? fallback;
 }
 
 export async function setSetting(key, value) {
-  return withStore(SETTINGS_STORE, "readwrite", (store) => store.put({ key, value }));
+  await runRequest(
+    SETTINGS_STORE,
+    "readwrite",
+    (store) => store.put({ key, value })
+  );
 }
 
 export async function getAllTours() {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(TOURS_STORE, "readonly");
-    const request = transaction.objectStore(TOURS_STORE).getAll();
-
-    request.onsuccess = () => resolve(request.result || []);
-    request.onerror = () => reject(request.error);
-  });
+  return (await runRequest(
+    TOURS_STORE,
+    "readonly",
+    (store) => store.getAll()
+  )) || [];
 }
 
 export async function saveTour(tour) {
   if (tour.active) {
     const tours = await getAllTours();
-
-    for (const item of tours.filter((entry) => entry.id !== tour.id && entry.active)) {
-      await withStore(TOURS_STORE, "readwrite", (store) => store.put({
-        ...item,
-        active: false
-      }));
+    for (const item of tours) {
+      if (item.id !== tour.id && item.active) {
+        await runRequest(
+          TOURS_STORE,
+          "readwrite",
+          (store) => store.put({ ...item, active: false })
+        );
+      }
     }
   }
 
-  return withStore(TOURS_STORE, "readwrite", (store) => store.put(tour));
+  await runRequest(
+    TOURS_STORE,
+    "readwrite",
+    (store) => store.put(tour)
+  );
 }
 
 export async function deleteTour(id) {
-  return withStore(TOURS_STORE, "readwrite", (store) => store.delete(id));
+  await runRequest(
+    TOURS_STORE,
+    "readwrite",
+    (store) => store.delete(id)
+  );
 }
 
 export async function getActiveTour() {
@@ -106,8 +115,8 @@ export async function getActiveTour() {
 
 export async function seedDefaultTour() {
   const tours = await getAllTours();
-  const existing = tours.find((tour) =>
-    tour.id === "nst-2027" || tour.name === "Nord-Süd-Trail 2027"
+  const existing = tours.find(
+    (tour) => tour.id === "nst-2027" || tour.name === "Nord-Süd-Trail 2027"
   );
 
   const defaults = {
@@ -144,25 +153,28 @@ export async function seedDefaultTour() {
 }
 
 export async function saveTrack(track) {
-  return withStore(TRACKS_STORE, "readwrite", (store) => store.put(track));
+  await runRequest(
+    TRACKS_STORE,
+    "readwrite",
+    (store) => store.put(track)
+  );
 }
 
 export async function getTrack(tourId) {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(TRACKS_STORE, "readonly");
-    const request = transaction.objectStore(TRACKS_STORE).get(tourId);
-
-    request.onsuccess = () => resolve(request.result || null);
-    request.onerror = () => reject(request.error);
-  });
+  return await runRequest(
+    TRACKS_STORE,
+    "readonly",
+    (store) => store.get(tourId)
+  ) || null;
 }
 
 export async function deleteTrack(tourId) {
-  return withStore(TRACKS_STORE, "readwrite", (store) => store.delete(tourId));
+  await runRequest(
+    TRACKS_STORE,
+    "readwrite",
+    (store) => store.delete(tourId)
+  );
 }
-
 
 export async function getStagesForTour(tourId) {
   const db = await openDatabase();
@@ -170,7 +182,7 @@ export async function getStagesForTour(tourId) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STAGES_STORE, "readonly");
     const index = transaction.objectStore(STAGES_STORE).index("tourId");
-    const request = index.getAll(tourId);
+    const request = index.getAll(IDBKeyRange.only(tourId));
 
     request.onsuccess = () => {
       const stages = request.result || [];
@@ -179,11 +191,16 @@ export async function getStagesForTour(tourId) {
     };
 
     request.onerror = () => reject(request.error);
+    transaction.onabort = () => reject(transaction.error);
   });
 }
 
 export async function saveStage(stage) {
-  return withStore(STAGES_STORE, "readwrite", (store) => store.put(stage));
+  await runRequest(
+    STAGES_STORE,
+    "readwrite",
+    (store) => store.put(stage)
+  );
 }
 
 export async function saveStages(stages) {
@@ -193,15 +210,22 @@ export async function saveStages(stages) {
     const transaction = db.transaction(STAGES_STORE, "readwrite");
     const store = transaction.objectStore(STAGES_STORE);
 
-    stages.forEach((stage) => store.put(stage));
+    for (const stage of stages) {
+      store.put(stage);
+    }
 
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
   });
 }
 
 export async function deleteStage(id) {
-  return withStore(STAGES_STORE, "readwrite", (store) => store.delete(id));
+  await runRequest(
+    STAGES_STORE,
+    "readwrite",
+    (store) => store.delete(id)
+  );
 }
 
 export async function deleteStagesForTour(tourId) {
@@ -212,9 +236,12 @@ export async function deleteStagesForTour(tourId) {
     const transaction = db.transaction(STAGES_STORE, "readwrite");
     const store = transaction.objectStore(STAGES_STORE);
 
-    stages.forEach((stage) => store.delete(stage.id));
+    for (const stage of stages) {
+      store.delete(stage.id);
+    }
 
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
   });
 }
