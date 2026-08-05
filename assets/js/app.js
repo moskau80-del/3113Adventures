@@ -10,10 +10,10 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4030";
+} from "./database.js?v=4040";
 
-import { loadLanguage, translate } from "./i18n.js?v=4030";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4030";
+import { loadLanguage, translate } from "./i18n.js?v=4040";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4040";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -23,6 +23,9 @@ const settingsStatus = document.getElementById("settingsStatus");
 const databaseStatus = document.getElementById("databaseStatus");
 const tourDialog = document.getElementById("tourDialog");
 const tourForm = document.getElementById("tourForm");
+let map = null;
+let trackLayer = null;
+let userMarker = null;
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -33,6 +36,16 @@ navButtons.forEach((button) => {
     pages.forEach((page) => {
       page.classList.toggle("active", page.id === button.dataset.page);
     });
+
+    if (button.dataset.page === "map") {
+      setTimeout(async () => {
+        initMap();
+        if (map) {
+          map.invalidateSize();
+          await renderMapTrack();
+        }
+      }, 100);
+    }
   });
 });
 
@@ -144,6 +157,9 @@ tourForm?.addEventListener("submit", async (event) => {
   tourDialog.close();
   await renderTours();
   await renderGpx();
+  if (document.getElementById('map').classList.contains('active')) {
+    await renderMapTrack();
+  }
 });
 
 document.getElementById("tourList")?.addEventListener("click", async (event) => {
@@ -180,7 +196,71 @@ document.getElementById("tourList")?.addEventListener("click", async (event) => 
 
   await renderTours();
   await renderGpx();
+  if (document.getElementById('map').classList.contains('active')) {
+    await renderMapTrack();
+  }
 });
+
+
+function initMap() {
+  if (map) return true;
+
+  const canvas = document.getElementById("mapCanvas");
+
+  if (!window.L) {
+    canvas.innerHTML = `<div class="map-empty">${translate(
+      "map.noLibrary",
+      "Die Kartenbibliothek konnte nicht geladen werden."
+    )}</div>`;
+    return false;
+  }
+
+  map = L.map("mapCanvas", {
+    zoomControl: true
+  }).setView([51.2, 10.4], 6);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap-Mitwirkende"
+  }).addTo(map);
+
+  trackLayer = L.layerGroup().addTo(map);
+  return true;
+}
+
+async function renderMapTrack() {
+  if (!initMap()) return;
+
+  trackLayer.clearLayers();
+
+  const activeTour = await getActiveTour();
+
+  if (!activeTour) return;
+
+  const track = await getTrack(activeTour.id);
+
+  if (!track?.points?.length) return;
+
+  const coordinates = track.points.map((point) => [point.lat, point.lng]);
+  const line = L.polyline(coordinates, {
+    weight: 4
+  }).addTo(trackLayer);
+
+  const first = track.points[0];
+  const last = track.points.at(-1);
+
+  L.marker([first.lat, first.lng])
+    .addTo(trackLayer)
+    .bindPopup(`<div class="map-popup"><strong>${translate("gpx.start", "Start")}</strong>${first.lat.toFixed(5)}, ${first.lng.toFixed(5)}</div>`);
+
+  L.marker([last.lat, last.lng])
+    .addTo(trackLayer)
+    .bindPopup(`<div class="map-popup"><strong>${translate("gpx.end", "Ziel")}</strong>${last.lat.toFixed(5)}, ${last.lng.toFixed(5)}</div>`);
+
+  map.fitBounds(line.getBounds(), {
+    padding: [20, 20]
+  });
+}
 
 async function renderGpx() {
   const activeTour = await getActiveTour();
@@ -239,6 +319,7 @@ document.getElementById("gpxInput")?.addEventListener("change", async (event) =>
     });
 
     await renderGpx();
+    await renderMapTrack();
   } catch (error) {
     alert(error.message);
   }
@@ -271,7 +352,45 @@ document.getElementById("deleteGpxBtn")?.addEventListener("click", async () => {
   if (confirm(translate("gpx.confirmDelete", "GPX-Track wirklich löschen?"))) {
     await deleteTrack(activeTour.id);
     await renderGpx();
+    if (trackLayer) trackLayer.clearLayers();
   }
+});
+
+
+document.getElementById("showWholeTrackBtn")?.addEventListener("click", async () => {
+  await renderMapTrack();
+});
+
+document.getElementById("locateBtn")?.addEventListener("click", () => {
+  if (!initMap()) return;
+
+  if (!navigator.geolocation) {
+    alert("Geolocation wird von diesem Gerät nicht unterstützt.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const coordinates = [
+        position.coords.latitude,
+        position.coords.longitude
+      ];
+
+      if (userMarker) {
+        userMarker.remove();
+      }
+
+      userMarker = L.marker(coordinates)
+        .addTo(map)
+        .bindPopup("Meine Position")
+        .openPopup();
+
+      map.setView(coordinates, 14);
+    },
+    () => {
+      alert("Position konnte nicht bestimmt werden.");
+    }
+  );
 });
 
 async function initialize() {
@@ -295,6 +414,9 @@ async function initialize() {
 
   await renderTours();
   await renderGpx();
+  if (document.getElementById('map').classList.contains('active')) {
+    await renderMapTrack();
+  }
 }
 
 document.getElementById("saveSettings")?.addEventListener("click", async () => {
@@ -310,6 +432,9 @@ document.getElementById("saveSettings")?.addEventListener("click", async () => {
 
   await renderTours();
   await renderGpx();
+  if (document.getElementById('map').classList.contains('active')) {
+    await renderMapTrack();
+  }
 });
 
 document.getElementById("refreshApp")?.addEventListener("click", async () => {
@@ -329,12 +454,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4030";
+  window.location.href = "./?v=4040";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4030");
+    navigator.serviceWorker.register("sw.js?v=4040");
   });
 }
 

@@ -9,7 +9,7 @@
   },
   "dashboard": {
     "subtitle": "Die neue modulare PWA-Grundlage ist aktiv.",
-    "sprintText": "Tourenverwaltung, GPX-Import und lokale Datenbank sind aktiv.",
+    "sprintText": "Tourenverwaltung, GPX-Import, Karte und lokale Datenbank sind aktiv.",
     "currentTour": "Aktuelle Tour",
     "noTour": "Noch keine Tour ausgewählt."
   },
@@ -72,5 +72,12 @@
     "previewEmpty": "Nach dem Import erscheint hier eine einfache Trackvorschau.",
     "imported": "GPX-Track importiert.",
     "confirmDelete": "GPX-Track wirklich löschen?"
+  },
+  "map": {
+    "subtitle": "Zeigt den importierten GPX-Track der aktiven Tour.",
+    "wholeTrack": "Gesamtroute anzeigen",
+    "locate": "Meine Position",
+    "noLibrary": "Die Kartenbibliothek konnte nicht geladen werden.",
+    "noTrack": "Importiere zuerst einen GPX-Track."
   }
 }

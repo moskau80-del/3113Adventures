@@ -9,7 +9,7 @@
   },
   "dashboard": {
     "subtitle": "The new modular PWA foundation is active.",
-    "sprintText": "Tour management, GPX import and the local database are active.",
+    "sprintText": "Tour management, GPX import, map and local database are active.",
     "currentTour": "Current tour",
     "noTour": "No tour selected."
   },
@@ -72,5 +72,12 @@
     "previewEmpty": "A simple track preview will appear after import.",
     "imported": "GPX track imported.",
     "confirmDelete": "Delete GPX track?"
+  },
+  "map": {
+    "subtitle": "Shows the imported GPX track for the active tour.",
+    "wholeTrack": "Show full route",
+    "locate": "My location",
+    "noLibrary": "The map library could not be loaded.",
+    "noTrack": "Import a GPX track first."
   }
 }
