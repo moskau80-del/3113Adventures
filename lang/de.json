@@ -1,1 +1,40 @@
-
+{
+  "nav": {
+    "dashboard": "Übersicht",
+    "tours": "Touren",
+    "stages": "Etappen",
+    "map": "Karte",
+    "places": "Orte",
+    "settings": "Einstellungen"
+  },
+  "dashboard": {
+    "subtitle": "Die neue modulare PWA-Grundlage ist aktiv.",
+    "sprintText": "Layout, Navigation, PWA-Manifest und Offline-Cache sind eingerichtet."
+  },
+  "pages": {
+    "toursTitle": "Touren",
+    "toursText": "Folgt in Sprint 2.",
+    "stagesTitle": "Etappen",
+    "stagesText": "Folgt später.",
+    "mapTitle": "Karte",
+    "mapText": "Folgt später.",
+    "placesTitle": "Orte",
+    "placesText": "Folgt später."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "appearance": "Darstellung",
+    "system": "System",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "save": "Speichern",
+    "refresh": "App-Dateien aktualisieren",
+    "saved": "Einstellungen gespeichert."
+  },
+  "database": {
+    "title": "Lokale Datenbank",
+    "text": "IndexedDB ist vorbereitet und speichert Einstellungen lokal auf diesem Gerät.",
+    "ready": "IndexedDB ist bereit."
+  }
+}

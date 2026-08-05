@@ -1,1 +1,40 @@
-
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tours": "Tours",
+    "stages": "Stages",
+    "map": "Map",
+    "places": "Places",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "subtitle": "The new modular PWA foundation is active.",
+    "sprintText": "Layout, navigation, PWA manifest and offline cache are configured."
+  },
+  "pages": {
+    "toursTitle": "Tours",
+    "toursText": "Coming in Sprint 2.",
+    "stagesTitle": "Stages",
+    "stagesText": "Coming later.",
+    "mapTitle": "Map",
+    "mapText": "Coming later.",
+    "placesTitle": "Places",
+    "placesText": "Coming later."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "appearance": "Appearance",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "save": "Save",
+    "refresh": "Refresh app files",
+    "saved": "Settings saved."
+  },
+  "database": {
+    "title": "Local database",
+    "text": "IndexedDB is prepared and stores settings locally on this device.",
+    "ready": "IndexedDB is ready."
+  }
+}
