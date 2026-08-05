@@ -109,7 +109,7 @@
     "walkingTime": "Walking time",
     "saving": "Saving stages …",
     "savedVerified": "Stages saved and verified.",
-    "loaded": "Stages loaded from IndexedDB.",
+    "loaded": "Stages loaded from local storage.",
     "saveFailed": "Stages could not be saved."
   }
 }

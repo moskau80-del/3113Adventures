@@ -16,11 +16,11 @@ import {
   deleteStage,
   deleteStagesForTour,
   compactStagesForTour
-} from "./database.js?v=40512";
+} from "./database.js?v=40513";
 
-import { loadLanguage, translate } from "./i18n.js?v=40512";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40512";
-import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=40512";
+import { loadLanguage, translate } from "./i18n.js?v=40513";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40513";
+import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=40513";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -454,7 +454,7 @@ async function renderStages() {
 
   if (!generatorStatus.textContent || generatorStatus.textContent.includes("Noch keine")) {
     generatorStatus.textContent = stages.length
-      ? `${stages.length} Etappen aus IndexedDB geladen.`
+      ? `${stages.length} Etappen aus dem lokalen Speicher geladen.`
       : translate("stages.noStages", "Noch keine Etappen vorhanden.");
   }
 
@@ -546,12 +546,15 @@ async function generateStages() {
 
   try {
     status.textContent = "Etappen werden gespeichert …";
-    await saveStages(stages);
-
+    const saveResult = await saveStages(stages);
     const verifiedStages = await getStagesForTour(activeTour.id);
 
+    const locations = [];
+    if (saveResult?.indexedDbWritten) locations.push("IndexedDB");
+    if (saveResult?.backupWritten) locations.push("lokales Backup");
+
     status.textContent =
-      `${verifiedStages.length} Etappen erfolgreich in IndexedDB gespeichert und geprüft.`;
+      `${verifiedStages.length} Etappen gespeichert und geprüft (${locations.join(" + ")}).`;
 
     await renderStages();
   } catch (error) {
@@ -600,7 +603,7 @@ document.getElementById("stageList")?.addEventListener("click", async (event) =>
   }
 
   if (deleteId && confirm(translate("stages.confirmDelete", "Etappe wirklich löschen?"))) {
-    await deleteStage(deleteId);
+    await deleteStage(deleteId, activeTour.id);
 
     const remaining = await getStagesForTour(activeTour.id);
     for (let index = 0; index < remaining.length; index++) {
@@ -719,12 +722,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40512";
+  window.location.href = "./?v=40513";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40512");
+    navigator.serviceWorker.register("sw.js?v=40513");
   });
 }
 

@@ -1,19 +1,21 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 5.1.2
+# 3113 Adventures – Version 4.0.0 / Sprint 5.1.3
 
-## Speicherfehler behoben
+## Doppelte Etappensicherung
 
-- GPX-Teilstrecken werden nicht mehr in jeder Etappe dupliziert.
-- Dadurch sinkt die Datenmenge der Etappen stark.
-- Nach dem Speichern liest die App alle Etappen erneut aus IndexedDB.
-- Eine Erfolgsmeldung erscheint nur, wenn die Anzahl wirklich stimmt.
-- Bei einem Fehler wird die konkrete Fehlermeldung angezeigt.
-- Alte, grosse Etappendatensätze werden beim Start automatisch komprimiert.
+- Etappen werden in IndexedDB gespeichert.
+- Zusätzlich wird eine unabhängige Sicherung in localStorage angelegt.
+- Beim App-Start werden beide Speicher geprüft.
+- Fehlen Etappen in IndexedDB, werden sie automatisch aus dem Backup wiederhergestellt.
+- Bearbeiten und Löschen aktualisieren beide Speicher.
+- Die Erfolgsmeldung nennt die tatsächlich verwendeten Speicher.
 
 ## Test
 
 1. Etappen neu erzeugen.
-2. Warten, bis „erfolgreich in IndexedDB gespeichert und geprüft“ erscheint.
-3. App neu laden.
-4. Es muss „Etappen aus IndexedDB geladen“ erscheinen.
+2. Es muss `IndexedDB`, `lokales Backup` oder beides in der Meldung stehen.
+3. Seite mit derselben Branch-Deploy-Adresse neu laden.
+4. Die Etappen müssen erneut erscheinen.
 
-Oben rechts muss `v4.0.0 · Sprint 5.1.2` stehen.
+Wichtig: Immer dieselbe stabile Branch-Adresse verwenden, nicht eine wechselnde Deploy-Preview-Adresse.
+
+Oben rechts muss `v4.0.0 · Sprint 5.1.3` stehen.

@@ -108,8 +108,8 @@
     "confirmDelete": "Etappe wirklich löschen?",
     "walkingTime": "Gehzeit",
     "saving": "Etappen werden gespeichert …",
-    "savedVerified": "Etappen erfolgreich gespeichert und geprüft.",
-    "loaded": "Etappen aus IndexedDB geladen.",
+    "savedVerified": "Etappen gespeichert und geprüft.",
+    "loaded": "Etappen aus dem lokalen Speicher geladen.",
     "saveFailed": "Etappen konnten nicht gespeichert werden."
   }
 }
