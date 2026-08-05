@@ -9,11 +9,13 @@
   },
   "dashboard": {
     "subtitle": "The new modular PWA foundation is active.",
-    "sprintText": "Layout, navigation, PWA manifest and offline cache are configured."
+    "sprintText": "Tour management and the local database are active.",
+    "currentTour": "Current tour",
+    "noTour": "No tour selected."
   },
   "pages": {
     "toursTitle": "Tours",
-    "toursText": "Coming in Sprint 2.",
+    "toursText": "Manage your long-distance hikes.",
     "stagesTitle": "Stages",
     "stagesText": "Coming later.",
     "mapTitle": "Map",
@@ -36,5 +38,22 @@
     "title": "Local database",
     "text": "IndexedDB is prepared and stores settings locally on this device.",
     "ready": "IndexedDB is ready."
+  },
+  "tours": {
+    "add": "+ Tour",
+    "dialogTitle": "Tour",
+    "name": "Name",
+    "description": "Description",
+    "start": "Start date",
+    "target": "Target date",
+    "distance": "Total distance km",
+    "active": "Use as active tour",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "activate": "Activate",
+    "activeLabel": "Active tour",
+    "noTours": "No tours yet.",
+    "confirmDelete": "Delete this tour?"
   }
 }

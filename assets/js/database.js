@@ -1,37 +1,10 @@
-const DB_NAME="3113AdventuresDB";
-const DB_VERSION=1;
-const SETTINGS_STORE="settings";
-
-export function openDatabase(){
-  return new Promise((resolve,reject)=>{
-    const request=indexedDB.open(DB_NAME,DB_VERSION);
-    request.onupgradeneeded=()=>{
-      const db=request.result;
-      if(!db.objectStoreNames.contains(SETTINGS_STORE)){
-        db.createObjectStore(SETTINGS_STORE,{keyPath:"key"});
-      }
-    };
-    request.onsuccess=()=>resolve(request.result);
-    request.onerror=()=>reject(request.error);
-  });
-}
-
-export async function getSetting(key,fallback=null){
-  const db=await openDatabase();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(SETTINGS_STORE,"readonly");
-    const request=tx.objectStore(SETTINGS_STORE).get(key);
-    request.onsuccess=()=>resolve(request.result?.value ?? fallback);
-    request.onerror=()=>reject(request.error);
-  });
-}
-
-export async function setSetting(key,value){
-  const db=await openDatabase();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(SETTINGS_STORE,"readwrite");
-    tx.objectStore(SETTINGS_STORE).put({key,value});
-    tx.oncomplete=()=>resolve();
-    tx.onerror=()=>reject(tx.error);
-  });
-}
+const DB_NAME="3113AdventuresDB";const DB_VERSION=2;const SETTINGS_STORE="settings";const TOURS_STORE="tours";
+export function openDatabase(){return new Promise((resolve,reject)=>{const request=indexedDB.open(DB_NAME,DB_VERSION);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(SETTINGS_STORE))db.createObjectStore(SETTINGS_STORE,{keyPath:"key"});if(!db.objectStoreNames.contains(TOURS_STORE)){const store=db.createObjectStore(TOURS_STORE,{keyPath:"id"});store.createIndex("active","active",{unique:false});store.createIndex("name","name",{unique:false});}};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}
+function withStore(storeName,mode,callback){return openDatabase().then(db=>new Promise((resolve,reject)=>{const tx=db.transaction(storeName,mode);const store=tx.objectStore(storeName);const req=callback(store);tx.oncomplete=()=>resolve(req?.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);}));}
+export async function getSetting(key,fallback=null){const db=await openDatabase();return new Promise((resolve,reject)=>{const tx=db.transaction(SETTINGS_STORE,"readonly");const req=tx.objectStore(SETTINGS_STORE).get(key);req.onsuccess=()=>resolve(req.result?.value??fallback);req.onerror=()=>reject(req.error);});}
+export async function setSetting(key,value){return withStore(SETTINGS_STORE,"readwrite",store=>store.put({key,value}));}
+export async function getAllTours(){const db=await openDatabase();return new Promise((resolve,reject)=>{const tx=db.transaction(TOURS_STORE,"readonly");const req=tx.objectStore(TOURS_STORE).getAll();req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);});}
+export async function saveTour(tour){if(tour.active){const tours=await getAllTours();for(const item of tours.filter(x=>x.id!==tour.id&&x.active))await withStore(TOURS_STORE,"readwrite",s=>s.put({...item,active:false}));}return withStore(TOURS_STORE,"readwrite",s=>s.put(tour));}
+export async function deleteTour(id){return withStore(TOURS_STORE,"readwrite",s=>s.delete(id));}
+export async function getActiveTour(){const tours=await getAllTours();return tours.find(t=>t.active)||null;}
+export async function seedDefaultTour(){const tours=await getAllTours();if(tours.length)return;await saveTour({id:"nst-2027",name:"Nord-Süd-Trail 2027",description:"Offizieller Nord-Süd-Trail von Sylt bis zum Haldenwanger Eck.",startDate:"2027-03-27",targetDate:"2027-08-13",distanceKm:3700,active:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});}

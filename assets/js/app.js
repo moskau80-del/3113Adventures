@@ -1,70 +1,12 @@
-import {openDatabase,getSetting,setSetting} from "./database.js?v=4012";
-import {loadLanguage,translate} from "./i18n.js?v=4012";
-
-const navButtons=document.querySelectorAll(".main-nav button");
-const pages=document.querySelectorAll(".page");
-const languageSelect=document.getElementById("languageSelect");
-const themeSelect=document.getElementById("themeSelect");
-const settingsStatus=document.getElementById("settingsStatus");
-const databaseStatus=document.getElementById("databaseStatus");
-
-navButtons.forEach((button)=>{
-  button.addEventListener("click",()=>{
-    navButtons.forEach((item)=>item.classList.toggle("active",item===button));
-    pages.forEach((page)=>page.classList.toggle("active",page.id===button.dataset.page));
-  });
-});
-
-function applyTheme(theme){
-  if(theme==="system"){
-    const dark=window.matchMedia("(prefers-color-scheme: dark)").matches;
-    document.documentElement.dataset.theme=dark?"dark":"light";
-  }else{
-    document.documentElement.dataset.theme=theme;
-  }
-}
-
-async function initialize(){
-  try{
-    await openDatabase();
-    databaseStatus.textContent=translate("database.ready","IndexedDB ist bereit.");
-  }catch(error){
-    databaseStatus.textContent=`IndexedDB-Fehler: ${error.message}`;
-  }
-
-  const language=await getSetting("language","de");
-  const theme=await getSetting("theme","system");
-  languageSelect.value=language;
-  themeSelect.value=theme;
-  await loadLanguage(language);
-  applyTheme(theme);
-  databaseStatus.textContent=translate("database.ready","IndexedDB ist bereit.");
-}
-
-document.getElementById("saveSettings")?.addEventListener("click",async()=>{
-  const language=languageSelect.value;
-  const theme=themeSelect.value;
-  await setSetting("language",language);
-  await setSetting("theme",theme);
-  await loadLanguage(language);
-  applyTheme(theme);
-  settingsStatus.textContent=translate("settings.saved","Einstellungen gespeichert.");
-});
-
-document.getElementById("refreshApp")?.addEventListener("click",async()=>{
-  if("serviceWorker"in navigator){
-    for(const registration of await navigator.serviceWorker.getRegistrations()){
-      await registration.unregister();
-    }
-  }
-  if("caches"in window){
-    for(const name of await caches.keys()) await caches.delete(name);
-  }
-  location.href="./?v=4012";
-});
-
-if("serviceWorker"in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=4012"));
-}
-
-initialize();
+import{openDatabase,getSetting,setSetting,getAllTours,saveTour,deleteTour,getActiveTour,seedDefaultTour}from"./database.js?v=4020";import{loadLanguage,translate}from"./i18n.js?v=4020";
+const navButtons=document.querySelectorAll(".main-nav button"),pages=document.querySelectorAll(".page"),languageSelect=document.getElementById("languageSelect"),themeSelect=document.getElementById("themeSelect"),settingsStatus=document.getElementById("settingsStatus"),databaseStatus=document.getElementById("databaseStatus"),tourDialog=document.getElementById("tourDialog"),tourForm=document.getElementById("tourForm");
+navButtons.forEach(button=>button.addEventListener("click",()=>{navButtons.forEach(item=>item.classList.toggle("active",item===button));pages.forEach(page=>page.classList.toggle("active",page.id===button.dataset.page));}));document.querySelectorAll("[data-close]").forEach(button=>button.addEventListener("click",()=>document.getElementById(button.dataset.close)?.close()));
+function applyTheme(theme){if(theme==="system")document.documentElement.dataset.theme=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";else document.documentElement.dataset.theme=theme;}
+function formatDate(value){if(!value)return"–";return new Intl.DateTimeFormat(document.documentElement.lang==="en"?"en-GB":"de-CH").format(new Date(value+"T12:00:00"));}
+function esc(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);}
+async function renderTours(){const tours=(await getAllTours()).sort((a,b)=>a.name.localeCompare(b.name)),container=document.getElementById("tourList");container.innerHTML=tours.length?tours.map(t=>`<article class="tour-card ${t.active?"active-tour":""}"><h3>${esc(t.name)}</h3>${t.active?`<span class="pill">${translate("tours.activeLabel","Aktive Tour")}</span>`:""}<div class="tour-meta"><span class="pill">${formatDate(t.startDate)} → ${formatDate(t.targetDate)}</span><span class="pill">${Number(t.distanceKm||0).toFixed(1)} km</span></div><p>${esc(t.description||"")}</p><div class="card-actions">${t.active?"":`<button data-activate-tour="${t.id}">${translate("tours.activate","Aktivieren")}</button>`}<button data-edit-tour="${t.id}">${translate("tours.edit","Bearbeiten")}</button><button class="danger" data-delete-tour="${t.id}">${translate("tours.delete","Löschen")}</button></div></article>`).join(""):`<div class="empty">${translate("tours.noTours","Noch keine Touren vorhanden.")}</div>`;const active=await getActiveTour(),dash=document.getElementById("currentTourCard");dash.innerHTML=active?`<strong>${esc(active.name)}</strong><p>${formatDate(active.startDate)} → ${formatDate(active.targetDate)}</p><p>${Number(active.distanceKm||0).toFixed(1)} km</p>`:translate("dashboard.noTour","Noch keine Tour ausgewählt.");}
+function openTour(t={}){tourId.value=t.id||"";tourName.value=t.name||"";tourDescription.value=t.description||"";tourStart.value=t.startDate||"";tourTarget.value=t.targetDate||"";tourDistance.value=t.distanceKm??"";tourActive.checked=!!t.active;tourDialog.showModal();}
+addTourBtn?.addEventListener("click",()=>openTour());tourForm?.addEventListener("submit",async e=>{e.preventDefault();const now=new Date().toISOString(),id=tourId.value||`tour-${Date.now()}`;await saveTour({id,name:tourName.value.trim(),description:tourDescription.value.trim(),startDate:tourStart.value,targetDate:tourTarget.value,distanceKm:Number(tourDistance.value||0),active:tourActive.checked,createdAt:now,updatedAt:now});tourDialog.close();await renderTours();});
+tourList?.addEventListener("click",async e=>{const activate=e.target.dataset.activateTour,edit=e.target.dataset.editTour,remove=e.target.dataset.deleteTour,tours=await getAllTours();if(activate){const t=tours.find(x=>x.id===activate);if(t)await saveTour({...t,active:true,updatedAt:new Date().toISOString()});}if(edit){const t=tours.find(x=>x.id===edit);if(t)openTour(t);return;}if(remove&&confirm(translate("tours.confirmDelete","Tour wirklich löschen?")))await deleteTour(remove);await renderTours();});
+async function initialize(){try{await openDatabase();await seedDefaultTour();}catch(error){databaseStatus.textContent=`IndexedDB-Fehler: ${error.message}`;}const language=await getSetting("language","de"),theme=await getSetting("theme","system");languageSelect.value=language;themeSelect.value=theme;await loadLanguage(language);applyTheme(theme);databaseStatus.textContent=translate("database.ready","IndexedDB ist bereit.");await renderTours();}
+saveSettings?.addEventListener("click",async()=>{const language=languageSelect.value,theme=themeSelect.value;await setSetting("language",language);await setSetting("theme",theme);await loadLanguage(language);applyTheme(theme);settingsStatus.textContent=translate("settings.saved","Einstellungen gespeichert.");await renderTours();});refreshApp?.addEventListener("click",async()=>{if("serviceWorker"in navigator)for(const registration of await navigator.serviceWorker.getRegistrations())await registration.unregister();if("caches"in window)for(const name of await caches.keys())await caches.delete(name);location.href="./?v=4020";});if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=4020"));initialize();

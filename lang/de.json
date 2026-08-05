@@ -9,11 +9,13 @@
   },
   "dashboard": {
     "subtitle": "Die neue modulare PWA-Grundlage ist aktiv.",
-    "sprintText": "Layout, Navigation, PWA-Manifest und Offline-Cache sind eingerichtet."
+    "sprintText": "Tourenverwaltung und lokale Datenbank sind aktiv.",
+    "currentTour": "Aktuelle Tour",
+    "noTour": "Noch keine Tour ausgewählt."
   },
   "pages": {
     "toursTitle": "Touren",
-    "toursText": "Folgt in Sprint 2.",
+    "toursText": "Verwalte deine Fernwanderungen.",
     "stagesTitle": "Etappen",
     "stagesText": "Folgt später.",
     "mapTitle": "Karte",
@@ -36,5 +38,22 @@
     "title": "Lokale Datenbank",
     "text": "IndexedDB ist vorbereitet und speichert Einstellungen lokal auf diesem Gerät.",
     "ready": "IndexedDB ist bereit."
+  },
+  "tours": {
+    "add": "+ Tour",
+    "dialogTitle": "Tour",
+    "name": "Name",
+    "description": "Beschreibung",
+    "start": "Startdatum",
+    "target": "Zieldatum",
+    "distance": "Gesamtdistanz km",
+    "active": "Als aktive Tour verwenden",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "activate": "Aktivieren",
+    "activeLabel": "Aktive Tour",
+    "noTours": "Noch keine Touren vorhanden.",
+    "confirmDelete": "Tour wirklich löschen?"
   }
 }

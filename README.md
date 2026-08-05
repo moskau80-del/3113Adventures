@@ -1,11 +1,5 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 1.2
+# 3113 Adventures – Version 4.0.0 / Sprint 2.0
 
-## Neu
-- Deutsch und Englisch
-- Hell, Dunkel und Systemdarstellung
-- IndexedDB-Grundlage
-- lokale Speicherung der Einstellungen
-- modularer JavaScript-Aufbau
-
-## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 1.2` stehen.
+- Tourenverwaltung mit IndexedDB
+- Nord-Süd-Trail 2027 vorinstalliert
+- Touren erstellen, bearbeiten, aktivieren und löschen
