@@ -14,12 +14,13 @@ import {
   saveStage,
   saveStages,
   deleteStage,
-  deleteStagesForTour
-} from "./database.js?v=40511";
+  deleteStagesForTour,
+  compactStagesForTour
+} from "./database.js?v=40512";
 
-import { loadLanguage, translate } from "./i18n.js?v=40511";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40511";
-import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=40511";
+import { loadLanguage, translate } from "./i18n.js?v=40512";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40512";
+import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=40512";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -169,6 +170,7 @@ tourForm?.addEventListener("submit", async (event) => {
   const activeTour = await getActiveTour();
   if (activeTour) {
     document.getElementById("stageStartDate").value = activeTour.startDate || "";
+    await compactStagesForTour(activeTour.id);
   }
 
   await renderStages();
@@ -215,6 +217,7 @@ document.getElementById("tourList")?.addEventListener("click", async (event) => 
   const activeTour = await getActiveTour();
   if (activeTour) {
     document.getElementById("stageStartDate").value = activeTour.startDate || "";
+    await compactStagesForTour(activeTour.id);
   }
 
   await renderStages();
@@ -449,9 +452,11 @@ async function renderStages() {
     ? `${Math.min(...distances).toFixed(1)} km`
     : "0 km";
 
-  generatorStatus.textContent = stages.length
-    ? `${stages.length} ${translate("stages.count", "Etappen")} · lokal gespeichert`
-    : translate("stages.noStages", "Noch keine Etappen vorhanden.");
+  if (!generatorStatus.textContent || generatorStatus.textContent.includes("Noch keine")) {
+    generatorStatus.textContent = stages.length
+      ? `${stages.length} Etappen aus IndexedDB geladen.`
+      : translate("stages.noStages", "Noch keine Etappen vorhanden.");
+  }
 
   container.innerHTML = stages.length
     ? stages.map((stage) => `
@@ -529,7 +534,7 @@ async function generateStages() {
       walkingHours: estimateWalkingHours(statistics.distanceKm, statistics.ascentM),
       startCoord,
       endCoord,
-      trackPoints: points,
+      pointCount: points.length,
       completed: false,
       notes: "",
       createdAt: new Date().toISOString(),
@@ -537,12 +542,23 @@ async function generateStages() {
     };
   });
 
-  await saveStages(stages);
+  const status = document.getElementById("stageGeneratorStatus");
 
-  document.getElementById("stageGeneratorStatus").textContent =
-    `${stages.length} ${translate("stages.generated", "Etappen wurden erzeugt.")}`;
+  try {
+    status.textContent = "Etappen werden gespeichert …";
+    await saveStages(stages);
 
-  await renderStages();
+    const verifiedStages = await getStagesForTour(activeTour.id);
+
+    status.textContent =
+      `${verifiedStages.length} Etappen erfolgreich in IndexedDB gespeichert und geprüft.`;
+
+    await renderStages();
+  } catch (error) {
+    console.error("Etappenspeicherung fehlgeschlagen:", error);
+    status.textContent = `Speichern fehlgeschlagen: ${error.message}`;
+    alert(`Etappen konnten nicht gespeichert werden: ${error.message}`);
+  }
 }
 
 function openStageDialog(stage) {
@@ -651,6 +667,7 @@ async function initialize() {
   const activeTour = await getActiveTour();
   if (activeTour) {
     document.getElementById("stageStartDate").value = activeTour.startDate || "";
+    await compactStagesForTour(activeTour.id);
   }
 
   await renderStages();
@@ -676,6 +693,7 @@ document.getElementById("saveSettings")?.addEventListener("click", async () => {
   const activeTour = await getActiveTour();
   if (activeTour) {
     document.getElementById("stageStartDate").value = activeTour.startDate || "";
+    await compactStagesForTour(activeTour.id);
   }
 
   await renderStages();
@@ -701,12 +719,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40511";
+  window.location.href = "./?v=40512";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40511");
+    navigator.serviceWorker.register("sw.js?v=40512");
   });
 }
 

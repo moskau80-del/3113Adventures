@@ -1,16 +1,19 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 5.1.1
+# 3113 Adventures – Version 4.0.0 / Sprint 5.1.2
 
-## Fehlerkorrekturen
-- Etappen werden zuverlässig in IndexedDB gespeichert.
-- Etappen werden nach dem Neuladen automatisch geladen.
-- Bearbeitungen bleiben erhalten.
-- Gelöschte Etappen werden dauerhaft entfernt.
-- Etappen bleiben eindeutig der aktiven Tour zugeordnet.
-- GPX-, Touren-, Karten- und Spracheinstellungen bleiben erhalten.
+## Speicherfehler behoben
+
+- GPX-Teilstrecken werden nicht mehr in jeder Etappe dupliziert.
+- Dadurch sinkt die Datenmenge der Etappen stark.
+- Nach dem Speichern liest die App alle Etappen erneut aus IndexedDB.
+- Eine Erfolgsmeldung erscheint nur, wenn die Anzahl wirklich stimmt.
+- Bei einem Fehler wird die konkrete Fehlermeldung angezeigt.
+- Alte, grosse Etappendatensätze werden beim Start automatisch komprimiert.
 
 ## Test
-1. Etappen erzeugen.
-2. App neu laden.
-3. Etappen müssen weiterhin sichtbar sein.
 
-Oben rechts muss `v4.0.0 · Sprint 5.1.1` stehen.
+1. Etappen neu erzeugen.
+2. Warten, bis „erfolgreich in IndexedDB gespeichert und geprüft“ erscheint.
+3. App neu laden.
+4. Es muss „Etappen aus IndexedDB geladen“ erscheinen.
+
+Oben rechts muss `v4.0.0 · Sprint 5.1.2` stehen.

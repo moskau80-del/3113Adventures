@@ -106,6 +106,10 @@
     "noTrack": "Für die aktive Tour ist noch kein GPX-Track vorhanden.",
     "confirmDeleteAll": "Alle Etappen der aktiven Tour löschen?",
     "confirmDelete": "Etappe wirklich löschen?",
-    "walkingTime": "Gehzeit"
+    "walkingTime": "Gehzeit",
+    "saving": "Etappen werden gespeichert …",
+    "savedVerified": "Etappen erfolgreich gespeichert und geprüft.",
+    "loaded": "Etappen aus IndexedDB geladen.",
+    "saveFailed": "Etappen konnten nicht gespeichert werden."
   }
 }

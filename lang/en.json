@@ -106,6 +106,10 @@
     "noTrack": "The active tour has no GPX track yet.",
     "confirmDeleteAll": "Delete all stages for the active tour?",
     "confirmDelete": "Delete this stage?",
-    "walkingTime": "Walking time"
+    "walkingTime": "Walking time",
+    "saving": "Saving stages …",
+    "savedVerified": "Stages saved and verified.",
+    "loaded": "Stages loaded from IndexedDB.",
+    "saveFailed": "Stages could not be saved."
   }
 }

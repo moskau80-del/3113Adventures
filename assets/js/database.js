@@ -1,5 +1,5 @@
 const DB_NAME = "3113AdventuresDB";
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 const SETTINGS_STORE = "settings";
 const TOURS_STORE = "tours";
 const TRACKS_STORE = "tracks";
@@ -206,18 +206,29 @@ export async function saveStage(stage) {
 export async function saveStages(stages) {
   const db = await openDatabase();
 
-  return new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     const transaction = db.transaction(STAGES_STORE, "readwrite");
     const store = transaction.objectStore(STAGES_STORE);
 
     for (const stage of stages) {
-      store.put(stage);
+      const request = store.put(stage);
+      request.onerror = () => reject(request.error);
     }
 
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });
+
+  if (!stages.length) return;
+
+  const saved = await getStagesForTour(stages[0].tourId);
+
+  if (saved.length !== stages.length) {
+    throw new Error(
+      `Speicherprüfung fehlgeschlagen: ${saved.length} von ${stages.length} Etappen gefunden.`
+    );
+  }
 }
 
 export async function deleteStage(id) {
@@ -244,4 +255,24 @@ export async function deleteStagesForTour(tourId) {
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });
+}
+
+
+export async function compactStagesForTour(tourId) {
+  const stages = await getStagesForTour(tourId);
+  let changed = false;
+
+  const compacted = stages.map((stage) => {
+    if (!Array.isArray(stage.trackPoints)) return stage;
+
+    changed = true;
+    const { trackPoints, ...rest } = stage;
+    return rest;
+  });
+
+  if (changed) {
+    await saveStages(compacted);
+  }
+
+  return compacted;
 }
