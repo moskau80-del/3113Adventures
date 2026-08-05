@@ -1,21 +1,20 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 5.1.3
+# 3113 Adventures – Version 4.0.0 / Sprint 5.1.4
 
-## Doppelte Etappensicherung
+## Neue Speicherstrategie
 
-- Etappen werden in IndexedDB gespeichert.
-- Zusätzlich wird eine unabhängige Sicherung in localStorage angelegt.
-- Beim App-Start werden beide Speicher geprüft.
-- Fehlen Etappen in IndexedDB, werden sie automatisch aus dem Backup wiederhergestellt.
-- Bearbeiten und Löschen aktualisieren beide Speicher.
-- Die Erfolgsmeldung nennt die tatsächlich verwendeten Speicher.
+Die Etappen verwenden jetzt ausschliesslich denselben Browserspeicher, der auch für einfache lokale App-Daten zuverlässig funktioniert.
+
+- kein IndexedDB mehr für Etappen
+- ein einziger stabiler localStorage-Schlüssel
+- sofortige Schreib- und Leseprüfung
+- sichtbare Speicherdiagnose mit Anzahl, Grösse und verwendeter Domain
+- kompakte Etappendaten ohne GPX-Punktlisten
 
 ## Test
 
-1. Etappen neu erzeugen.
-2. Es muss `IndexedDB`, `lokales Backup` oder beides in der Meldung stehen.
-3. Seite mit derselben Branch-Deploy-Adresse neu laden.
-4. Die Etappen müssen erneut erscheinen.
+1. Etappen erzeugen.
+2. Die Speicherdiagnose muss eine Anzahl grösser als 0 zeigen.
+3. Seite über exakt dieselbe Domain neu laden.
+4. Die Diagnose muss dieselbe Anzahl zeigen.
 
-Wichtig: Immer dieselbe stabile Branch-Adresse verwenden, nicht eine wechselnde Deploy-Preview-Adresse.
-
-Oben rechts muss `v4.0.0 · Sprint 5.1.3` stehen.
+Oben rechts muss `v4.0.0 · Sprint 5.1.4` stehen.

@@ -1,39 +1,11 @@
-const CACHE="3113-adventures-v4-sprint-5-1-3";
+const CACHE="3113-adventures-v4-sprint-5-1-4";
 const FILES=[
-  "./?v=40513","./index.html","./assets/css/app.css?v=40513",
-  "./assets/js/app.js?v=40513","./assets/js/database.js?v=40513",
-  "./assets/js/i18n.js?v=40513","./assets/js/gpx.js?v=40513",
-  "./assets/js/stages.js?v=40513","./lang/de.json?v=40513",
-  "./lang/en.json?v=40513","./manifest.webmanifest","./icons/icon.svg"
+  "./?v=40514","./index.html","./assets/css/app.css?v=40514",
+  "./assets/js/app.js?v=40514","./assets/js/database.js?v=40514",
+  "./assets/js/i18n.js?v=40514","./assets/js/gpx.js?v=40514",
+  "./assets/js/stages.js?v=40514","./lang/de.json?v=40514",
+  "./lang/en.json?v=40514","./manifest.webmanifest","./icons/icon.svg"
 ];
-
-self.addEventListener("install",(event)=>{
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE).then((cache)=>cache.addAll(FILES)));
-});
-
-self.addEventListener("activate",(event)=>{
-  event.waitUntil(
-    caches.keys()
-      .then((keys)=>Promise.all(
-        keys.filter((key)=>key!==CACHE).map((key)=>caches.delete(key))
-      ))
-      .then(()=>self.clients.claim())
-  );
-});
-
-self.addEventListener("fetch",(event)=>{
-  if(event.request.method!=="GET") return;
-
-  event.respondWith(
-    fetch(event.request)
-      .then((response)=>{
-        const copy=response.clone();
-        caches.open(CACHE).then((cache)=>cache.put(event.request,copy));
-        return response;
-      })
-      .catch(()=>caches.match(event.request).then(
-        (hit)=>hit||caches.match("./index.html")
-      ))
-  );
-});
+self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)))});
+self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request).then(hit=>hit||caches.match("./index.html"))))});

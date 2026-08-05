@@ -15,12 +15,13 @@ import {
   saveStages,
   deleteStage,
   deleteStagesForTour,
-  compactStagesForTour
-} from "./database.js?v=40513";
+  compactStagesForTour,
+  getStageStorageDiagnostic
+} from "./database.js?v=40514";
 
-import { loadLanguage, translate } from "./i18n.js?v=40513";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40513";
-import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=40513";
+import { loadLanguage, translate } from "./i18n.js?v=40514";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40514";
+import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=40514";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -441,6 +442,15 @@ async function renderStages() {
   const stages = await getStagesForTour(activeTour.id);
   const distances = stages.map((stage) => Number(stage.distanceKm || 0));
 
+  const diagnosticElement = document.getElementById("stageStorageDiagnostic");
+  if (diagnosticElement) {
+    const diagnostic = getStageStorageDiagnostic(activeTour.id);
+    diagnosticElement.textContent =
+      `Speicherdiagnose: ${diagnostic.count} Etappen · ` +
+      `${diagnostic.characters} Zeichen · ${diagnostic.origin}`;
+  }
+
+
   document.getElementById("stageCount").textContent = String(stages.length);
   document.getElementById("stageAverage").textContent = stages.length
     ? `${(distances.reduce((sum, value) => sum + value, 0) / stages.length).toFixed(1)} km`
@@ -454,7 +464,7 @@ async function renderStages() {
 
   if (!generatorStatus.textContent || generatorStatus.textContent.includes("Noch keine")) {
     generatorStatus.textContent = stages.length
-      ? `${stages.length} Etappen aus dem lokalen Speicher geladen.`
+      ? `${stages.length} Etappen aus dem Browserspeicher geladen.`
       : translate("stages.noStages", "Noch keine Etappen vorhanden.");
   }
 
@@ -549,12 +559,9 @@ async function generateStages() {
     const saveResult = await saveStages(stages);
     const verifiedStages = await getStagesForTour(activeTour.id);
 
-    const locations = [];
-    if (saveResult?.indexedDbWritten) locations.push("IndexedDB");
-    if (saveResult?.backupWritten) locations.push("lokales Backup");
-
     status.textContent =
-      `${verifiedStages.length} Etappen gespeichert und geprüft (${locations.join(" + ")}).`;
+      `${verifiedStages.length} Etappen im Browserspeicher gespeichert und geprüft ` +
+      `(${saveResult.bytes} Zeichen).`;
 
     await renderStages();
   } catch (error) {
@@ -722,12 +729,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40513";
+  window.location.href = "./?v=40514";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40513");
+    navigator.serviceWorker.register("sw.js?v=40514");
   });
 }
 

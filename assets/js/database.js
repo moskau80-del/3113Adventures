@@ -1,5 +1,5 @@
 const DB_NAME = "3113AdventuresDB";
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 const SETTINGS_STORE = "settings";
 const TOURS_STORE = "tours";
 const TRACKS_STORE = "tracks";
@@ -213,67 +213,40 @@ export async function deleteTrack(tourId) {
   );
 }
 
-export async function getStagesForTour(tourId) {
-  let indexedStages = [];
 
+const STAGES_LOCAL_KEY = "3113-adventures-v4-stages";
+
+function readAllLocalStages() {
   try {
-    const db = await openDatabase();
-
-    indexedStages = await new Promise((resolve, reject) => {
-      const transaction = db.transaction(STAGES_STORE, "readonly");
-      const index = transaction.objectStore(STAGES_STORE).index("tourId");
-      const request = index.getAll(IDBKeyRange.only(tourId));
-
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-      transaction.onabort = () => reject(transaction.error);
-    });
+    const raw = localStorage.getItem(STAGES_LOCAL_KEY);
+    if (!raw) return {};
+    const data = JSON.parse(raw);
+    return data && typeof data === "object" ? data : {};
   } catch (error) {
-    console.warn("IndexedDB-Etappen konnten nicht gelesen werden:", error);
+    console.error("Etappenspeicher konnte nicht gelesen werden:", error);
+    return {};
   }
-
-  const backupStages = readStageBackup(tourId);
-  let stages = indexedStages.length ? indexedStages : backupStages;
-
-  if (!indexedStages.length && backupStages.length) {
-    try {
-      await saveStagesToIndexedDb(backupStages);
-    } catch (error) {
-      console.warn("Etappen konnten nicht aus dem Backup wiederhergestellt werden:", error);
-    }
-  }
-
-  stages.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-  return stages;
 }
 
-export async function saveStage(stage) {
-  let stages = await getStagesForTour(stage.tourId);
-  const index = stages.findIndex((item) => item.id === stage.id);
+function writeAllLocalStages(data) {
+  const serialized = JSON.stringify(data);
+  localStorage.setItem(STAGES_LOCAL_KEY, serialized);
 
-  if (index >= 0) stages[index] = stage;
-  else stages.push(stage);
+  const verification = localStorage.getItem(STAGES_LOCAL_KEY);
+  if (verification !== serialized) {
+    throw new Error("Der Browserspeicher konnte nicht verifiziert werden.");
+  }
 
-  stages.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-  await saveStages(stages);
+  return serialized.length;
 }
 
-async function saveStagesToIndexedDb(stages) {
-  const db = await openDatabase();
+export async function getStagesForTour(tourId) {
+  const allStages = readAllLocalStages();
+  const stages = Array.isArray(allStages[tourId]) ? allStages[tourId] : [];
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STAGES_STORE, "readwrite");
-    const store = transaction.objectStore(STAGES_STORE);
-
-    for (const stage of stages) {
-      const request = store.put(stage);
-      request.onerror = () => reject(request.error);
-    }
-
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-    transaction.onabort = () => reject(transaction.error);
-  });
+  return [...stages].sort(
+    (a, b) => Number(a.order || 0) - Number(b.order || 0)
+  );
 }
 
 export async function saveStages(stages) {
@@ -281,92 +254,77 @@ export async function saveStages(stages) {
     throw new Error("Ungültige Etappendaten.");
   }
 
-  if (!stages.length) return;
-
-  const tourId = stages[0].tourId;
-  const backupWritten = writeStageBackup(tourId, stages);
-
-  let indexedDbWritten = false;
-  try {
-    await saveStagesToIndexedDb(stages);
-    indexedDbWritten = true;
-  } catch (error) {
-    console.warn("IndexedDB-Schreiben fehlgeschlagen, Backup bleibt erhalten:", error);
+  if (!stages.length) {
+    return { count: 0, bytes: 0, storage: "localStorage" };
   }
 
+  const tourId = stages[0].tourId;
+  if (!tourId) {
+    throw new Error("Die Tour-ID der Etappen fehlt.");
+  }
+
+  const compactStages = stages.map((stage) => {
+    const { trackPoints, ...compact } = stage;
+    return compact;
+  });
+
+  const allStages = readAllLocalStages();
+  allStages[tourId] = compactStages;
+
+  const bytes = writeAllLocalStages(allStages);
   const verified = await getStagesForTour(tourId);
 
-  if (verified.length !== stages.length) {
+  if (verified.length !== compactStages.length) {
     throw new Error(
-      `Speicherprüfung fehlgeschlagen: ${verified.length} von ${stages.length} Etappen gefunden.`
+      `Speicherprüfung fehlgeschlagen: ${verified.length} von ${compactStages.length} Etappen.`
     );
   }
 
   return {
     count: verified.length,
-    indexedDbWritten,
-    backupWritten
+    bytes,
+    storage: "localStorage"
   };
 }
 
-export async function deleteStage(id, tourId = null) {
-  try {
-    await runRequest(
-      STAGES_STORE,
-      "readwrite",
-      (store) => store.delete(id)
-    );
-  } catch (error) {
-    console.warn("IndexedDB-Löschen fehlgeschlagen:", error);
-  }
+export async function saveStage(stage) {
+  const stages = await getStagesForTour(stage.tourId);
+  const index = stages.findIndex((item) => item.id === stage.id);
 
-  if (tourId) {
-    const stages = readStageBackup(tourId).filter((stage) => stage.id !== id);
-    writeStageBackup(tourId, stages);
-  }
+  if (index >= 0) stages[index] = stage;
+  else stages.push(stage);
+
+  stages.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+  return saveStages(stages);
+}
+
+export async function deleteStage(id, tourId) {
+  const stages = await getStagesForTour(tourId);
+  return saveStages(stages.filter((stage) => stage.id !== id));
 }
 
 export async function deleteStagesForTour(tourId) {
-  const stages = await getStagesForTour(tourId);
-
-  try {
-    const db = await openDatabase();
-
-    await new Promise((resolve, reject) => {
-      const transaction = db.transaction(STAGES_STORE, "readwrite");
-      const store = transaction.objectStore(STAGES_STORE);
-
-      for (const stage of stages) {
-        store.delete(stage.id);
-      }
-
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error);
-    });
-  } catch (error) {
-    console.warn("IndexedDB-Etappen konnten nicht vollständig gelöscht werden:", error);
-  }
-
-  deleteStageBackup(tourId);
+  const allStages = readAllLocalStages();
+  delete allStages[tourId];
+  writeAllLocalStages(allStages);
 }
-
 
 export async function compactStagesForTour(tourId) {
   const stages = await getStagesForTour(tourId);
-  let changed = false;
+  if (!stages.length) return stages;
+  await saveStages(stages);
+  return stages;
+}
 
-  const compacted = stages.map((stage) => {
-    if (!Array.isArray(stage.trackPoints)) return stage;
+export function getStageStorageDiagnostic(tourId) {
+  const raw = localStorage.getItem(STAGES_LOCAL_KEY) || "";
+  const allStages = readAllLocalStages();
+  const stages = Array.isArray(allStages[tourId]) ? allStages[tourId] : [];
 
-    changed = true;
-    const { trackPoints, ...rest } = stage;
-    return rest;
-  });
-
-  if (changed) {
-    await saveStages(compacted);
-  }
-
-  return compacted;
+  return {
+    key: STAGES_LOCAL_KEY,
+    count: stages.length,
+    characters: raw.length,
+    origin: window.location.origin
+  };
 }
