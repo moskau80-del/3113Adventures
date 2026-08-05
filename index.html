@@ -7,13 +7,13 @@
   <meta name="description" content="3113 Adventures – Fernwanderplanung für den Nord-Süd-Trail.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=301">
+  <link rel="stylesheet" href="styles.css?v=310">
   <title>3113 Adventures</title>
 </head>
 <body>
 <header class="topbar">
   <div><span class="brand-number">3113</span><h1>Adventures</h1></div>
-  <span class="version">v3.0.1</span>
+  <span class="version">v3.1</span>
 </header>
 
 <nav id="mainNav" class="main-nav" aria-label="Hauptnavigation">
@@ -157,6 +157,17 @@
       <button id="showFullTrackBtn" class="secondary">Gesamtroute anzeigen</button>
     </div>
     <div id="gpxInfo" class="info-strip">Noch kein GPX-Track importiert.</div>
+<div class="map-layer-controls">
+  <label class="checkbox"><input id="layerRoute" type="checkbox" checked> Route</label>
+  <label class="checkbox"><input id="layerCamping" type="checkbox" checked> Camping</label>
+  <label class="checkbox"><input id="layerWater" type="checkbox" checked> Wasser</label>
+  <label class="checkbox"><input id="layerShop" type="checkbox" checked> Einkauf</label>
+  <label class="checkbox"><input id="layerTransport" type="checkbox" checked> ÖV</label>
+  <label class="checkbox"><input id="layerSight" type="checkbox" checked> Sehenswürdigkeiten</label>
+  <label class="checkbox"><input id="layerOther" type="checkbox" checked> Weitere</label>
+  <label class="checkbox"><input id="layerVerifiedOnly" type="checkbox"> Nur geprüfte Orte</label>
+</div>
+
   </article>
   <div id="mapError" class="card map-error" hidden></div>
   <div id="mapCanvas"></div>
@@ -271,8 +282,8 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data.js?v=301"></script>
-<script src="app.js?v=301"></script>
+<script src="data.js?v=310"></script>
+<script src="app.js?v=310"></script>
 
 <dialog id="splitDialog">
   <form id="splitForm">
@@ -282,6 +293,13 @@
     <label>Distanz erster Teil in km<input id="splitKm" type="number" step="0.1" min="0.1" required></label>
     <div class="button-row"><button type="submit" class="primary">Teilen</button><button type="button" data-close="splitDialog" class="secondary">Abbrechen</button></div>
   </form>
+</dialog>
+
+
+<dialog id="nearbyDialog">
+  <div class="dialog-header"><h2>Orte nahe der Etappe</h2><button type="button" data-close="nearbyDialog" class="close-btn">×</button></div>
+  <div id="nearbyStageInfo" class="info-strip"></div>
+  <div id="nearbyList"></div>
 </dialog>
 
 </body></html>

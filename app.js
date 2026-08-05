@@ -1,8 +1,8 @@
 (() => {
 "use strict";
-const STORAGE_KEY="3113-adventures-v301";
+const STORAGE_KEY="3113-adventures-v310";
 const KNOWN_LEGACY_KEYS=[
-  "3113-adventures-v300","3113-adventures-v220","3113-adventures-v210","3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
+  "3113-adventures-v301","3113-adventures-v300","3113-adventures-v220","3113-adventures-v210","3113-adventures-v202","3113-adventures-v201","3113-adventures-v2",
   "a3113-v14","a3113-v141","a3113-v13","a3113-v12","a3113-v121","a3113-v11",
   "adventures3113_v1","3113Adventures","3113-adventures"
 ];
@@ -522,7 +522,7 @@ function renderStages(){
       <p><strong>Übernachtung:</strong> ${escapeHtml(s.overnight||"–")}</p>
       ${s.notes?`<p class="muted">${escapeHtml(s.notes)}</p>`:""}
       <div class="card-actions">
-        ${s.startCoord?`<button data-show-stage="${s.id}">Auf Karte</button>`:""}
+        ${s.startCoord?`<button data-show-stage="${s.id}">Auf Karte</button><button data-nearby-stage="${s.id}">Orte nahe Etappe</button>`:""}
         ${s.restDay
           ? `<button data-delete-rest="${s.id}" class="danger">Ruhetag entfernen</button>`
           : `<button data-rest-before="${s.id}">Ruhetag davor</button>
@@ -829,25 +829,75 @@ function showFullTrack(){
   if(initMap()) renderMap();
 }
 
+
+function visiblePlaceCategories(){
+  return {
+    camping:$("layerCamping")?.checked ?? true,
+    water:$("layerWater")?.checked ?? true,
+    shop:$("layerShop")?.checked ?? true,
+    transport:$("layerTransport")?.checked ?? true,
+    sight:$("layerSight")?.checked ?? true,
+    other:$("layerOther")?.checked ?? true
+  };
+}
+function createPlaceIcon(category){
+  return L.divIcon({className:"",html:`<div class="place-marker">${markerIcon(category)}</div>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-16]});
+}
+function pointToSegmentDistanceKm(point,a,b){
+  const lat0=point.lat*Math.PI/180,xScale=111.320*Math.cos(lat0),yScale=110.574;
+  const px=point.lng*xScale,py=point.lat*yScale,ax=a.lng*xScale,ay=a.lat*yScale,bx=b.lng*xScale,by=b.lat*yScale;
+  const dx=bx-ax,dy=by-ay;
+  if(dx===0&&dy===0)return Math.hypot(px-ax,py-ay);
+  const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy)));
+  return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));
+}
+function distanceToTrackKm(point,trackPoints){
+  if(!trackPoints?.length)return Infinity;
+  let min=Infinity;
+  for(let i=1;i<trackPoints.length;i++)min=Math.min(min,pointToSegmentDistanceKm(point,trackPoints[i-1],trackPoints[i]));
+  return min;
+}
+function stageTrackPoints(stage){
+  if(!state.gpx?.points?.length||!stage?.startCoord||!stage?.endCoord)return [];
+  const points=state.gpx.points;
+  let si=0,ei=points.length-1,sb=Infinity,eb=Infinity;
+  points.forEach((pt,i)=>{
+    const ds=haversine(stage.startCoord,pt),de=haversine(stage.endCoord,pt);
+    if(ds<sb){sb=ds;si=i}
+    if(de<eb){eb=de;ei=i}
+  });
+  if(si>ei)[si,ei]=[ei,si];
+  return points.slice(si,ei+1);
+}
+function showNearbyPlaces(stageId){
+  const stage=state.stages.find(item=>item.id===stageId);
+  if(!stage)return;
+  const track=stageTrackPoints(stage);
+  if(!track.length){alert("Für diese Etappe fehlen Start- und Zielkoordinaten.");return}
+  const nearby=state.places.map(place=>({...place,distanceKm:distanceToTrackKm(place,track)}))
+    .filter(place=>place.distanceKm<=5).sort((a,b)=>a.distanceKm-b.distanceKm);
+  $("nearbyStageInfo").innerHTML=`<strong>${escapeHtml(stage.from)} → ${escapeHtml(stage.to)}</strong><br>${Number(stage.km||0).toFixed(1)} km`;
+  $("nearbyList").innerHTML=nearby.length?nearby.map(place=>`
+    <article class="nearby-row">
+      <h4>${markerIcon(place.category)} ${escapeHtml(place.name)}</h4>
+      <div class="nearby-distance">${place.distanceKm.toFixed(2)} km vom Etappentrack</div>
+      <div class="muted">${categoryName(place.category)}${place.verified?" · selbst geprüft":""}</div>
+      ${place.notes?`<p>${escapeHtml(place.notes)}</p>`:""}
+      <button data-show-nearby="${place.id}" class="secondary">Auf Karte</button>
+    </article>`).join(""):'<div class="empty">Keine gespeicherten Orte innerhalb von 5 km zur Etappe.</div>';
+  $("nearbyDialog").showModal();
+}
+
 function renderMap(){
-  if(!map || !trackLayer || !markerLayer)return;
+  if(!map||!trackLayer||!markerLayer)return;
   trackLayer.clearLayers();markerLayer.clearLayers();
-  if(state.gpx?.points?.length){
-    const activeStage=activeStageId?state.stages.find(stage=>stage.id===activeStageId):null;
-    const points=activeStage?getStageTrackPoints(activeStage):state.gpx.points;
-    if(points.length>1){
-      const coords=points.map(point=>[point.lat,point.lng]);
-      const line=L.polyline(coords,{weight:activeStage?6:4,opacity:activeStage?1:0.85}).addTo(trackLayer);
-      map.fitBounds(line.getBounds(),{padding:[28,28],maxZoom:15});
-      if(activeStage){
-        L.marker(coords[0]).addTo(trackLayer).bindPopup(`<strong>Start:</strong> ${escapeHtml(activeStage.from)}`);
-        L.marker(coords[coords.length-1]).addTo(trackLayer).bindPopup(`<strong>Ziel:</strong> ${escapeHtml(activeStage.to)}`);
-        $("gpxInfo").innerHTML=`<strong>Etappe:</strong> ${escapeHtml(activeStage.from)} → ${escapeHtml(activeStage.to)} · ${Number(activeStage.km||0).toFixed(1)} km`;
-      }
-    }
-  }
-  state.places.forEach(place=>{
-    L.marker([place.lat,place.lng]).addTo(markerLayer).bindPopup(`<strong>${escapeHtml(place.name)}</strong><br>${categoryName(place.category)}${place.verified?"<br>Selbst geprüft":""}`);
+  const showRoute=$("layerRoute")?.checked ?? true;
+  const cats=visiblePlaceCategories();
+  const verifiedOnly=$("layerVerifiedOnly")?.checked ?? false;
+  if(showRoute&&state.gpx?.points?.length)L.polyline(state.gpx.points.map(p=>[p.lat,p.lng]),{weight:4}).addTo(trackLayer);
+  state.places.filter(p=>cats[p.category]!==false).filter(p=>!verifiedOnly||p.verified).forEach(p=>{
+    L.marker([p.lat,p.lng],{icon:createPlaceIcon(p.category)}).addTo(markerLayer)
+      .bindPopup(`<strong>${escapeHtml(p.name)}</strong><br>${categoryName(p.category)}<br>${Number(p.lat).toFixed(5)}, ${Number(p.lng).toFixed(5)}${p.verified?"<br>Selbst geprüft":""}${p.notes?`<br>${escapeHtml(p.notes)}`:""}`);
   });
 }
 function parseGpx(text,name){
@@ -894,7 +944,7 @@ function bindEvents(){
   $("stageSearch").addEventListener("input",renderStages);
   $("stageFilter").addEventListener("change",renderStages);
   $("stageList").addEventListener("click",event=>{
-    const show=event.target.dataset.showStage,
+    const nearbyStage=event.target.dataset.nearbyStage,show=event.target.dataset.showStage,
       edit=event.target.dataset.editStage,
       toggle=event.target.dataset.toggleStage,
       remove=event.target.dataset.deleteStage,
@@ -903,6 +953,7 @@ function bindEvents(){
       deleteRest=event.target.dataset.deleteRest,
       split=event.target.dataset.splitStage,
       merge=event.target.dataset.mergeStage;
+    if(nearbyStage)showNearbyPlaces(Number(nearbyStage));
     if(show){
       const stage=state.stages.find(item=>item.id===Number(show));
       showStageOnMap(stage);
@@ -925,6 +976,7 @@ function bindEvents(){
   $("placeFilter").addEventListener("change",renderPlaces);
   $("placeList").addEventListener("click",event=>{
     const show=event.target.dataset.showPlace,edit=event.target.dataset.editPlace,remove=event.target.dataset.deletePlace;
+    if(nearbyStage)showNearbyPlaces(Number(nearbyStage));
     if(show){document.querySelector('[data-page="map"]').click();setTimeout(()=>{const p=state.places.find(x=>x.id===Number(show));map.setView([p.lat,p.lng],14)},80)}
     if(edit)openPlace(state.places.find(p=>p.id===Number(edit)));
     if(remove&&confirm("Ort wirklich löschen?")){state.places=state.places.filter(p=>p.id!==Number(remove));save();renderAll()}
@@ -937,6 +989,15 @@ function bindEvents(){
     state.tour.targetDate=$("targetInput").value;
     state.tour.restDays=Number($("restDaysInput").value||0);
     save();renderAll();
+  });
+  ["layerRoute","layerCamping","layerWater","layerShop","layerTransport","layerSight","layerOther","layerVerifiedOnly"].forEach(id=>{
+    const el=$(id);if(el)el.addEventListener("change",renderMap);
+  });
+  $("nearbyList").addEventListener("click",event=>{
+    const id=event.target.dataset.showNearby;if(!id)return;
+    const place=state.places.find(item=>item.id===Number(id));if(!place)return;
+    $("nearbyDialog").close();document.querySelector('[data-page="map"]').click();
+    setTimeout(()=>{initMap();map.setView([place.lat,place.lng],15);L.marker([place.lat,place.lng],{icon:createPlaceIcon(place.category)}).addTo(map).bindPopup(`<strong>${escapeHtml(place.name)}</strong>`).openPopup()},150);
   });
   $("gpxInput").addEventListener("change",async event=>{
     const file=event.target.files[0];if(!file)return;
@@ -966,12 +1027,12 @@ function bindEvents(){
   $("refreshBtn").addEventListener("click",async()=>{
     if("serviceWorker"in navigator){for(const reg of await navigator.serviceWorker.getRegistrations())await reg.unregister()}
     if("caches"in window){for(const name of await caches.keys())await caches.delete(name)}
-    location.href="./?v=301";
+    location.href="./?v=310";
   });
 }
 function start(){
   initNavigation();bindEvents();renderAll();renderGpxInfo();
-  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=301");
+  if("serviceWorker"in navigator)navigator.serviceWorker.register("service-worker.js?v=310");
 }
 document.addEventListener("DOMContentLoaded",start);
 })();

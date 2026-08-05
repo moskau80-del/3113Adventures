@@ -1,11 +1,12 @@
-# 3113 Adventures – Version 3.0.1
+# 3113 Adventures – Version 3.1
 
-## Behoben
-- Beim Öffnen einer Etappe wird nur noch deren eigener GPX-Abschnitt dargestellt.
-- Die Karte zoomt auf Start und Ziel der gewählten Etappe.
-- Start- und Zielmarker werden angezeigt.
-- Schaltfläche `Gesamtroute anzeigen` ergänzt.
-- Bereits erzeugte Etappen ohne gespeicherte Teilpunkte werden automatisch anhand ihrer Start- und Zielkoordinaten aus dem Gesamttrack ausgeschnitten.
+Neu:
+- gespeicherte Orte direkt auf der Karte
+- Kategorienfilter und Filter für geprüfte Orte
+- pro Etappe Orte innerhalb von 5 km zum Etappentrack
+- Entfernung zum Etappentrack
+- Orte direkt auf der Karte öffnen
 
-## Kontrolle
-Oben rechts muss `v3.0.1` stehen.
+Nur gespeicherte Orte erscheinen. OSM-Suchergebnisse müssen zuerst gespeichert werden.
+
+Kontrolle: oben rechts muss v3.1 stehen.
