@@ -9,7 +9,7 @@
   },
   "dashboard": {
     "subtitle": "Die neue modulare PWA-Grundlage ist aktiv.",
-    "sprintText": "Tourenverwaltung und lokale Datenbank sind aktiv.",
+    "sprintText": "Tourenverwaltung, GPX-Import und lokale Datenbank sind aktiv.",
     "currentTour": "Aktuelle Tour",
     "noTour": "Noch keine Tour ausgewählt."
   },
@@ -18,7 +18,7 @@
     "toursText": "Verwalte deine Fernwanderungen.",
     "stagesTitle": "Etappen",
     "stagesText": "Folgt später.",
-    "mapTitle": "Karte",
+    "mapTitle": "Karte / GPX",
     "mapText": "Folgt später.",
     "placesTitle": "Orte",
     "placesText": "Folgt später."
@@ -55,5 +55,22 @@
     "activeLabel": "Aktive Tour",
     "noTours": "Noch keine Touren vorhanden.",
     "confirmDelete": "Tour wirklich löschen?"
+  },
+  "gpx": {
+    "subtitle": "Importiere den GPX-Track für die aktive Tour.",
+    "importTitle": "GPX-Track",
+    "choose": "GPX-Datei auswählen",
+    "export": "GPX exportieren",
+    "delete": "GPX löschen",
+    "noTrack": "Noch kein GPX-Track importiert.",
+    "summary": "Track-Zusammenfassung",
+    "points": "Trackpunkte",
+    "distance": "berechnete Distanz",
+    "start": "Start",
+    "end": "Ziel",
+    "preview": "Trackvorschau",
+    "previewEmpty": "Nach dem Import erscheint hier eine einfache Trackvorschau.",
+    "imported": "GPX-Track importiert.",
+    "confirmDelete": "GPX-Track wirklich löschen?"
   }
 }

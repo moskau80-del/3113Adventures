@@ -9,7 +9,7 @@
   },
   "dashboard": {
     "subtitle": "The new modular PWA foundation is active.",
-    "sprintText": "Tour management and the local database are active.",
+    "sprintText": "Tour management, GPX import and the local database are active.",
     "currentTour": "Current tour",
     "noTour": "No tour selected."
   },
@@ -18,7 +18,7 @@
     "toursText": "Manage your long-distance hikes.",
     "stagesTitle": "Stages",
     "stagesText": "Coming later.",
-    "mapTitle": "Map",
+    "mapTitle": "Map / GPX",
     "mapText": "Coming later.",
     "placesTitle": "Places",
     "placesText": "Coming later."
@@ -55,5 +55,22 @@
     "activeLabel": "Active tour",
     "noTours": "No tours yet.",
     "confirmDelete": "Delete this tour?"
+  },
+  "gpx": {
+    "subtitle": "Import the GPX track for the active tour.",
+    "importTitle": "GPX track",
+    "choose": "Choose GPX file",
+    "export": "Export GPX",
+    "delete": "Delete GPX",
+    "noTrack": "No GPX track imported.",
+    "summary": "Track summary",
+    "points": "Track points",
+    "distance": "calculated distance",
+    "start": "Start",
+    "end": "End",
+    "preview": "Track preview",
+    "previewEmpty": "A simple track preview will appear after import.",
+    "imported": "GPX track imported.",
+    "confirmDelete": "Delete GPX track?"
   }
 }

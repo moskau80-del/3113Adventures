@@ -11,3 +11,14 @@ html[data-theme="dark"] .card{background:var(--card)}
 html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:#455044}
 
 .section-header{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:14px}.section-header h2{margin-bottom:4px}.tour-card{background:var(--card);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 8px 28px #00000012}.tour-card.active-tour{border-left:6px solid var(--sand)}.tour-card h3{margin:0 0 6px}.tour-meta{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.pill{display:inline-block;background:#e9ece6;border-radius:999px;padding:5px 8px;font-size:.82rem}.card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.card-actions button{border:0;border-radius:9px;padding:8px 10px}.danger{background:#f0dcda;color:#9c3f36}.empty{background:var(--card);border-radius:16px;padding:22px;text-align:center;color:#6b736a}dialog{width:min(92vw,560px);border:0;border-radius:18px;padding:18px}dialog::backdrop{background:#172016aa}.dialog-header{display:flex;justify-content:space-between;align-items:center}.dialog-header h2{margin:0}.close-btn{border:0;background:transparent;font-size:1.8rem}textarea,input{width:100%;padding:10px;border:1px solid #d8ddd5;border-radius:10px;background:#fff;color:var(--ink)}.checkbox{display:flex!important;align-items:center;gap:8px}.checkbox input{width:auto}@media(max-width:620px){.section-header{align-items:stretch;flex-direction:column}}
+
+.button-file{border:0;border-radius:11px;padding:10px 13px;font-weight:750;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.button-file input{display:none}
+.info-strip{margin-top:14px;padding:12px;border-radius:11px;background:#eef1eb}
+.summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.summary-grid div{background:#eef1eb;border-radius:12px;padding:12px}
+.summary-grid strong,.summary-grid span{display:block}
+.summary-grid span{font-size:.8rem;margin-top:4px}
+.track-preview{height:280px;border-radius:14px;background:#eef1eb;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.track-preview svg{width:100%;height:100%}
+@media(min-width:760px){.summary-grid{grid-template-columns:repeat(4,1fr)}}
