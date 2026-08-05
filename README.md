@@ -1,16 +1,21 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 5.2.1
+# 3113 Adventures – Version 4.0.0 / Sprint 5.3
 
-## Kritische Fehlerkorrektur
+## Neu
 
-- IndexedDB-Version wurde von 4 auf 10 erhöht.
-- Dadurch wird kein unzulässiges Datenbank-Downgrade mehr versucht.
-- Bereits gespeicherte Tour- und GPX-Daten bleiben zugänglich.
-- Die App initialisiert auch dann weiter, wenn einzelne Einstellungen fehlen.
-- Der GPX-Code greift nicht mehr auf das entfernte Vorschau-Element zu.
-- GPX-Dateien können wieder importiert werden.
+- Etappen bearbeiten:
+  - Name
+  - Datum
+  - Start
+  - Ziel
+  - Notizen
+  - Status abgeschlossen/offen
+- einzelne Etappen löschen
+- Änderungen sofort im Browserspeicher sichern
+- einzelne Etappe auf der Karte anzeigen
+- Etappenkarte zeigt nur den betreffenden GPX-Abschnitt
+- Schaltfläche `Gesamtroute anzeigen` wechselt zurück zur vollständigen Route
+- Tour- und GPX-Korrekturen aus Sprint 5.2.1 enthalten
 
 ## Kontrolle
 
-- Oben rechts muss `v4.0.0 · Sprint 5.2.1` stehen.
-- Unter Touren muss `Nord-Süd-Trail 2027` erscheinen.
-- Unter Karte muss `GPX-Datei auswählen` funktionieren.
+Oben rechts muss `v4.0.0 · Sprint 5.3` stehen.

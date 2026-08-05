@@ -96,7 +96,9 @@ export function saveStagesLocal(tourId,stages){
     descentM:stage.descentM,
     walkingHours:stage.walkingHours,
     startCoord:stage.startCoord,
-    endCoord:stage.endCoord
+    endCoord:stage.endCoord,
+    notes:stage.notes||"",
+    completed:Boolean(stage.completed)
   }));
 
   const serialized=JSON.stringify(compact);
@@ -134,6 +136,36 @@ export function loadStagesLocal(tourId){
 
 export function deleteStagesLocal(tourId){
   localStorage.removeItem(storageKey(tourId));
+}
+
+
+export function updateStageLocal(tourId,updatedStage){
+  const stages=loadStagesLocal(tourId);
+  const index=stages.findIndex(stage=>stage.id===updatedStage.id);
+
+  if(index<0){
+    throw new Error("Etappe wurde im Speicher nicht gefunden.");
+  }
+
+  stages[index]={
+    ...stages[index],
+    ...updatedStage
+  };
+
+  return saveStagesLocal(tourId,stages);
+}
+
+export function deleteStageLocal(tourId,stageId){
+  const stages=loadStagesLocal(tourId)
+    .filter(stage=>stage.id!==stageId)
+    .map((stage,index)=>({...stage,order:index+1}));
+
+  if(stages.length){
+    return saveStagesLocal(tourId,stages);
+  }
+
+  deleteStagesLocal(tourId);
+  return {count:0,characters:0};
 }
 
 export function getStageStorageInfo(tourId){

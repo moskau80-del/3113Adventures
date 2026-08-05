@@ -51,3 +51,8 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .stage-route{font-weight:700;margin-top:6px}
 .stage-coordinates{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.78rem;color:#6b736a;margin-top:8px}
 @media(min-width:760px){.generator-grid{grid-template-columns:repeat(2,1fr)}}
+
+.stage-card.completed{opacity:.65}
+.stage-card.completed h3{text-decoration:line-through}
+.card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.card-actions button{border:0;border-radius:9px;padding:8px 10px}

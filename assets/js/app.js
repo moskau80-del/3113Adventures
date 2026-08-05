@@ -10,11 +10,11 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40521";
+} from "./database.js?v=4053";
 
-import { loadLanguage, translate } from "./i18n.js?v=40521";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40521";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, getStageStorageInfo } from "./stages.js?v=40521";
+import { loadLanguage, translate } from "./i18n.js?v=4053";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4053";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, getStageStorageInfo } from "./stages.js?v=4053";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -27,6 +27,9 @@ const tourForm = document.getElementById("tourForm");
 let map = null;
 let trackLayer = null;
 let userMarker = null;
+const stageDialog = document.getElementById("stageDialog");
+const stageForm = document.getElementById("stageForm");
+let currentMapStageId = null;
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -375,6 +378,7 @@ document.getElementById("deleteGpxBtn")?.addEventListener("click", async () => {
 
 
 document.getElementById("showWholeTrackBtn")?.addEventListener("click", async () => {
+  currentMapStageId=null;
   await renderMapTrack();
 });
 
@@ -452,7 +456,7 @@ async function renderStages(){
 
   list.innerHTML=stages.length
     ? stages.map(stage=>`
-      <article class="stage-card">
+      <article class="stage-card ${stage.completed?"completed":""}">
         <h3>${escapeHtml(stage.name)}</h3>
         <div class="stage-route">${escapeHtml(stage.from)} → ${escapeHtml(stage.to)}</div>
         <div class="stage-meta">
@@ -461,16 +465,148 @@ async function renderStages(){
           <span class="pill">↑ ${Math.round(stage.ascentM||0)} m</span>
           <span class="pill">↓ ${Math.round(stage.descentM||0)} m</span>
           <span class="pill">${formatHours(stage.walkingHours||0)}</span>
+          ${stage.completed?'<span class="pill">Abgeschlossen</span>':""}
         </div>
         <div class="stage-coordinates">
           ${stage.startCoord.lat.toFixed(5)}, ${stage.startCoord.lng.toFixed(5)}
           →
           ${stage.endCoord.lat.toFixed(5)}, ${stage.endCoord.lng.toFixed(5)}
         </div>
+        ${stage.notes?`<p>${escapeHtml(stage.notes)}</p>`:""}
+        <div class="card-actions">
+          <button data-map-stage="${stage.id}">Auf Karte</button>
+          <button data-edit-stage="${stage.id}">Bearbeiten</button>
+          <button class="danger" data-delete-stage="${stage.id}">Löschen</button>
+        </div>
       </article>
     `).join("")
     : '<div class="empty">Noch keine Etappen vorhanden.</div>';
 }
+
+
+function openStageDialog(stage){
+  document.getElementById("editStageId").value=stage.id;
+  document.getElementById("editStageName").value=stage.name||"";
+  document.getElementById("editStageDate").value=stage.date||"";
+  document.getElementById("editStageFrom").value=stage.from||"";
+  document.getElementById("editStageTo").value=stage.to||"";
+  document.getElementById("editStageNotes").value=stage.notes||"";
+  document.getElementById("editStageCompleted").checked=Boolean(stage.completed);
+  stageDialog.showModal();
+}
+
+function findNearestPointIndex(points,target){
+  let bestIndex=0;
+  let bestDistance=Infinity;
+
+  points.forEach((point,index)=>{
+    const dLat=point.lat-target.lat;
+    const dLng=point.lng-target.lng;
+    const value=dLat*dLat+dLng*dLng;
+
+    if(value<bestDistance){
+      bestDistance=value;
+      bestIndex=index;
+    }
+  });
+
+  return bestIndex;
+}
+
+async function showStageOnMap(stage){
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const track=await getTrack(activeTour.id);
+  if(!track?.points?.length) return;
+
+  currentMapStageId=stage.id;
+  document.querySelector('[data-page="map"]').click();
+
+  setTimeout(()=>{
+    if(!initMap()) return;
+
+    trackLayer.clearLayers();
+
+    let startIndex=findNearestPointIndex(track.points,stage.startCoord);
+    let endIndex=findNearestPointIndex(track.points,stage.endCoord);
+
+    if(startIndex>endIndex){
+      [startIndex,endIndex]=[endIndex,startIndex];
+    }
+
+    const segment=track.points.slice(startIndex,endIndex+1);
+    if(segment.length<2) return;
+
+    const line=L.polyline(segment.map(point=>[point.lat,point.lng]),{
+      weight:5
+    }).addTo(trackLayer);
+
+    L.marker([stage.startCoord.lat,stage.startCoord.lng])
+      .addTo(trackLayer)
+      .bindPopup(`<strong>${escapeHtml(stage.from)}</strong>`);
+
+    L.marker([stage.endCoord.lat,stage.endCoord.lng])
+      .addTo(trackLayer)
+      .bindPopup(`<strong>${escapeHtml(stage.to)}</strong>`);
+
+    map.fitBounds(line.getBounds(),{padding:[20,20]});
+  },150);
+}
+
+document.getElementById("stageList")?.addEventListener("click",async(event)=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const stages=loadStagesLocal(activeTour.id);
+  const editId=event.target.dataset.editStage;
+  const deleteId=event.target.dataset.deleteStage;
+  const mapId=event.target.dataset.mapStage;
+
+  if(editId){
+    const stage=stages.find(item=>item.id===editId);
+    if(stage) openStageDialog(stage);
+  }
+
+  if(deleteId&&confirm("Etappe wirklich löschen?")){
+    deleteStageLocal(activeTour.id,deleteId);
+    await renderStages();
+  }
+
+  if(mapId){
+    const stage=stages.find(item=>item.id===mapId);
+    if(stage) await showStageOnMap(stage);
+  }
+});
+
+stageForm?.addEventListener("submit",async(event)=>{
+  event.preventDefault();
+
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const id=document.getElementById("editStageId").value;
+  const stages=loadStagesLocal(activeTour.id);
+  const stage=stages.find(item=>item.id===id);
+
+  if(!stage){
+    alert("Etappe wurde nicht gefunden.");
+    return;
+  }
+
+  updateStageLocal(activeTour.id,{
+    ...stage,
+    name:document.getElementById("editStageName").value.trim(),
+    date:document.getElementById("editStageDate").value,
+    from:document.getElementById("editStageFrom").value.trim(),
+    to:document.getElementById("editStageTo").value.trim(),
+    notes:document.getElementById("editStageNotes").value.trim(),
+    completed:document.getElementById("editStageCompleted").checked
+  });
+
+  stageDialog.close();
+  await renderStages();
+});
 
 document.getElementById("generateStagesBtn")?.addEventListener("click",async()=>{
   const activeTour=await getActiveTour();
@@ -504,7 +640,9 @@ document.getElementById("generateStagesBtn")?.addEventListener("click",async()=>
       descentM:stats.descentM,
       walkingHours:stats.walkingHours,
       startCoord:points[0],
-      endCoord:points.at(-1)
+      endCoord:points.at(-1),
+      notes:"",
+      completed:false
     };
   });
 
@@ -642,12 +780,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40521";
+  window.location.href = "./?v=4053";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40521");
+    navigator.serviceWorker.register("sw.js?v=4053");
   });
 }
 
