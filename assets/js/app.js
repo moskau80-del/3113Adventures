@@ -10,11 +10,11 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4052";
+} from "./database.js?v=40521";
 
-import { loadLanguage, translate } from "./i18n.js?v=4052";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4052";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, getStageStorageInfo } from "./stages.js?v=4052";
+import { loadLanguage, translate } from "./i18n.js?v=40521";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40521";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, getStageStorageInfo } from "./stages.js?v=40521";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -299,10 +299,12 @@ async function renderGpx() {
     distance.textContent = "0 km";
     start.textContent = "–";
     end.textContent = "–";
-    preview.innerHTML = `<p class="muted">${translate(
-      "gpx.previewEmpty",
-      "Nach dem Import erscheint hier eine einfache Trackvorschau."
-    )}</p>`;
+    if (preview) {
+      preview.innerHTML = `<p class="muted">${translate(
+        "gpx.previewEmpty",
+        "Nach dem Import erscheint hier eine einfache Trackvorschau."
+      )}</p>`;
+    }
     return;
   }
 
@@ -311,7 +313,7 @@ async function renderGpx() {
   distance.textContent = `${Number(track.distanceKm).toFixed(1)} km`;
   start.textContent = `${track.points[0].lat.toFixed(5)}, ${track.points[0].lng.toFixed(5)}`;
   end.textContent = `${track.points.at(-1).lat.toFixed(5)}, ${track.points.at(-1).lng.toFixed(5)}`;
-  preview.innerHTML = createPreviewSvg(track.points);
+  if (preview) preview.innerHTML = createPreviewSvg(track.points);
 }
 
 document.getElementById("gpxInput")?.addEventListener("change", async (event) => {
@@ -552,35 +554,49 @@ document.getElementById("exportStagesBtn")?.addEventListener("click",async()=>{
 });
 
 async function initialize() {
+  let language = "de";
+  let theme = "system";
+
   try {
     await openDatabase();
     await seedDefaultTour();
+    language = await getSetting("language", "de");
+    theme = await getSetting("theme", "system");
   } catch (error) {
+    console.error("Initialisierung der lokalen Datenbank fehlgeschlagen:", error);
     databaseStatus.textContent = `IndexedDB-Fehler: ${error.message}`;
   }
-
-  const language = await getSetting("language", "de");
-  const theme = await getSetting("theme", "system");
 
   languageSelect.value = language;
   themeSelect.value = theme;
 
-  await loadLanguage(language);
-  applyTheme(theme);
-
-  databaseStatus.textContent = translate("database.ready", "IndexedDB ist bereit.");
-
-  await renderTours();
-  await renderGpx();
-
-  const activeTour=await getActiveTour();
-  if(activeTour){
-    document.getElementById("stageStartDate").value=activeTour.startDate||"";
+  try {
+    await loadLanguage(language);
+  } catch (error) {
+    console.warn("Sprachdatei konnte nicht geladen werden:", error);
   }
 
-  await renderStages();
-  if (document.getElementById('map').classList.contains('active')) {
-    await renderMapTrack();
+  applyTheme(theme);
+
+  try {
+    await renderTours();
+    await renderGpx();
+
+    const activeTour = await getActiveTour();
+    if (activeTour) {
+      document.getElementById("stageStartDate").value = activeTour.startDate || "";
+    }
+
+    await renderStages();
+
+    if (document.getElementById("map").classList.contains("active")) {
+      await renderMapTrack();
+    }
+
+    databaseStatus.textContent = translate("database.ready", "IndexedDB ist bereit.");
+  } catch (error) {
+    console.error("App-Daten konnten nicht geladen werden:", error);
+    databaseStatus.textContent = `Ladefehler: ${error.message}`;
   }
 }
 
@@ -626,12 +642,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4052";
+  window.location.href = "./?v=40521";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4052");
+    navigator.serviceWorker.register("sw.js?v=40521");
   });
 }
 

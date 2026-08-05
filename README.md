@@ -1,21 +1,16 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 5.2
+# 3113 Adventures – Version 4.0.0 / Sprint 5.2.1
 
-Kompletter Neuaufbau des Etappenplaners auf Basis von Sprint 4.0.
+## Kritische Fehlerkorrektur
 
-## Enthalten
-- GPX nach Zielkilometern aufteilen
-- kompakte Etappendaten
-- ein einziger localStorage-Speicherweg
-- sofortige Schreib- und Leseprüfung
-- Laden nach Seitenneustart
-- Etappen löschen
-- Etappen als JSON exportieren
-- sichtbare Speicherdiagnose
+- IndexedDB-Version wurde von 4 auf 10 erhöht.
+- Dadurch wird kein unzulässiges Datenbank-Downgrade mehr versucht.
+- Bereits gespeicherte Tour- und GPX-Daten bleiben zugänglich.
+- Die App initialisiert auch dann weiter, wenn einzelne Einstellungen fehlen.
+- Der GPX-Code greift nicht mehr auf das entfernte Vorschau-Element zu.
+- GPX-Dateien können wieder importiert werden.
 
-## Test
-1. Etappen erzeugen.
-2. Diagnose muss eine Anzahl grösser als 0 zeigen.
-3. Exakt dieselbe Branch-Adresse neu laden.
-4. Dieselbe Etappenanzahl muss wieder erscheinen.
+## Kontrolle
 
-Oben rechts muss `v4.0.0 · Sprint 5.2` stehen.
+- Oben rechts muss `v4.0.0 · Sprint 5.2.1` stehen.
+- Unter Touren muss `Nord-Süd-Trail 2027` erscheinen.
+- Unter Karte muss `GPX-Datei auswählen` funktionieren.

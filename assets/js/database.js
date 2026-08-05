@@ -1,5 +1,5 @@
 const DB_NAME = "3113AdventuresDB";
-const DB_VERSION = 4;
+const DB_VERSION = 10;
 const SETTINGS_STORE = "settings";
 const TOURS_STORE = "tours";
 const TRACKS_STORE = "tracks";
