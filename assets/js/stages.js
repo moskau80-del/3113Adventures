@@ -1,96 +1,156 @@
-function haversine(a, b) {
-  const radius = 6371;
-  const toRad = (value) => value * Math.PI / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLon = toRad(b.lng - a.lng);
+const STORAGE_PREFIX = "3113-v4-stages:";
 
-  const value =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) *
-      Math.cos(toRad(b.lat)) *
-      Math.sin(dLon / 2) ** 2;
-
-  return 2 * radius * Math.asin(Math.sqrt(value));
+function haversine(a,b){
+  const R=6371;
+  const toRad=(value)=>value*Math.PI/180;
+  const dLat=toRad(b.lat-a.lat);
+  const dLon=toRad(b.lng-a.lng);
+  const x=
+    Math.sin(dLat/2)**2+
+    Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
 }
 
-function interpolatePoint(a, b, fraction) {
+function interpolate(a,b,fraction){
   return {
-    lat: a.lat + (b.lat - a.lat) * fraction,
-    lng: a.lng + (b.lng - a.lng) * fraction,
+    lat:a.lat+(b.lat-a.lat)*fraction,
+    lng:a.lng+(b.lng-a.lng)*fraction,
     elevation:
-      Number(a.elevation || 0) +
-      (Number(b.elevation || 0) - Number(a.elevation || 0)) * fraction
+      Number(a.elevation||0)+
+      (Number(b.elevation||0)-Number(a.elevation||0))*fraction
   };
 }
 
-export function splitTrackIntoStages(points, targetKm) {
-  if (!Array.isArray(points) || points.length < 2) return [];
+export function splitTrack(points,targetKm){
+  if(!Array.isArray(points)||points.length<2) return [];
 
-  const chunks = [];
-  let current = [points[0]];
-  let accumulated = 0;
+  const chunks=[];
+  let current=[points[0]];
+  let accumulated=0;
 
-  for (let index = 1; index < points.length; index++) {
-    let previous = points[index - 1];
-    const next = points[index];
-    let remainingSegment = haversine(previous, next);
+  for(let index=1;index<points.length;index++){
+    let previous=points[index-1];
+    const next=points[index];
+    let segmentDistance=haversine(previous,next);
 
-    while (accumulated + remainingSegment >= targetKm && remainingSegment > 0) {
-      const needed = targetKm - accumulated;
-      const fraction = needed / remainingSegment;
-      const cutPoint = interpolatePoint(previous, next, fraction);
-
-      current.push(cutPoint);
+    while(accumulated+segmentDistance>=targetKm && segmentDistance>0){
+      const needed=targetKm-accumulated;
+      const cut=interpolate(previous,next,needed/segmentDistance);
+      current.push(cut);
       chunks.push(current);
-      current = [cutPoint];
-
-      previous = cutPoint;
-      remainingSegment = haversine(previous, next);
-      accumulated = 0;
+      current=[cut];
+      previous=cut;
+      segmentDistance=haversine(previous,next);
+      accumulated=0;
     }
 
     current.push(next);
-    accumulated += remainingSegment;
+    accumulated+=segmentDistance;
   }
 
-  if (current.length > 1) {
-    chunks.push(current);
-  }
-
+  if(current.length>1) chunks.push(current);
   return chunks;
 }
 
-export function calculateStageStatistics(points) {
-  let distanceKm = 0;
-  let ascentM = 0;
-  let descentM = 0;
+export function calculateStage(points){
+  let distanceKm=0;
+  let ascentM=0;
+  let descentM=0;
 
-  for (let index = 1; index < points.length; index++) {
-    distanceKm += haversine(points[index - 1], points[index]);
-
-    const difference =
-      Number(points[index].elevation || 0) -
-      Number(points[index - 1].elevation || 0);
-
-    if (difference > 0) ascentM += difference;
-    if (difference < 0) descentM += Math.abs(difference);
+  for(let index=1;index<points.length;index++){
+    distanceKm+=haversine(points[index-1],points[index]);
+    const diff=Number(points[index].elevation||0)-Number(points[index-1].elevation||0);
+    if(diff>0) ascentM+=diff;
+    if(diff<0) descentM+=Math.abs(diff);
   }
 
   return {
     distanceKm,
     ascentM,
-    descentM
+    descentM,
+    walkingHours:distanceKm/4.2+ascentM/600
   };
 }
 
-export function addDays(dateString, days) {
-  const date = new Date(`${dateString}T12:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+export function addDays(dateString,days){
+  const date=new Date(`${dateString}T12:00:00`);
+  date.setDate(date.getDate()+days);
+  return date.toISOString().slice(0,10);
 }
 
-export function estimateWalkingHours(distanceKm, ascentM) {
-  const flatHours = distanceKm / 4.2;
-  const ascentHours = ascentM / 600;
-  return flatHours + ascentHours;
+function storageKey(tourId){
+  return `${STORAGE_PREFIX}${tourId}`;
+}
+
+export function saveStagesLocal(tourId,stages){
+  const compact=stages.map(stage=>({
+    id:stage.id,
+    tourId:stage.tourId,
+    order:stage.order,
+    name:stage.name,
+    date:stage.date,
+    from:stage.from,
+    to:stage.to,
+    distanceKm:stage.distanceKm,
+    ascentM:stage.ascentM,
+    descentM:stage.descentM,
+    walkingHours:stage.walkingHours,
+    startCoord:stage.startCoord,
+    endCoord:stage.endCoord
+  }));
+
+  const serialized=JSON.stringify(compact);
+  localStorage.setItem(storageKey(tourId),serialized);
+
+  const verification=localStorage.getItem(storageKey(tourId));
+  if(verification!==serialized){
+    throw new Error("Speicherprüfung fehlgeschlagen.");
+  }
+
+  const reread=JSON.parse(verification);
+  if(!Array.isArray(reread)||reread.length!==compact.length){
+    throw new Error("Gespeicherte Etappen konnten nicht korrekt gelesen werden.");
+  }
+
+  return {
+    count:reread.length,
+    characters:serialized.length
+  };
+}
+
+export function loadStagesLocal(tourId){
+  try{
+    const raw=localStorage.getItem(storageKey(tourId));
+    if(!raw) return [];
+    const stages=JSON.parse(raw);
+    return Array.isArray(stages)
+      ? stages.sort((a,b)=>Number(a.order||0)-Number(b.order||0))
+      : [];
+  }catch(error){
+    console.error("Etappen konnten nicht geladen werden:",error);
+    return [];
+  }
+}
+
+export function deleteStagesLocal(tourId){
+  localStorage.removeItem(storageKey(tourId));
+}
+
+export function getStageStorageInfo(tourId){
+  const raw=localStorage.getItem(storageKey(tourId))||"";
+  let count=0;
+
+  try{
+    const parsed=raw?JSON.parse(raw):[];
+    count=Array.isArray(parsed)?parsed.length:0;
+  }catch{
+    count=0;
+  }
+
+  return {
+    key:storageKey(tourId),
+    count,
+    characters:raw.length,
+    origin:window.location.origin
+  };
 }
