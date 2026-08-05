@@ -9,11 +9,17 @@ import {
   seedDefaultTour,
   saveTrack,
   getTrack,
-  deleteTrack
-} from "./database.js?v=4040";
+  deleteTrack,
+  getStagesForTour,
+  saveStage,
+  saveStages,
+  deleteStage,
+  deleteStagesForTour
+} from "./database.js?v=4051";
 
-import { loadLanguage, translate } from "./i18n.js?v=4040";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4040";
+import { loadLanguage, translate } from "./i18n.js?v=4051";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4051";
+import { splitTrackIntoStages, calculateStageStatistics, addDays, estimateWalkingHours } from "./stages.js?v=4051";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -26,6 +32,8 @@ const tourForm = document.getElementById("tourForm");
 let map = null;
 let trackLayer = null;
 let userMarker = null;
+const stageDialog = document.getElementById("stageDialog");
+const stageForm = document.getElementById("stageForm");
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -157,6 +165,13 @@ tourForm?.addEventListener("submit", async (event) => {
   tourDialog.close();
   await renderTours();
   await renderGpx();
+
+  const activeTour = await getActiveTour();
+  if (activeTour) {
+    document.getElementById("stageStartDate").value = activeTour.startDate || "";
+  }
+
+  await renderStages();
   if (document.getElementById('map').classList.contains('active')) {
     await renderMapTrack();
   }
@@ -196,6 +211,13 @@ document.getElementById("tourList")?.addEventListener("click", async (event) => 
 
   await renderTours();
   await renderGpx();
+
+  const activeTour = await getActiveTour();
+  if (activeTour) {
+    document.getElementById("stageStartDate").value = activeTour.startDate || "";
+  }
+
+  await renderStages();
   if (document.getElementById('map').classList.contains('active')) {
     await renderMapTrack();
   }
@@ -393,6 +415,209 @@ document.getElementById("locateBtn")?.addEventListener("click", () => {
   );
 });
 
+
+function formatHours(value) {
+  const hours = Math.floor(value);
+  const minutes = Math.round((value - hours) * 60);
+  return `${hours} h ${String(minutes).padStart(2, "0")} min`;
+}
+
+async function renderStages() {
+  const activeTour = await getActiveTour();
+  const container = document.getElementById("stageList");
+  const generatorStatus = document.getElementById("stageGeneratorStatus");
+
+  if (!activeTour) {
+    container.innerHTML = `<div class="empty">${translate(
+      "dashboard.noTour",
+      "Noch keine Tour ausgewählt."
+    )}</div>`;
+    return;
+  }
+
+  const stages = await getStagesForTour(activeTour.id);
+  const distances = stages.map((stage) => Number(stage.distanceKm || 0));
+
+  document.getElementById("stageCount").textContent = String(stages.length);
+  document.getElementById("stageAverage").textContent = stages.length
+    ? `${(distances.reduce((sum, value) => sum + value, 0) / stages.length).toFixed(1)} km`
+    : "0 km";
+  document.getElementById("stageLongest").textContent = stages.length
+    ? `${Math.max(...distances).toFixed(1)} km`
+    : "0 km";
+  document.getElementById("stageShortest").textContent = stages.length
+    ? `${Math.min(...distances).toFixed(1)} km`
+    : "0 km";
+
+  if (!generatorStatus.textContent) {
+    generatorStatus.textContent = stages.length
+      ? `${stages.length} ${translate("stages.count", "Etappen")}`
+      : translate("stages.noStages", "Noch keine Etappen vorhanden.");
+  }
+
+  container.innerHTML = stages.length
+    ? stages.map((stage) => `
+      <article class="stage-card ${stage.completed ? "completed" : ""}">
+        <div class="stage-line">
+          <div>
+            <h3>${escapeHtml(stage.name)}</h3>
+            <div class="stage-route">${escapeHtml(stage.from)} → ${escapeHtml(stage.to)}</div>
+          </div>
+          <span class="pill">${formatDate(stage.date)}</span>
+        </div>
+
+        <div class="tour-meta">
+          <span class="pill">${Number(stage.distanceKm || 0).toFixed(1)} km</span>
+          <span class="pill">↑ ${Math.round(stage.ascentM || 0)} m</span>
+          <span class="pill">↓ ${Math.round(stage.descentM || 0)} m</span>
+          <span class="pill">${translate("stages.walkingTime", "Gehzeit")}: ${formatHours(stage.walkingHours || 0)}</span>
+        </div>
+
+        <div class="stage-coordinates">
+          ${stage.startCoord.lat.toFixed(5)}, ${stage.startCoord.lng.toFixed(5)}
+          →
+          ${stage.endCoord.lat.toFixed(5)}, ${stage.endCoord.lng.toFixed(5)}
+        </div>
+
+        ${stage.notes ? `<p>${escapeHtml(stage.notes)}</p>` : ""}
+
+        <div class="card-actions">
+          <button data-edit-stage="${stage.id}">${translate("stages.edit", "Bearbeiten")}</button>
+          <button class="danger" data-delete-stage="${stage.id}">${translate("stages.delete", "Löschen")}</button>
+        </div>
+      </article>
+    `).join("")
+    : `<div class="empty">${translate("stages.noStages", "Noch keine Etappen vorhanden.")}</div>`;
+}
+
+async function generateStages() {
+  const activeTour = await getActiveTour();
+  if (!activeTour) return;
+
+  const track = await getTrack(activeTour.id);
+
+  if (!track?.points?.length) {
+    alert(translate("stages.noTrack", "Für die aktive Tour ist noch kein GPX-Track vorhanden."));
+    return;
+  }
+
+  const targetKm = Number(document.getElementById("targetStageKm").value || 28);
+  const startDate =
+    document.getElementById("stageStartDate").value ||
+    activeTour.startDate ||
+    new Date().toISOString().slice(0, 10);
+
+  const chunks = splitTrackIntoStages(track.points, targetKm);
+  const now = Date.now();
+
+  await deleteStagesForTour(activeTour.id);
+
+  const stages = chunks.map((points, index) => {
+    const statistics = calculateStageStatistics(points);
+    const startCoord = points[0];
+    const endCoord = points.at(-1);
+
+    return {
+      id: `${activeTour.id}-stage-${now}-${index + 1}`,
+      tourId: activeTour.id,
+      order: index + 1,
+      name: `${translate("pages.stagesTitle", "Etappe")} ${index + 1}`,
+      date: addDays(startDate, index),
+      from: `Start ${index + 1}`,
+      to: `Ziel ${index + 1}`,
+      distanceKm: statistics.distanceKm,
+      ascentM: statistics.ascentM,
+      descentM: statistics.descentM,
+      walkingHours: estimateWalkingHours(statistics.distanceKm, statistics.ascentM),
+      startCoord,
+      endCoord,
+      trackPoints: points,
+      completed: false,
+      notes: "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  });
+
+  await saveStages(stages);
+
+  document.getElementById("stageGeneratorStatus").textContent =
+    `${stages.length} ${translate("stages.generated", "Etappen wurden erzeugt.")}`;
+
+  await renderStages();
+}
+
+function openStageDialog(stage) {
+  document.getElementById("stageId").value = stage.id;
+  document.getElementById("stageName").value = stage.name || "";
+  document.getElementById("stageDate").value = stage.date || "";
+  document.getElementById("stageFrom").value = stage.from || "";
+  document.getElementById("stageTo").value = stage.to || "";
+  document.getElementById("stageNotes").value = stage.notes || "";
+  document.getElementById("stageCompleted").checked = Boolean(stage.completed);
+  stageDialog.showModal();
+}
+
+document.getElementById("generateStagesBtn")?.addEventListener("click", generateStages);
+
+document.getElementById("deleteStagesBtn")?.addEventListener("click", async () => {
+  const activeTour = await getActiveTour();
+  if (!activeTour) return;
+
+  if (confirm(translate("stages.confirmDeleteAll", "Alle Etappen der aktiven Tour löschen?"))) {
+    await deleteStagesForTour(activeTour.id);
+    document.getElementById("stageGeneratorStatus").textContent = "";
+    await renderStages();
+  }
+});
+
+document.getElementById("stageList")?.addEventListener("click", async (event) => {
+  const editId = event.target.dataset.editStage;
+  const deleteId = event.target.dataset.deleteStage;
+  const activeTour = await getActiveTour();
+
+  if (!activeTour) return;
+
+  const stages = await getStagesForTour(activeTour.id);
+
+  if (editId) {
+    const stage = stages.find((item) => item.id === editId);
+    if (stage) openStageDialog(stage);
+  }
+
+  if (deleteId && confirm(translate("stages.confirmDelete", "Etappe wirklich löschen?"))) {
+    await deleteStage(deleteId);
+    await renderStages();
+  }
+});
+
+stageForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const activeTour = await getActiveTour();
+  if (!activeTour) return;
+
+  const stages = await getStagesForTour(activeTour.id);
+  const id = document.getElementById("stageId").value;
+  const stage = stages.find((item) => item.id === id);
+
+  if (!stage) return;
+
+  await saveStage({
+    ...stage,
+    name: document.getElementById("stageName").value.trim(),
+    date: document.getElementById("stageDate").value,
+    from: document.getElementById("stageFrom").value.trim(),
+    to: document.getElementById("stageTo").value.trim(),
+    notes: document.getElementById("stageNotes").value.trim(),
+    completed: document.getElementById("stageCompleted").checked,
+    updatedAt: new Date().toISOString()
+  });
+
+  stageDialog.close();
+  await renderStages();
+});
+
 async function initialize() {
   try {
     await openDatabase();
@@ -414,6 +639,13 @@ async function initialize() {
 
   await renderTours();
   await renderGpx();
+
+  const activeTour = await getActiveTour();
+  if (activeTour) {
+    document.getElementById("stageStartDate").value = activeTour.startDate || "";
+  }
+
+  await renderStages();
   if (document.getElementById('map').classList.contains('active')) {
     await renderMapTrack();
   }
@@ -432,6 +664,13 @@ document.getElementById("saveSettings")?.addEventListener("click", async () => {
 
   await renderTours();
   await renderGpx();
+
+  const activeTour = await getActiveTour();
+  if (activeTour) {
+    document.getElementById("stageStartDate").value = activeTour.startDate || "";
+  }
+
+  await renderStages();
   if (document.getElementById('map').classList.contains('active')) {
     await renderMapTrack();
   }
@@ -454,12 +693,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4040";
+  window.location.href = "./?v=4051";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4040");
+    navigator.serviceWorker.register("sw.js?v=4051");
   });
 }
 

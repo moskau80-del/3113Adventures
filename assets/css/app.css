@@ -43,3 +43,12 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
   color:#6b736a;
   text-align:center;
 }
+
+.generator-grid{display:grid;gap:10px}
+.stage-card{background:var(--card);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 8px 28px #00000012}
+.stage-card.completed{opacity:.65}
+.stage-card h3{margin:0 0 6px}
+.stage-line{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.stage-route{font-weight:700}
+.stage-coordinates{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.8rem;color:#6b736a}
+@media(min-width:760px){.generator-grid{grid-template-columns:repeat(2,1fr)}}

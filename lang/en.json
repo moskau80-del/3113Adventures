@@ -9,7 +9,7 @@
   },
   "dashboard": {
     "subtitle": "The new modular PWA foundation is active.",
-    "sprintText": "Tour management, GPX import, map and local database are active.",
+    "sprintText": "Tours, GPX, map and automatic stage planning are active.",
     "currentTour": "Current tour",
     "noTour": "No tour selected."
   },
@@ -17,7 +17,7 @@
     "toursTitle": "Tours",
     "toursText": "Manage your long-distance hikes.",
     "stagesTitle": "Stages",
-    "stagesText": "Coming later.",
+    "stagesText": "Automatically create stages from the GPX track of the active tour.",
     "mapTitle": "Map / GPX",
     "mapText": "Coming later.",
     "placesTitle": "Places",
@@ -79,5 +79,33 @@
     "locate": "My location",
     "noLibrary": "The map library could not be loaded.",
     "noTrack": "Import a GPX track first."
+  },
+  "stages": {
+    "subtitle": "Automatically create stages from the GPX track of the active tour.",
+    "generatorTitle": "Automatically create stages",
+    "targetKm": "Target kilometres per stage",
+    "startDate": "Start date",
+    "generate": "Create stages",
+    "deleteAll": "Delete all stages",
+    "summary": "Summary",
+    "count": "Stages",
+    "average": "Average",
+    "longest": "Longest stage",
+    "shortest": "Shortest stage",
+    "editTitle": "Edit stage",
+    "name": "Name",
+    "date": "Date",
+    "from": "Start",
+    "to": "End",
+    "notes": "Notes",
+    "completed": "Completed",
+    "edit": "Edit",
+    "delete": "Delete",
+    "noStages": "No stages yet.",
+    "generated": "Stages were created.",
+    "noTrack": "The active tour has no GPX track yet.",
+    "confirmDeleteAll": "Delete all stages for the active tour?",
+    "confirmDelete": "Delete this stage?",
+    "walkingTime": "Walking time"
   }
 }
