@@ -305,6 +305,55 @@ export function mergeStageWithNextLocal(tourId,stageId){
   );
 }
 
+
+export function distributeRestDays(stages,restDays){
+  const count=Math.max(0,Math.floor(Number(restDays)||0));
+  if(!count || !stages.length) return stages;
+
+  const result=[];
+  const walkingCount=stages.length;
+
+  // Positions after walking days; spread them across the route.
+  const positions=new Set();
+  for(let i=1;i<=count;i++){
+    const raw=Math.round((i*walkingCount)/(count+1));
+    positions.add(Math.max(1,Math.min(walkingCount-1,raw)));
+  }
+
+  stages.forEach((stage,index)=>{
+    result.push(stage);
+
+    const walkingPosition=index+1;
+    if(positions.has(walkingPosition)){
+      const coord=stage.endCoord||stage.startCoord;
+      result.push({
+        id:`${stage.tourId}-rest-auto-${iSafeDate()}-${walkingPosition}`,
+        tourId:stage.tourId,
+        order:0,
+        name:"Ruhetag",
+        date:stage.date,
+        from:"Ruhetag",
+        to:"Ruhetag",
+        distanceKm:0,
+        ascentM:0,
+        descentM:0,
+        walkingHours:0,
+        startCoord:coord,
+        endCoord:coord,
+        notes:"Automatisch verteilter Ruhetag",
+        completed:false,
+        restDay:true
+      });
+    }
+  });
+
+  return result.map((stage,index)=>({...stage,order:index+1}));
+}
+
+function iSafeDate(){
+  return Date.now();
+}
+
 export function getStageStorageInfo(tourId){
   const raw=localStorage.getItem(storageKey(tourId))||"";
   let count=0;

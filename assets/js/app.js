@@ -10,11 +10,11 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4055";
+} from "./database.js?v=4056";
 
-import { loadLanguage, translate } from "./i18n.js?v=4055";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4055";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, getStageStorageInfo } from "./stages.js?v=4055";
+import { loadLanguage, translate } from "./i18n.js?v=4056";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4056";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4056";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -525,7 +525,7 @@ async function renderStages(){
 
   list.innerHTML=stages.length
     ? stages.map(stage=>`
-      <article class="stage-card ${stage.completed?"completed":""} ${stage.restDay?"rest-day":""}">
+      <article id="stage-card-${stage.id}" class="stage-card ${stage.completed?"completed":""} ${stage.restDay?"rest-day":""}">
         <h3>${escapeHtml(stage.name)}</h3>
         <div class="stage-route">${escapeHtml(stage.from)} → ${escapeHtml(stage.to)}</div>
         <div class="stage-meta">
@@ -562,6 +562,17 @@ async function renderStages(){
 
 
 
+
+function jumpToStage(stageId){
+  const element=document.getElementById(`stage-card-${stageId}`);
+  if(!element) return;
+
+  element.scrollIntoView({behavior:"smooth",block:"center"});
+  element.classList.remove("flash");
+  requestAnimationFrame(()=>element.classList.add("flash"));
+  setTimeout(()=>element.classList.remove("flash"),1600);
+}
+
 function renderStageTimeline(stages){
   const container=document.getElementById("stageTimeline");
   if(!container) return;
@@ -588,7 +599,7 @@ function renderStageTimeline(stages){
       <h4>${label}</h4>
       <div class="timeline-items">
         ${items.map(stage=>`
-          <div class="timeline-item ${stage.restDay?"rest":""} ${stage.completed?"completed":""}">
+          <div class="timeline-item ${stage.restDay?"rest":""} ${stage.completed?"completed":""}" data-timeline-stage="${stage.id}" title="Etappe öffnen">
             <span class="timeline-date">${formatDate(stage.date)}</span>
             <span>${stage.restDay
               ?"Ruhetag"
@@ -774,6 +785,14 @@ stageForm?.addEventListener("submit",async(event)=>{
 });
 
 
+
+document.getElementById("stageTimeline")?.addEventListener("click",(event)=>{
+  const item=event.target.closest("[data-timeline-stage]");
+  if(!item) return;
+
+  jumpToStage(item.dataset.timelineStage);
+});
+
 splitStageForm?.addEventListener("submit",async(event)=>{
   event.preventDefault();
 
@@ -832,7 +851,7 @@ document.getElementById("generateStagesBtn")?.addEventListener("click",async()=>
     new Date().toISOString().slice(0,10);
 
   const chunks=splitTrack(track.points,targetKm);
-  const stages=chunks.map((points,index)=>{
+  let stages=chunks.map((points,index)=>{
     const stats=calculateStage(points);
     return {
       id:`${activeTour.id}-stage-${index+1}`,
@@ -849,14 +868,28 @@ document.getElementById("generateStagesBtn")?.addEventListener("click",async()=>
       startCoord:points[0],
       endCoord:points.at(-1),
       notes:"",
-      completed:false
+      completed:false,
+      restDay:false
     };
   });
 
+  const requestedRestDays=Number(document.getElementById("plannedRestDays").value||0);
+  stages=distributeRestDays(stages,requestedRestDays);
+
+  // Dates must include automatically inserted rest days.
+  stages=stages.map((stage,index)=>({
+    ...stage,
+    order:index+1,
+    date:addDays(startDate,index),
+    name:stage.restDay?"Ruhetag":stage.name
+  }));
+
   try{
     const result=saveStagesLocal(activeTour.id,stages);
+    const restCount=stages.filter(stage=>stage.restDay).length;
+    const walkingCount=stages.length-restCount;
     document.getElementById("stageStatus").textContent=
-      `${result.count} Etappen gespeichert und geprüft.`;
+      `${walkingCount} Wandertage und ${restCount} Ruhetage gespeichert und geprüft.`;
     await renderStages();
   }catch(error){
     document.getElementById("stageStatus").textContent=`Speichern fehlgeschlagen: ${error.message}`;
@@ -987,12 +1020,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4055";
+  window.location.href = "./?v=4056";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4055");
+    navigator.serviceWorker.register("sw.js?v=4056");
   });
 }
 
