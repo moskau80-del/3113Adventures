@@ -56,3 +56,13 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .stage-card.completed h3{text-decoration:line-through}
 .card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .card-actions button{border:0;border-radius:9px;padding:8px 10px}
+
+.section-header.compact{margin-bottom:8px}
+.stage-card.rest-day{border-left:6px solid #8aa0bd;background:#f4f7fb}
+.timeline-month{margin:14px 0}
+.timeline-month h4{margin:0 0 8px}
+.timeline-items{display:grid;gap:6px}
+.timeline-item{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:10px;background:#f2f4ef}
+.timeline-item.rest{background:#e9eff7}
+.timeline-item.completed{opacity:.65}
+.timeline-date{font-weight:800;min-width:92px}

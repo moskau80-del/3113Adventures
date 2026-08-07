@@ -1,21 +1,14 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 5.3
+# 3113 Adventures – Version 4.0.0 / Sprint 5.4
 
 ## Neu
-
-- Etappen bearbeiten:
-  - Name
-  - Datum
-  - Start
-  - Ziel
-  - Notizen
-  - Status abgeschlossen/offen
-- einzelne Etappen löschen
-- Änderungen sofort im Browserspeicher sichern
-- einzelne Etappe auf der Karte anzeigen
-- Etappenkarte zeigt nur den betreffenden GPX-Abschnitt
-- Schaltfläche `Gesamtroute anzeigen` wechselt zurück zur vollständigen Route
-- Tour- und GPX-Korrekturen aus Sprint 5.2.1 enthalten
+- Ruhetag vor oder nach einer Etappe einfügen
+- Ruhetage entfernen
+- Etappen teilen
+- Etappen mit der nächsten Etappe zusammenlegen
+- automatische Datumsverschiebung
+- Tour-Zeitachse nach Monaten
+- Datumsangaben neu berechnen
+- alle Funktionen aus Sprint 5.3 bleiben enthalten
 
 ## Kontrolle
-
-Oben rechts muss `v4.0.0 · Sprint 5.3` stehen.
+Oben rechts muss `v4.0.0 · Sprint 5.4` stehen.

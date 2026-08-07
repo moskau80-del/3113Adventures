@@ -98,7 +98,8 @@ export function saveStagesLocal(tourId,stages){
     startCoord:stage.startCoord,
     endCoord:stage.endCoord,
     notes:stage.notes||"",
-    completed:Boolean(stage.completed)
+    completed:Boolean(stage.completed),
+    restDay:Boolean(stage.restDay)
   }));
 
   const serialized=JSON.stringify(compact);
@@ -166,6 +167,142 @@ export function deleteStageLocal(tourId,stageId){
 
   deleteStagesLocal(tourId);
   return {count:0,characters:0};
+}
+
+
+export function recalculateStageDates(tourId,startDate){
+  const stages=loadStagesLocal(tourId);
+  const recalculated=stages.map((stage,index)=>({
+    ...stage,
+    order:index+1,
+    date:addDays(startDate,index)
+  }));
+  return saveStagesLocal(tourId,recalculated);
+}
+
+export function insertRestDayLocal(tourId,stageId,position="after"){
+  const stages=loadStagesLocal(tourId);
+  const index=stages.findIndex(stage=>stage.id===stageId);
+  if(index<0) throw new Error("Etappe wurde nicht gefunden.");
+
+  const reference=stages[index];
+  const insertIndex=position==="before"?index:index+1;
+  const locationCoord=reference.endCoord||reference.startCoord;
+
+  const rest={
+    id:`${tourId}-rest-${Date.now()}`,
+    tourId,
+    order:insertIndex+1,
+    name:"Ruhetag",
+    date:reference.date,
+    from:"Ruhetag",
+    to:"Ruhetag",
+    distanceKm:0,
+    ascentM:0,
+    descentM:0,
+    walkingHours:0,
+    startCoord:locationCoord,
+    endCoord:locationCoord,
+    notes:"",
+    completed:false,
+    restDay:true
+  };
+
+  stages.splice(insertIndex,0,rest);
+  return saveStagesLocal(
+    tourId,
+    stages.map((stage,index)=>({...stage,order:index+1}))
+  );
+}
+
+export function deleteRestDayLocal(tourId,stageId){
+  const stages=loadStagesLocal(tourId)
+    .filter(stage=>stage.id!==stageId)
+    .map((stage,index)=>({...stage,order:index+1}));
+
+  if(stages.length) return saveStagesLocal(tourId,stages);
+  deleteStagesLocal(tourId);
+  return {count:0,characters:0};
+}
+
+export function splitStageLocal(tourId,stageId,location,firstKm){
+  const stages=loadStagesLocal(tourId);
+  const index=stages.findIndex(stage=>stage.id===stageId);
+  if(index<0) throw new Error("Etappe wurde nicht gefunden.");
+
+  const original=stages[index];
+  if(original.restDay) throw new Error("Ein Ruhetag kann nicht geteilt werden.");
+
+  const total=Number(original.distanceKm||0);
+  if(firstKm<=0||firstKm>=total){
+    throw new Error("Die Teilstrecke muss zwischen 0 und der Gesamtdistanz liegen.");
+  }
+
+  const ratio=firstKm/total;
+  const first={
+    ...original,
+    id:`${original.id}-a-${Date.now()}`,
+    to:location,
+    distanceKm:firstKm,
+    ascentM:Number(original.ascentM||0)*ratio,
+    descentM:Number(original.descentM||0)*ratio,
+    walkingHours:Number(original.walkingHours||0)*ratio,
+    completed:false
+  };
+
+  const second={
+    ...original,
+    id:`${original.id}-b-${Date.now()}`,
+    from:location,
+    distanceKm:total-firstKm,
+    ascentM:Number(original.ascentM||0)*(1-ratio),
+    descentM:Number(original.descentM||0)*(1-ratio),
+    walkingHours:Number(original.walkingHours||0)*(1-ratio),
+    completed:false
+  };
+
+  stages.splice(index,1,first,second);
+
+  return saveStagesLocal(
+    tourId,
+    stages.map((stage,index)=>({...stage,order:index+1}))
+  );
+}
+
+export function mergeStageWithNextLocal(tourId,stageId){
+  const stages=loadStagesLocal(tourId);
+  const index=stages.findIndex(stage=>stage.id===stageId);
+
+  if(index<0||index>=stages.length-1){
+    throw new Error("Keine nächste Etappe zum Zusammenlegen vorhanden.");
+  }
+
+  const first=stages[index];
+  const second=stages[index+1];
+
+  if(first.restDay||second.restDay){
+    throw new Error("Ruhetage können nicht zusammengelegt werden.");
+  }
+
+  const merged={
+    ...first,
+    id:`${tourId}-merged-${Date.now()}`,
+    to:second.to,
+    distanceKm:Number(first.distanceKm||0)+Number(second.distanceKm||0),
+    ascentM:Number(first.ascentM||0)+Number(second.ascentM||0),
+    descentM:Number(first.descentM||0)+Number(second.descentM||0),
+    walkingHours:Number(first.walkingHours||0)+Number(second.walkingHours||0),
+    endCoord:second.endCoord,
+    notes:[first.notes,second.notes].filter(Boolean).join(" · "),
+    completed:Boolean(first.completed&&second.completed)
+  };
+
+  stages.splice(index,2,merged);
+
+  return saveStagesLocal(
+    tourId,
+    stages.map((stage,index)=>({...stage,order:index+1}))
+  );
 }
 
 export function getStageStorageInfo(tourId){

@@ -10,11 +10,11 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4053";
+} from "./database.js?v=4054";
 
-import { loadLanguage, translate } from "./i18n.js?v=4053";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4053";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, getStageStorageInfo } from "./stages.js?v=4053";
+import { loadLanguage, translate } from "./i18n.js?v=4054";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4054";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, getStageStorageInfo } from "./stages.js?v=4054";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -29,6 +29,8 @@ let trackLayer = null;
 let userMarker = null;
 const stageDialog = document.getElementById("stageDialog");
 const stageForm = document.getElementById("stageForm");
+const splitStageDialog = document.getElementById("splitStageDialog");
+const splitStageForm = document.getElementById("splitStageForm");
 let currentMapStageId = null;
 
 navButtons.forEach((button) => {
@@ -454,9 +456,11 @@ async function renderStages(){
   diagnostic.textContent=
     `Speicher: ${info.count} Etappen · ${info.characters} Zeichen · ${info.origin}`;
 
+  renderStageTimeline(stages);
+
   list.innerHTML=stages.length
     ? stages.map(stage=>`
-      <article class="stage-card ${stage.completed?"completed":""}">
+      <article class="stage-card ${stage.completed?"completed":""} ${stage.restDay?"rest-day":""}">
         <h3>${escapeHtml(stage.name)}</h3>
         <div class="stage-route">${escapeHtml(stage.from)} → ${escapeHtml(stage.to)}</div>
         <div class="stage-meta">
@@ -474,15 +478,60 @@ async function renderStages(){
         </div>
         ${stage.notes?`<p>${escapeHtml(stage.notes)}</p>`:""}
         <div class="card-actions">
-          <button data-map-stage="${stage.id}">Auf Karte</button>
-          <button data-edit-stage="${stage.id}">Bearbeiten</button>
-          <button class="danger" data-delete-stage="${stage.id}">Löschen</button>
+          ${stage.restDay
+            ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
+            : `<button data-map-stage="${stage.id}">Auf Karte</button>
+               <button data-edit-stage="${stage.id}">Bearbeiten</button>
+               <button data-rest-before="${stage.id}">Ruhetag davor</button>
+               <button data-rest-after="${stage.id}">Ruhetag danach</button>
+               <button data-split-stage="${stage.id}">Teilen</button>
+               <button data-merge-stage="${stage.id}">Mit nächster verbinden</button>
+               <button class="danger" data-delete-stage="${stage.id}">Löschen</button>`}
         </div>
       </article>
     `).join("")
     : '<div class="empty">Noch keine Etappen vorhanden.</div>';
 }
 
+
+
+function renderStageTimeline(stages){
+  const container=document.getElementById("stageTimeline");
+  if(!container) return;
+
+  if(!stages.length){
+    container.innerHTML='<p class="muted">Noch keine Etappen vorhanden.</p>';
+    return;
+  }
+
+  const grouped={};
+  stages.forEach(stage=>{
+    const month=(stage.date||"").slice(0,7)||"ohne-datum";
+    if(!grouped[month]) grouped[month]=[];
+    grouped[month].push(stage);
+  });
+
+  container.innerHTML=Object.entries(grouped).map(([month,items])=>{
+    const label=month==="ohne-datum"
+      ?"Ohne Datum"
+      :new Intl.DateTimeFormat("de-CH",{month:"long",year:"numeric"})
+        .format(new Date(`${month}-01T12:00:00`));
+
+    return `<div class="timeline-month">
+      <h4>${label}</h4>
+      <div class="timeline-items">
+        ${items.map(stage=>`
+          <div class="timeline-item ${stage.restDay?"rest":""} ${stage.completed?"completed":""}">
+            <span class="timeline-date">${formatDate(stage.date)}</span>
+            <span>${stage.restDay
+              ?"Ruhetag"
+              :`${escapeHtml(stage.from)} → ${escapeHtml(stage.to)} · ${Number(stage.distanceKm||0).toFixed(1)} km`}
+            </span>
+          </div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+}
 
 function openStageDialog(stage){
   document.getElementById("editStageId").value=stage.id;
@@ -562,6 +611,55 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   const editId=event.target.dataset.editStage;
   const deleteId=event.target.dataset.deleteStage;
   const mapId=event.target.dataset.mapStage;
+  const restBefore=event.target.dataset.restBefore;
+  const restAfter=event.target.dataset.restAfter;
+  const deleteRest=event.target.dataset.deleteRest;
+  const splitId=event.target.dataset.splitStage;
+  const mergeId=event.target.dataset.mergeStage;
+
+
+  if(restBefore){
+    insertRestDayLocal(activeTour.id,restBefore,"before");
+    recalculateStageDates(activeTour.id,activeTour.startDate||stages[0]?.date||new Date().toISOString().slice(0,10));
+    await renderStages();
+    return;
+  }
+
+  if(restAfter){
+    insertRestDayLocal(activeTour.id,restAfter,"after");
+    recalculateStageDates(activeTour.id,activeTour.startDate||stages[0]?.date||new Date().toISOString().slice(0,10));
+    await renderStages();
+    return;
+  }
+
+  if(deleteRest){
+    deleteRestDayLocal(activeTour.id,deleteRest);
+    recalculateStageDates(activeTour.id,activeTour.startDate||stages[0]?.date||new Date().toISOString().slice(0,10));
+    await renderStages();
+    return;
+  }
+
+  if(splitId){
+    const stage=stages.find(item=>item.id===splitId);
+    if(stage){
+      document.getElementById("splitStageId").value=stage.id;
+      document.getElementById("splitStageLocation").value="";
+      document.getElementById("splitStageKm").value=(Number(stage.distanceKm||0)/2).toFixed(1);
+      splitStageDialog.showModal();
+    }
+    return;
+  }
+
+  if(mergeId){
+    try{
+      mergeStageWithNextLocal(activeTour.id,mergeId);
+      recalculateStageDates(activeTour.id,activeTour.startDate||stages[0]?.date||new Date().toISOString().slice(0,10));
+      await renderStages();
+    }catch(error){
+      alert(error.message);
+    }
+    return;
+  }
 
   if(editId){
     const stage=stages.find(item=>item.id===editId);
@@ -605,6 +703,48 @@ stageForm?.addEventListener("submit",async(event)=>{
   });
 
   stageDialog.close();
+  await renderStages();
+});
+
+
+splitStageForm?.addEventListener("submit",async(event)=>{
+  event.preventDefault();
+
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const id=document.getElementById("splitStageId").value;
+  const location=document.getElementById("splitStageLocation").value.trim();
+  const firstKm=Number(document.getElementById("splitStageKm").value);
+
+  try{
+    splitStageLocal(activeTour.id,id,location,firstKm);
+    const stages=loadStagesLocal(activeTour.id);
+
+    recalculateStageDates(
+      activeTour.id,
+      activeTour.startDate||stages[0]?.date||new Date().toISOString().slice(0,10)
+    );
+
+    splitStageDialog.close();
+    await renderStages();
+  }catch(error){
+    alert(error.message);
+  }
+});
+
+document.getElementById("recalculateStageDatesBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const stages=loadStagesLocal(activeTour.id);
+  if(!stages.length) return;
+
+  recalculateStageDates(
+    activeTour.id,
+    activeTour.startDate||stages[0].date||new Date().toISOString().slice(0,10)
+  );
+
   await renderStages();
 });
 
@@ -780,12 +920,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4053";
+  window.location.href = "./?v=4054";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4053");
+    navigator.serviceWorker.register("sw.js?v=4054");
   });
 }
 
