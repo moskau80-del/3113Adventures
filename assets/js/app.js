@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4063";
+} from "./database.js?v=4064";
 
-import { loadLanguage, translate } from "./i18n.js?v=4063";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4063";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4063";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement } from "./places.js?v=4063";
+import { loadLanguage, translate } from "./i18n.js?v=4064";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4064";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4064";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4064";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -922,53 +922,118 @@ document.getElementById("runSupplySearchBtn")?.addEventListener("click",async()=
   }
 
   const maxDistance=Number(document.getElementById("supplyMaxDistance").value||1);
-  const bounds=boundsForStage(segment,maxDistance+0.5);
-  const query=buildOverpassQuery(bounds,currentSupplyCategory);
-
+  const windows=stageSearchWindows(segment,maxDistance+0.4,70);
   const status=document.getElementById("supplyStatus");
-  status.textContent="Suche läuft …";
+
   currentSupplyResults=[];
+  let collected=[];
+  let completed=0;
+  let failures=0;
 
   const endpoints=[
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter"
   ];
 
-  let lastError=null;
+  for(let windowIndex=0;windowIndex<windows.length;windowIndex++){
+    const bounds=windows[windowIndex];
+    const query=buildOverpassQuery(bounds,currentSupplyCategory);
 
-  for(const endpoint of endpoints){
-    try{
-      const response=await fetch(endpoint,{
-        method:"POST",
-        headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
-        body:`data=${encodeURIComponent(query)}`
-      });
+    status.innerHTML=
+      `Suche Teil ${windowIndex+1} von ${windows.length} …<div class="search-progress">${completed} erfolgreich · ${failures} fehlgeschlagen</div>`;
 
-      if(!response.ok) throw new Error(`Serverantwort ${response.status}`);
+    let success=false;
 
-      const data=await response.json();
+    for(const endpoint of endpoints){
+      try{
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),18000);
 
-      currentSupplyResults=(data.elements||[])
-        .map(element=>normalizeOverpassElement(element,currentSupplyCategory))
-        .filter(Boolean)
-        .map(place=>({
-          ...place,
-          stageId:stage.id,
-          distanceKm:distanceToStageKm(place,segment)
-        }))
-        .filter(place=>place.distanceKm<=maxDistance)
-        .sort((a,b)=>a.distanceKm-b.distanceKm)
-        .slice(0,40);
+        const response=await fetch(endpoint,{
+          method:"POST",
+          headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+          body:`data=${encodeURIComponent(query)}`,
+          signal:controller.signal
+        });
 
-      status.textContent=`${currentSupplyResults.length} Treffer gefunden.`;
-      renderSupplyResults(currentSupplyResults);
-      return;
-    }catch(error){
-      lastError=error;
+        clearTimeout(timer);
+
+        if(!response.ok) throw new Error(`Serverantwort ${response.status}`);
+
+        const data=await response.json();
+        const normalized=(data.elements||[])
+          .map(element=>normalizeOverpassElement(element,currentSupplyCategory))
+          .filter(Boolean);
+
+        collected.push(...normalized);
+        completed++;
+        success=true;
+        break;
+      }catch(error){
+        console.warn("Overpass-Teilabfrage fehlgeschlagen:",error);
+      }
     }
+
+    if(!success) failures++;
   }
 
-  status.textContent=`Suche fehlgeschlagen: ${lastError?.message||"Unbekannter Fehler"}`;
+  collected=dedupePlaces(collected);
+
+  currentSupplyResults=collected
+    .map(place=>({
+      ...place,
+      stageId:stage.id,
+      distanceKm:distanceToStageKm(place,segment)
+    }))
+    .filter(place=>place.distanceKm<=maxDistance)
+    .sort((a,b)=>a.distanceKm-b.distanceKm)
+    .slice(0,80);
+
+  status.textContent=
+    `${currentSupplyResults.length} Treffer gefunden · ${completed}/${windows.length} Teilabfragen erfolgreich${failures?` · ${failures} fehlgeschlagen`:""}.`;
+
+  renderSupplyResults(currentSupplyResults);
+});
+
+
+document.getElementById("saveManualPlaceBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour||!currentSupplyStageId) return;
+
+  const name=document.getElementById("manualPlaceName").value.trim();
+  const category=document.getElementById("manualPlaceCategory").value;
+  const lat=Number(document.getElementById("manualPlaceLat").value);
+  const lng=Number(document.getElementById("manualPlaceLng").value);
+
+  if(!name||!Number.isFinite(lat)||!Number.isFinite(lng)){
+    alert("Bitte Name sowie gültige Koordinaten eingeben.");
+    return;
+  }
+
+  const stages=loadStagesLocal(activeTour.id);
+  const stage=stages.find(item=>item.id===currentSupplyStageId);
+  const track=await getTrack(activeTour.id);
+  const segment=stage&&track?.points?.length?stageTrackSegment(track.points,stage):[];
+
+  const place={
+    id:`manual-${Date.now()}`,
+    stageId:currentSupplyStageId,
+    name,
+    category,
+    lat,
+    lng,
+    distanceKm:segment.length>=2?distanceToStageKm({lat,lng},segment):0,
+    tags:{source:"manual"}
+  };
+
+  addPlaceLocal(activeTour.id,place);
+  document.getElementById("manualPlaceName").value="";
+  document.getElementById("manualPlaceLat").value="";
+  document.getElementById("manualPlaceLng").value="";
+
+  document.getElementById("supplyStatus").textContent="Manueller Ort gespeichert.";
+  await renderPlaces();
+  await renderStages();
 });
 
 document.getElementById("supplyResults")?.addEventListener("click",async(event)=>{
@@ -1301,12 +1366,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4063";
+  window.location.href = "./?v=4064";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4063");
+    navigator.serviceWorker.register("sw.js?v=4064");
   });
 }
 

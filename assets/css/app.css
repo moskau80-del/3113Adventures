@@ -105,3 +105,7 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .stage-supply-item span{font-size:.78rem;margin-top:2px}
 .stage-supply-empty{color:#6b736a;font-size:.86rem}
 @media(min-width:760px){.stage-supply-grid{grid-template-columns:repeat(4,1fr)}}
+
+.manual-place{margin-top:14px;padding-top:10px;border-top:1px solid #dde2da}
+.manual-place summary{cursor:pointer;font-weight:800}
+.search-progress{display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.84rem}

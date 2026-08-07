@@ -187,3 +187,36 @@ export function toggleFavoriteLocal(tourId,placeId){
 export function getPlacesForStage(tourId,stageId){
   return loadPlacesLocal(tourId).filter(place=>place.stageId===stageId);
 }
+
+
+export function stageSearchWindows(points,paddingKm=1.5,maxPointsPerWindow=80){
+  if(!Array.isArray(points)||points.length<2) return [];
+
+  const windows=[];
+  const step=Math.max(2,Math.floor(maxPointsPerWindow));
+
+  for(let start=0;start<points.length-1;start+=step-1){
+    const slice=points.slice(start,Math.min(points.length,start+step));
+    if(slice.length<2) continue;
+    windows.push(boundsForStage(slice,paddingKm));
+  }
+
+  return windows;
+}
+
+export function dedupePlaces(places){
+  const seen=new Set();
+  const result=[];
+
+  for(const place of places){
+    const key=place.osmType&&place.osmId
+      ? `${place.osmType}:${place.osmId}`
+      : `${place.name}:${place.lat.toFixed(5)}:${place.lng.toFixed(5)}`;
+
+    if(seen.has(key)) continue;
+    seen.add(key);
+    result.push(place);
+  }
+
+  return result;
+}
