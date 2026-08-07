@@ -31,7 +31,8 @@ export function savePlacesLocal(tourId,places){
     tags:place.tags||{},
     savedAt:place.savedAt||new Date().toISOString(),
     favorite:Boolean(place.favorite),
-    preferred:Boolean(place.preferred)
+    preferredStart:Boolean(place.preferredStart),
+    preferredEnd:Boolean(place.preferredEnd)
   }));
 
   const serialized=JSON.stringify(compact);
@@ -252,5 +253,74 @@ export function clearPreferredPlaceLocal(tourId,stageId){
 export function getPreferredPlaceForStage(tourId,stageId){
   return loadPlacesLocal(tourId).find(
     place=>place.stageId===stageId&&place.preferred
+  )||null;
+}
+
+
+export function setPreferredStartLocal(tourId,placeId){
+  const places=loadPlacesLocal(tourId);
+  const selected=places.find(place=>place.id===placeId);
+  if(!selected) return places;
+
+  return savePlacesLocal(
+    tourId,
+    places.map(place=>({
+      ...place,
+      preferredStart:place.stageId===selected.stageId
+        ? place.id===placeId
+        : Boolean(place.preferredStart),
+      preferredEnd:Boolean(place.preferredEnd)
+    }))
+  );
+}
+
+export function setPreferredEndLocal(tourId,placeId){
+  const places=loadPlacesLocal(tourId);
+  const selected=places.find(place=>place.id===placeId);
+  if(!selected) return places;
+
+  return savePlacesLocal(
+    tourId,
+    places.map(place=>({
+      ...place,
+      preferredStart:Boolean(place.preferredStart),
+      preferredEnd:place.stageId===selected.stageId
+        ? place.id===placeId
+        : Boolean(place.preferredEnd)
+    }))
+  );
+}
+
+export function clearPreferredStartLocal(tourId,stageId){
+  return savePlacesLocal(
+    tourId,
+    loadPlacesLocal(tourId).map(place=>({
+      ...place,
+      preferredStart:place.stageId===stageId?false:Boolean(place.preferredStart),
+      preferredEnd:Boolean(place.preferredEnd)
+    }))
+  );
+}
+
+export function clearPreferredEndLocal(tourId,stageId){
+  return savePlacesLocal(
+    tourId,
+    loadPlacesLocal(tourId).map(place=>({
+      ...place,
+      preferredStart:Boolean(place.preferredStart),
+      preferredEnd:place.stageId===stageId?false:Boolean(place.preferredEnd)
+    }))
+  );
+}
+
+export function getPreferredStartForStage(tourId,stageId){
+  return loadPlacesLocal(tourId).find(
+    place=>place.stageId===stageId&&place.preferredStart
+  )||null;
+}
+
+export function getPreferredEndForStage(tourId,stageId){
+  return loadPlacesLocal(tourId).find(
+    place=>place.stageId===stageId&&place.preferredEnd
   )||null;
 }

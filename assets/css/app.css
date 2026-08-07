@@ -124,3 +124,7 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .planning-status{margin-top:10px;padding:9px 10px;border-radius:10px;background:#f5f6f2}
 .planning-status strong,.planning-status span{display:block}
 .planning-status span{font-size:.8rem;margin-top:3px}
+
+.stage-preferred-start{margin-top:10px;padding:10px;border-radius:10px;background:#eaf2fb}
+.stage-preferred-end{margin-top:10px;padding:10px;border-radius:10px;background:#edf3e8}
+.stage-preferred-start strong,.stage-preferred-start span,.stage-preferred-end strong,.stage-preferred-end span{display:block}

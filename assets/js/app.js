@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4068";
+} from "./database.js?v=4069";
 
-import { loadLanguage, translate } from "./i18n.js?v=4068";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4068";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4068";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredPlaceLocal, clearPreferredPlaceLocal, getPreferredPlaceForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4068";
+import { loadLanguage, translate } from "./i18n.js?v=4069";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4069";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4069";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4069";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -37,6 +37,7 @@ let currentSupplyStageId=null;
 let currentSupplyCategory="camping";
 let currentSupplyResults=[];
 let pendingPreferredDestinationStageId=null;
+let pendingPreferredStartStageId=null;
 let placeFilter="all";
 
 navButtons.forEach((button) => {
@@ -515,21 +516,27 @@ function nearestPlaceByCategory(places,category){
 function stagePlanningStatusHtml(tourId,stage){
   if(stage.restDay) return "";
   const places=getPlacesForStage(tourId,stage.id);
-  const preferred=getPreferredPlaceForStage(tourId,stage.id);
+  const preferredStart=getPreferredStartForStage(tourId,stage.id);
+  const preferredEnd=getPreferredEndForStage(tourId,stage.id);
   const categories=new Set(places.map(p=>p.category));
   const checks=[["camping","Übernachtung"],["water","Wasser"],["shop","Einkauf"]];
   const done=checks.filter(([key])=>categories.has(key)).length;
-  return `<div class="planning-status"><strong>Planungsstand ${done}/3</strong><span>${checks.map(([key,label])=>`${categories.has(key)?"✓":"○"} ${label}`).join(" · ")}</span><span>${preferred?`★ Bevorzugter Stopp: ${escapeHtml(preferred.name)}`:"○ Noch kein bevorzugter Stopp"}</span></div>`;
+  return `<div class="planning-status"><strong>Planungsstand ${done}/3</strong><span>${checks.map(([key,label])=>`${categories.has(key)?"✓":"○"} ${label}`).join(" · ")}</span><span>${preferredStart?`★ Start: ${escapeHtml(preferredStart.name)}`:"○ Kein bevorzugter Start"}<br>${preferredEnd?`★ Ziel: ${escapeHtml(preferredEnd.name)}`:"○ Kein bevorzugtes Ziel"}</span></div>`;
 }
 
 function stagePreferredHtml(tourId,stageId){
-  const place=getPreferredPlaceForStage(tourId,stageId);
-  if(!place) return "";
-  return `<div class="stage-preferred">
-    <strong>★ Bevorzugter Stopp: ${escapeHtml(place.name)}</strong>
-    <span>${escapeHtml(place.category)} · ${Number(place.distanceKm||0).toFixed(2)} km von der Etappe</span>
-    <span class="stage-destination">Nur auf ausdrückliche Bestätigung als Etappenziel übernehmen.</span>
-  </div>`;
+  const start=getPreferredStartForStage(tourId,stageId);
+  const end=getPreferredEndForStage(tourId,stageId);
+
+  const startHtml=start
+    ? `<div class="stage-preferred-start"><strong>★ Bevorzugter Start: ${escapeHtml(start.name)}</strong><span>${escapeHtml(start.category)} · ${Number(start.distanceKm||0).toFixed(2)} km von der Etappe</span><span class="stage-destination">Nur nach ausdrücklicher Bestätigung übernehmen.</span></div>`
+    : "";
+
+  const endHtml=end
+    ? `<div class="stage-preferred-end"><strong>★ Bevorzugtes Ziel: ${escapeHtml(end.name)}</strong><span>${escapeHtml(end.category)} · ${Number(end.distanceKm||0).toFixed(2)} km von der Etappe</span><span class="stage-destination">Nur nach ausdrücklicher Bestätigung übernehmen.</span></div>`
+    : "";
+
+  return startHtml+endHtml;
 }
 
 function stageSupplyHtml(tourId,stageId){
@@ -617,7 +624,7 @@ async function renderStages(){
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
-            : `<button data-map-stage="${stage.id}">Auf Karte</button><button data-supply-stage="${stage.id}">Versorgung suchen</button>${getPreferredPlaceForStage(activeTour.id,stage.id)?`<button data-use-preferred-destination="${stage.id}">Stopp als Ziel übernehmen</button>`:""}
+            : `<button data-map-stage="${stage.id}">Auf Karte</button><button data-supply-stage="${stage.id}">Versorgung suchen</button>${getPreferredStartForStage(activeTour.id,stage.id)?`<button data-use-preferred-start="${stage.id}">Start übernehmen</button>`:""}${getPreferredEndForStage(activeTour.id,stage.id)?`<button data-use-preferred-destination="${stage.id}">Ziel übernehmen</button>`:""}
                <button data-edit-stage="${stage.id}">Bearbeiten</button>
                <button data-rest-before="${stage.id}">Ruhetag davor</button>
                <button data-rest-after="${stage.id}">Ruhetag danach</button>
@@ -677,8 +684,8 @@ function renderStageTimeline(stages){
             <span>${stage.restDay
               ?"Ruhetag"
               :`${escapeHtml(stage.from)} → ${escapeHtml(stage.to)} · ${Number(stage.distanceKm||0).toFixed(1)} km${
-                  getPreferredPlaceForStage(stage.tourId,stage.id)
-                    ? `<small class="timeline-stop">★ ${escapeHtml(getPreferredPlaceForStage(stage.tourId,stage.id).name)}</small>`
+                  getPreferredEndForStage(stage.tourId,stage.id)
+                    ? `<small class="timeline-stop">★ ${escapeHtml(getPreferredEndForStage(stage.tourId,stage.id).name)}</small>`
                     : ""
                 }`}
             </span>
@@ -780,11 +787,28 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   const mergeId=event.target.dataset.mergeStage;
   const supplyId=event.target.dataset.supplyStage;
   const preferredDestinationId=event.target.dataset.usePreferredDestination;
+  const preferredStartIdStage=event.target.dataset.usePreferredStart;
 
 
+
+
+  if(preferredStartIdStage){
+    const preferred=getPreferredStartForStage(activeTour.id,preferredStartIdStage);
+    const stage=stages.find(item=>item.id===preferredStartIdStage);
+
+    if(preferred&&stage){
+      pendingPreferredStartStageId=stage.id;
+      document.getElementById("preferredStartInfo").innerHTML=
+        `<strong>${escapeHtml(stage.name)}</strong><br>`+
+        `${escapeHtml(stage.from)} → ${escapeHtml(preferred.name)}<br>`+
+        `${escapeHtml(preferred.category)} · ${Number(preferred.distanceKm||0).toFixed(2)} km von der Etappe`;
+      document.getElementById("preferredStartDialog").showModal();
+    }
+    return;
+  }
 
   if(preferredDestinationId){
-    const preferred=getPreferredPlaceForStage(activeTour.id,preferredDestinationId);
+    const preferred=getPreferredEndForStage(activeTour.id,preferredDestinationId);
     const stage=stages.find(item=>item.id===preferredDestinationId);
 
     if(preferred&&stage){
@@ -1126,17 +1150,12 @@ async function renderPlaces(){
 
   list.innerHTML=visiblePlaces.length
     ?visiblePlaces.map(place=>`
-      <article class="place-card ${place.favorite?"favorite":""} ${place.preferred?"preferred-place":""}">
-        <h3>${escapeHtml(place.name)}</h3>
-        <div class="poi-meta">
-          <span class="pill">${escapeHtml(place.category)}</span>
-          <span class="pill">${Number(place.distanceKm||0).toFixed(2)} km von der Etappe</span>
-        </div>
+      <article class="place-card ${place.favorite?"favorite":""} ${place.preferredStart?'<span class="preferred-badge">Bevorzugter Start</span>':""}${place.preferredEnd?'<span class="preferred-badge">Bevorzugtes Ziel</span>':""}<div class="card-actions">
         <p class="stage-coordinates">${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}</p>
         ${place.preferred?'<span class="preferred-badge">Bevorzugter Stopp</span>':""}
         <div class="card-actions">
-          <button data-preferred-place="${place.id}">${place.preferred?"Bevorzugt ✓":"Als bevorzugt"}</button>
-          ${place.preferred?`<button data-clear-preferred="${place.stageId}">Bevorzugung entfernen</button>`:""}
+          <button data-preferred-start="${place.id}">${place.preferredStart?"Start ✓":"Als Start"}</button><button data-preferred-end="${place.id}">${place.preferredEnd?"Ziel ✓":"Als Ziel"}</button>
+          ${place.preferredStart?`<button data-clear-preferred-start="${place.stageId}">Start entfernen</button>`:""}${place.preferredEnd?`<button data-clear-preferred-end="${place.stageId}">Ziel entfernen</button>`:""}
           <button data-favorite-place="${place.id}" class="favorite-star">${place.favorite?"★ Favorit":"☆ Favorit"}</button>
           <button data-show-place="${place.id}">Auf Karte</button>
           <button class="danger" data-delete-place="${place.id}">Löschen</button>
@@ -1165,24 +1184,30 @@ document.getElementById("placeList")?.addEventListener("click",async(event)=>{
   const deleteId=event.target.dataset.deletePlace;
   const showId=event.target.dataset.showPlace;
   const favoriteId=event.target.dataset.favoritePlace;
-  const preferredId=event.target.dataset.preferredPlace;
-  const clearPreferredStageId=event.target.dataset.clearPreferred;
+  const preferredStartId=event.target.dataset.preferredStart;
+  const preferredEndId=event.target.dataset.preferredEnd;
+  const clearPreferredStartStageId=event.target.dataset.clearPreferredStart;
+  const clearPreferredEndStageId=event.target.dataset.clearPreferredEnd;
 
 
-  if(preferredId){
-    setPreferredPlaceLocal(activeTour.id,preferredId);
-    await renderPlaces();
-    await renderStages();
-    await renderDashboardStats();
-    return;
+  if(preferredStartId){
+    setPreferredStartLocal(activeTour.id,preferredStartId);
+    await renderPlaces(); await renderStages(); await renderDashboardStats(); return;
   }
 
-  if(clearPreferredStageId){
-    clearPreferredPlaceLocal(activeTour.id,clearPreferredStageId);
-    await renderPlaces();
-    await renderStages();
-    await renderDashboardStats();
-    return;
+  if(preferredEndId){
+    setPreferredEndLocal(activeTour.id,preferredEndId);
+    await renderPlaces(); await renderStages(); await renderDashboardStats(); return;
+  }
+
+  if(clearPreferredStartStageId){
+    clearPreferredStartLocal(activeTour.id,clearPreferredStartStageId);
+    await renderPlaces(); await renderStages(); await renderDashboardStats(); return;
+  }
+
+  if(clearPreferredEndStageId){
+    clearPreferredEndLocal(activeTour.id,clearPreferredEndStageId);
+    await renderPlaces(); await renderStages(); await renderDashboardStats(); return;
   }
 
   if(favoriteId){
@@ -1255,13 +1280,45 @@ document.getElementById("recalculateStageDatesBtn")?.addEventListener("click",as
 });
 
 
+
+document.getElementById("confirmPreferredStartBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour||!pendingPreferredStartStageId) return;
+
+  const stages=loadStagesLocal(activeTour.id);
+  const stage=stages.find(item=>item.id===pendingPreferredStartStageId);
+  const preferred=getPreferredStartForStage(activeTour.id,pendingPreferredStartStageId);
+
+  if(!stage||!preferred){
+    pendingPreferredStartStageId=null;
+    document.getElementById("preferredStartDialog").close();
+    return;
+  }
+
+  updateStageLocal(activeTour.id,{
+    ...stage,
+    from:preferred.name,
+    notes:[stage.notes,`Bevorzugter Start nach ausdrücklicher Bestätigung übernommen (${preferred.category})`]
+      .filter(Boolean).join(" · ")
+  });
+
+  pendingPreferredStartStageId=null;
+  document.getElementById("preferredStartDialog").close();
+  await renderStages();
+  await renderDashboardStats();
+});
+
+document.getElementById("preferredStartDialog")?.addEventListener("close",()=>{
+  pendingPreferredStartStageId=null;
+});
+
 document.getElementById("confirmPreferredDestinationBtn")?.addEventListener("click",async()=>{
   const activeTour=await getActiveTour();
   if(!activeTour||!pendingPreferredDestinationStageId) return;
 
   const stages=loadStagesLocal(activeTour.id);
   const stage=stages.find(item=>item.id===pendingPreferredDestinationStageId);
-  const preferred=getPreferredPlaceForStage(activeTour.id,pendingPreferredDestinationStageId);
+  const preferred=getPreferredEndForStage(activeTour.id,pendingPreferredDestinationStageId);
 
   if(!stage||!preferred){
     pendingPreferredDestinationStageId=null;
@@ -1475,12 +1532,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4068";
+  window.location.href = "./?v=4069";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4068");
+    navigator.serviceWorker.register("sw.js?v=4069");
   });
 }
 
