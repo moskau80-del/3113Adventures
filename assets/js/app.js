@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4061";
+} from "./database.js?v=4062";
 
-import { loadLanguage, translate } from "./i18n.js?v=4061";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4061";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4061";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement } from "./places.js?v=4061";
+import { loadLanguage, translate } from "./i18n.js?v=4062";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4062";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4062";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement } from "./places.js?v=4062";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -36,6 +36,7 @@ let currentMapStageId = null;
 let currentSupplyStageId=null;
 let currentSupplyCategory="camping";
 let currentSupplyResults=[];
+let placeFilter="all";
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -682,11 +683,11 @@ async function showStageOnMap(stage){
       .addTo(trackLayer)
       .bindPopup(`<strong>${escapeHtml(stage.to)}</strong>`);
 
-    const places=loadPlacesLocal(activeTour.id).filter(place=>place.stageId===stage.id);
+    const places=getPlacesForStage(activeTour.id,stage.id);
     places.forEach(place=>{
       L.marker([place.lat,place.lng])
         .addTo(trackLayer)
-        .bindPopup(`<strong>${escapeHtml(place.name)}</strong><br>${escapeHtml(place.category)}<br>${Number(place.distanceKm||0).toFixed(2)} km von der Etappe`);
+        .bindPopup(`<strong>${escapeHtml(place.name)}</strong><br>${escapeHtml(place.category)}<br>${Number(place.distanceKm||0).toFixed(2)} km von der Etappe${place.favorite?"<br>★ Favorit":""}`);
     });
 
     map.fitBounds(line.getBounds(),{padding:[20,20]});
@@ -965,10 +966,13 @@ async function renderPlaces(){
   document.getElementById("campingCount").textContent=String(places.filter(p=>p.category==="camping").length);
   document.getElementById("waterCount").textContent=String(places.filter(p=>p.category==="water").length);
   document.getElementById("shopCount").textContent=String(places.filter(p=>p.category==="shop").length);
+  document.getElementById("favoriteCount").textContent=String(places.filter(p=>p.favorite).length);
 
-  list.innerHTML=places.length
-    ?places.map(place=>`
-      <article class="place-card">
+  const visiblePlaces=placeFilter==="favorites"?places.filter(place=>place.favorite):places;
+
+  list.innerHTML=visiblePlaces.length
+    ?visiblePlaces.map(place=>`
+      <article class="place-card ${place.favorite?"favorite":""}">
         <h3>${escapeHtml(place.name)}</h3>
         <div class="poi-meta">
           <span class="pill">${escapeHtml(place.category)}</span>
@@ -976,13 +980,25 @@ async function renderPlaces(){
         </div>
         <p class="stage-coordinates">${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}</p>
         <div class="card-actions">
+          <button data-favorite-place="${place.id}" class="favorite-star">${place.favorite?"★ Favorit":"☆ Favorit"}</button>
           <button data-show-place="${place.id}">Auf Karte</button>
           <button class="danger" data-delete-place="${place.id}">Löschen</button>
         </div>
       </article>
     `).join("")
-    :'<div class="empty">Noch keine Orte gespeichert. Suche Orte direkt bei einer Etappe.</div>';
+    :'<div class="empty">Keine passenden Orte vorhanden.</div>';
 }
+
+
+document.getElementById("showAllPlacesBtn")?.addEventListener("click",async()=>{
+  placeFilter="all";
+  await renderPlaces();
+});
+
+document.getElementById("showFavoritePlacesBtn")?.addEventListener("click",async()=>{
+  placeFilter="favorites";
+  await renderPlaces();
+});
 
 document.getElementById("placeList")?.addEventListener("click",async(event)=>{
   const activeTour=await getActiveTour();
@@ -991,6 +1007,14 @@ document.getElementById("placeList")?.addEventListener("click",async(event)=>{
   const places=loadPlacesLocal(activeTour.id);
   const deleteId=event.target.dataset.deletePlace;
   const showId=event.target.dataset.showPlace;
+  const favoriteId=event.target.dataset.favoritePlace;
+
+
+  if(favoriteId){
+    toggleFavoriteLocal(activeTour.id,favoriteId);
+    await renderPlaces();
+    return;
+  }
 
   if(deleteId&&confirm("Ort wirklich löschen?")){
     deletePlaceLocal(activeTour.id,deleteId);
@@ -1240,12 +1264,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4061";
+  window.location.href = "./?v=4062";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4061");
+    navigator.serviceWorker.register("sw.js?v=4062");
   });
 }
 

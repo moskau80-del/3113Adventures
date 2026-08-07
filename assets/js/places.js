@@ -29,7 +29,8 @@ export function savePlacesLocal(tourId,places){
     lng:Number(place.lng),
     distanceKm:Number(place.distanceKm||0),
     tags:place.tags||{},
-    savedAt:place.savedAt||new Date().toISOString()
+    savedAt:place.savedAt||new Date().toISOString(),
+    favorite:Boolean(place.favorite)
   }));
 
   const serialized=JSON.stringify(compact);
@@ -167,4 +168,22 @@ export function normalizeOverpassElement(element,category){
     lng,
     tags
   };
+}
+
+
+export function toggleFavoriteLocal(tourId,placeId){
+  const places=loadPlacesLocal(tourId);
+  const index=places.findIndex(place=>place.id===placeId);
+  if(index<0) return places;
+
+  places[index]={
+    ...places[index],
+    favorite:!places[index].favorite
+  };
+
+  return savePlacesLocal(tourId,places);
+}
+
+export function getPlacesForStage(tourId,stageId){
+  return loadPlacesLocal(tourId).filter(place=>place.stageId===stageId);
 }

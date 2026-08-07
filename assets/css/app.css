@@ -93,3 +93,7 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .place-card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 6px 20px #0000000d}
 .place-card h3{margin:0 0 6px}
 @media(min-width:760px){.supply-grid{grid-template-columns:repeat(3,1fr)}}
+
+.favorite-star{font-size:1.1rem}
+.place-card.favorite{border-left:6px solid #c3a245}
+.map-place-label{font-size:.8rem;font-weight:700}
