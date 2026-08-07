@@ -1,10 +1,10 @@
-const CACHE="3113-adventures-v4-sprint-6-7";
+const CACHE="3113-adventures-v4-sprint-6-8";
 const FILES=[
-  "./?v=4067","./index.html","./assets/css/app.css?v=4067",
-  "./assets/js/app.js?v=4067","./assets/js/database.js?v=4067",
-  "./assets/js/i18n.js?v=4067","./assets/js/gpx.js?v=4067",
-  "./assets/js/stages.js?v=4067","./assets/js/places.js?v=4067",
-  "./lang/de.json?v=4067","./lang/en.json?v=4067",
+  "./?v=4068","./index.html","./assets/css/app.css?v=4068",
+  "./assets/js/app.js?v=4068","./assets/js/database.js?v=4068",
+  "./assets/js/i18n.js?v=4068","./assets/js/gpx.js?v=4068",
+  "./assets/js/stages.js?v=4068","./assets/js/places.js?v=4068",
+  "./lang/de.json?v=4068","./lang/en.json?v=4068",
   "./manifest.webmanifest","./icons/icon.svg"
 ];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)))});

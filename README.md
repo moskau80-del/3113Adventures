@@ -1,11 +1,10 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 6.7
+# 3113 Adventures – Version 4.0.0 / Sprint 6.8
 
 ## Neu
-- bevorzugte Stopps werden niemals automatisch als Etappenziel übernommen
-- Klick auf `Stopp als Ziel übernehmen` öffnet zuerst einen Bestätigungsdialog
-- Änderung wird erst nach ausdrücklicher Bestätigung gespeichert
-- Abbrechen lässt die Etappe unverändert
-- alle Funktionen aus Sprint 6.6 bleiben enthalten
+- Planungsstand pro Etappe für Übernachtung, Wasser und Einkauf
+- Anzeige 0/3 bis 3/3 direkt bei jeder Etappe
+- bevorzugter Stopp bleibt separat und wird nie automatisch als Etappenziel übernommen
+- alle Funktionen aus Sprint 6.7 bleiben enthalten
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 6.7` stehen.
+Oben rechts muss `v4.0.0 · Sprint 6.8` stehen.

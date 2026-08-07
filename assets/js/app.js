@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4067";
+} from "./database.js?v=4068";
 
-import { loadLanguage, translate } from "./i18n.js?v=4067";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4067";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4067";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredPlaceLocal, clearPreferredPlaceLocal, getPreferredPlaceForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4067";
+import { loadLanguage, translate } from "./i18n.js?v=4068";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4068";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4068";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredPlaceLocal, clearPreferredPlaceLocal, getPreferredPlaceForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4068";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -512,6 +512,16 @@ function nearestPlaceByCategory(places,category){
 }
 
 
+function stagePlanningStatusHtml(tourId,stage){
+  if(stage.restDay) return "";
+  const places=getPlacesForStage(tourId,stage.id);
+  const preferred=getPreferredPlaceForStage(tourId,stage.id);
+  const categories=new Set(places.map(p=>p.category));
+  const checks=[["camping","Übernachtung"],["water","Wasser"],["shop","Einkauf"]];
+  const done=checks.filter(([key])=>categories.has(key)).length;
+  return `<div class="planning-status"><strong>Planungsstand ${done}/3</strong><span>${checks.map(([key,label])=>`${categories.has(key)?"✓":"○"} ${label}`).join(" · ")}</span><span>${preferred?`★ Bevorzugter Stopp: ${escapeHtml(preferred.name)}`:"○ Noch kein bevorzugter Stopp"}</span></div>`;
+}
+
 function stagePreferredHtml(tourId,stageId){
   const place=getPreferredPlaceForStage(tourId,stageId);
   if(!place) return "";
@@ -603,7 +613,7 @@ async function renderStages(){
           ${stage.endCoord.lat.toFixed(5)}, ${stage.endCoord.lng.toFixed(5)}
         </div>
         ${stage.notes?`<p>${escapeHtml(stage.notes)}</p>`:""}
-        ${stage.restDay?"":`${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>`}
+        ${stage.restDay?"":`${stagePlanningStatusHtml(activeTour.id,stage)}${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>`}
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
@@ -1465,12 +1475,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4067";
+  window.location.href = "./?v=4068";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4067");
+    navigator.serviceWorker.register("sw.js?v=4068");
   });
 }
 
