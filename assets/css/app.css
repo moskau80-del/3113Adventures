@@ -97,3 +97,11 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .favorite-star{font-size:1.1rem}
 .place-card.favorite{border-left:6px solid #c3a245}
 .map-place-label{font-size:.8rem;font-weight:700}
+
+.stage-supply{margin-top:10px;padding-top:10px;border-top:1px solid #dde2da}
+.stage-supply-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.stage-supply-item{background:#eef1eb;border-radius:10px;padding:8px}
+.stage-supply-item strong,.stage-supply-item span{display:block}
+.stage-supply-item span{font-size:.78rem;margin-top:2px}
+.stage-supply-empty{color:#6b736a;font-size:.86rem}
+@media(min-width:760px){.stage-supply-grid{grid-template-columns:repeat(4,1fr)}}

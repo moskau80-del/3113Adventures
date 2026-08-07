@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4062";
+} from "./database.js?v=4063";
 
-import { loadLanguage, translate } from "./i18n.js?v=4062";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4062";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4062";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement } from "./places.js?v=4062";
+import { loadLanguage, translate } from "./i18n.js?v=4063";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4063";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4063";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement } from "./places.js?v=4063";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -493,6 +493,40 @@ function formatHours(value){
   return `${hours} h ${String(minutes).padStart(2,"0")} min`;
 }
 
+
+function nearestPlaceByCategory(places,category){
+  return places
+    .filter(place=>place.category===category)
+    .sort((a,b)=>Number(a.distanceKm||0)-Number(b.distanceKm||0))[0]||null;
+}
+
+function stageSupplyHtml(tourId,stageId){
+  const places=getPlacesForStage(tourId,stageId);
+
+  if(!places.length){
+    return '<div class="stage-supply-empty">Noch keine Versorgung für diese Etappe gespeichert.</div>';
+  }
+
+  const categories=[
+    ["camping","⛺ Camping"],
+    ["water","💧 Wasser"],
+    ["shop","🛒 Einkauf"],
+    ["transport","🚆 ÖV"]
+  ];
+
+  return `<div class="stage-supply-grid">
+    ${categories.map(([category,label])=>{
+      const place=nearestPlaceByCategory(places,category);
+      return `<div class="stage-supply-item">
+        <strong>${label}</strong>
+        ${place
+          ? `<span>${escapeHtml(place.name)}</span><span>${Number(place.distanceKm||0).toFixed(2)} km</span>`
+          : '<span>–</span>'}
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
 async function renderStages(){
   const activeTour=await getActiveTour();
   const list=document.getElementById("stageList");
@@ -547,6 +581,7 @@ async function renderStages(){
           ${stage.endCoord.lat.toFixed(5)}, ${stage.endCoord.lng.toFixed(5)}
         </div>
         ${stage.notes?`<p>${escapeHtml(stage.notes)}</p>`:""}
+        ${stage.restDay?"":`<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>`}
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
@@ -950,6 +985,7 @@ document.getElementById("supplyResults")?.addEventListener("click",async(event)=
   event.target.textContent="Gespeichert";
   event.target.disabled=true;
   await renderPlaces();
+  await renderStages();
 });
 
 async function renderPlaces(){
@@ -1019,6 +1055,7 @@ document.getElementById("placeList")?.addEventListener("click",async(event)=>{
   if(deleteId&&confirm("Ort wirklich löschen?")){
     deletePlaceLocal(activeTour.id,deleteId);
     await renderPlaces();
+    await renderStages();
   }
 
   if(showId){
@@ -1264,12 +1301,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4062";
+  window.location.href = "./?v=4063";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4062");
+    navigator.serviceWorker.register("sw.js?v=4063");
   });
 }
 
