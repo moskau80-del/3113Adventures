@@ -66,3 +66,10 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .timeline-item.rest{background:#e9eff7}
 .timeline-item.completed{opacity:.65}
 .timeline-date{font-weight:800;min-width:92px}
+
+.progress-wrap{margin-top:16px}
+.progress-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:6px}
+.progress-bar{height:12px;background:#e3e7df;border-radius:999px;overflow:hidden}
+.progress-bar span{display:block;height:100%;background:var(--forest);border-radius:999px;transition:width .2s ease}
+.next-stage-card{display:grid;gap:6px}
+.next-stage-card strong{font-size:1.05rem}

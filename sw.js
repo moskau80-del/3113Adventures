@@ -1,10 +1,10 @@
-const CACHE="3113-adventures-v4-sprint-5-4";
+const CACHE="3113-adventures-v4-sprint-5-5";
 const FILES=[
-  "./?v=4054","./index.html","./assets/css/app.css?v=4054",
-  "./assets/js/app.js?v=4054","./assets/js/database.js?v=4054",
-  "./assets/js/i18n.js?v=4054","./assets/js/gpx.js?v=4054",
-  "./assets/js/stages.js?v=4054","./lang/de.json?v=4054",
-  "./lang/en.json?v=4054","./manifest.webmanifest","./icons/icon.svg"
+  "./?v=4055","./index.html","./assets/css/app.css?v=4055",
+  "./assets/js/app.js?v=4055","./assets/js/database.js?v=4055",
+  "./assets/js/i18n.js?v=4055","./assets/js/gpx.js?v=4055",
+  "./assets/js/stages.js?v=4055","./lang/de.json?v=4055",
+  "./lang/en.json?v=4055","./manifest.webmanifest","./icons/icon.svg"
 ];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

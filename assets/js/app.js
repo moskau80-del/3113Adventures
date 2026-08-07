@@ -10,11 +10,11 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4054";
+} from "./database.js?v=4055";
 
-import { loadLanguage, translate } from "./i18n.js?v=4054";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4054";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, getStageStorageInfo } from "./stages.js?v=4054";
+import { loadLanguage, translate } from "./i18n.js?v=4055";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4055";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, getStageStorageInfo } from "./stages.js?v=4055";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -86,6 +86,71 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#39;"
   })[character]);
+}
+
+
+async function renderDashboardStats(){
+  const activeTour=await getActiveTour();
+
+  const stageCount=document.getElementById("dashStageCount");
+  const restCount=document.getElementById("dashRestCount");
+  const plannedKm=document.getElementById("dashPlannedKm");
+  const remainingKm=document.getElementById("dashRemainingKm");
+  const progressLabel=document.getElementById("dashProgressLabel");
+  const progressBar=document.getElementById("dashProgressBar");
+  const nextStage=document.getElementById("dashNextStage");
+
+  if(!activeTour){
+    stageCount.textContent="0";
+    restCount.textContent="0";
+    plannedKm.textContent="0 km";
+    remainingKm.textContent="0 km";
+    progressLabel.textContent="0 %";
+    progressBar.style.width="0%";
+    nextStage.textContent="Noch keine aktive Tour.";
+    return;
+  }
+
+  const stages=loadStagesLocal(activeTour.id);
+  const walking=stages.filter(stage=>!stage.restDay);
+  const rests=stages.filter(stage=>stage.restDay);
+
+  const totalKm=walking.reduce(
+    (sum,stage)=>sum+Number(stage.distanceKm||0),
+    0
+  );
+
+  const completedKm=walking
+    .filter(stage=>stage.completed)
+    .reduce((sum,stage)=>sum+Number(stage.distanceKm||0),0);
+
+  const remaining=Math.max(0,totalKm-completedKm);
+  const percent=totalKm>0?Math.min(100,(completedKm/totalKm)*100):0;
+
+  stageCount.textContent=String(walking.length);
+  restCount.textContent=String(rests.length);
+  plannedKm.textContent=`${totalKm.toFixed(1)} km`;
+  remainingKm.textContent=`${remaining.toFixed(1)} km`;
+  progressLabel.textContent=`${percent.toFixed(0)} %`;
+  progressBar.style.width=`${percent}%`;
+
+  const next=stages.find(stage=>!stage.completed&&!stage.restDay);
+
+  if(!next){
+    nextStage.innerHTML=stages.length
+      ? "<strong>Alle Wanderetappen abgeschlossen.</strong>"
+      : "Noch keine geplante Etappe vorhanden.";
+    return;
+  }
+
+  nextStage.innerHTML=`
+    <div class="next-stage-card">
+      <strong>${escapeHtml(next.name)}</strong>
+      <span>${formatDate(next.date)}</span>
+      <span>${escapeHtml(next.from)} → ${escapeHtml(next.to)}</span>
+      <span>${Number(next.distanceKm||0).toFixed(1)} km · ↑ ${Math.round(next.ascentM||0)} m · ↓ ${Math.round(next.descentM||0)} m</span>
+    </div>
+  `;
 }
 
 async function renderTours() {
@@ -491,6 +556,8 @@ async function renderStages(){
       </article>
     `).join("")
     : '<div class="empty">Noch keine Etappen vorhanden.</div>';
+
+  await renderDashboardStats();
 }
 
 
@@ -920,12 +987,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4054";
+  window.location.href = "./?v=4055";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4054");
+    navigator.serviceWorker.register("sw.js?v=4055");
   });
 }
 
