@@ -306,28 +306,21 @@ export function mergeStageWithNextLocal(tourId,stageId){
 }
 
 
-export function distributeRestDays(stages,restDays){
-  const count=Math.max(0,Math.floor(Number(restDays)||0));
-  if(!count || !stages.length) return stages;
+export function distributeRestDays(stages,restEveryDays){
+  const every=Math.max(0,Math.floor(Number(restEveryDays)||0));
+  if(!every || !stages.length) return stages;
 
   const result=[];
-  const walkingCount=stages.length;
+  let walkingCounter=0;
 
-  // Positions after walking days; spread them across the route.
-  const positions=new Set();
-  for(let i=1;i<=count;i++){
-    const raw=Math.round((i*walkingCount)/(count+1));
-    positions.add(Math.max(1,Math.min(walkingCount-1,raw)));
-  }
-
-  stages.forEach((stage,index)=>{
+  stages.forEach((stage)=>{
     result.push(stage);
+    walkingCounter++;
 
-    const walkingPosition=index+1;
-    if(positions.has(walkingPosition)){
+    if(walkingCounter % every === 0 && walkingCounter < stages.length){
       const coord=stage.endCoord||stage.startCoord;
       result.push({
-        id:`${stage.tourId}-rest-auto-${iSafeDate()}-${walkingPosition}`,
+        id:`${stage.tourId}-rest-auto-${Date.now()}-${walkingCounter}`,
         tourId:stage.tourId,
         order:0,
         name:"Ruhetag",
@@ -340,7 +333,7 @@ export function distributeRestDays(stages,restDays){
         walkingHours:0,
         startCoord:coord,
         endCoord:coord,
-        notes:"Automatisch verteilter Ruhetag",
+        notes:`Automatisch nach ${every} Wandertagen eingefügt`,
         completed:false,
         restDay:true
       });
@@ -348,10 +341,6 @@ export function distributeRestDays(stages,restDays){
   });
 
   return result.map((stage,index)=>({...stage,order:index+1}));
-}
-
-function iSafeDate(){
-  return Date.now();
 }
 
 export function getStageStorageInfo(tourId){

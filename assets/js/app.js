@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4060";
+} from "./database.js?v=4061";
 
-import { loadLanguage, translate } from "./i18n.js?v=4060";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4060";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4060";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement } from "./places.js?v=4060";
+import { loadLanguage, translate } from "./i18n.js?v=4061";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4061";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4061";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement } from "./places.js?v=4061";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -1093,8 +1093,8 @@ document.getElementById("generateStagesBtn")?.addEventListener("click",async()=>
     };
   });
 
-  const requestedRestDays=Number(document.getElementById("plannedRestDays").value||0);
-  stages=distributeRestDays(stages,requestedRestDays);
+  const restEveryDays=Number(document.getElementById("restEveryDays").value||0);
+  stages=distributeRestDays(stages,restEveryDays);
 
   // Dates must include automatically inserted rest days.
   stages=stages.map((stage,index)=>({
@@ -1109,7 +1109,7 @@ document.getElementById("generateStagesBtn")?.addEventListener("click",async()=>
     const restCount=stages.filter(stage=>stage.restDay).length;
     const walkingCount=stages.length-restCount;
     document.getElementById("stageStatus").textContent=
-      `${walkingCount} Wandertage und ${restCount} Ruhetage gespeichert und geprüft.`;
+      `${walkingCount} Wandertage und ${restCount} automatische Ruhetage gespeichert und geprüft.`;
     await renderStages();
   }catch(error){
     document.getElementById("stageStatus").textContent=`Speichern fehlgeschlagen: ${error.message}`;
@@ -1240,12 +1240,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4060";
+  window.location.href = "./?v=4061";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4060");
+    navigator.serviceWorker.register("sw.js?v=4061");
   });
 }
 
