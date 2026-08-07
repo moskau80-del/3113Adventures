@@ -10,11 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4056";
+} from "./database.js?v=4060";
 
-import { loadLanguage, translate } from "./i18n.js?v=4056";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4056";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4056";
+import { loadLanguage, translate } from "./i18n.js?v=4060";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4060";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4060";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement } from "./places.js?v=4060";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -32,6 +33,9 @@ const stageForm = document.getElementById("stageForm");
 const splitStageDialog = document.getElementById("splitStageDialog");
 const splitStageForm = document.getElementById("splitStageForm");
 let currentMapStageId = null;
+let currentSupplyStageId=null;
+let currentSupplyCategory="camping";
+let currentSupplyResults=[];
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -545,7 +549,7 @@ async function renderStages(){
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
-            : `<button data-map-stage="${stage.id}">Auf Karte</button>
+            : `<button data-map-stage="${stage.id}">Auf Karte</button><button data-supply-stage="${stage.id}">Versorgung suchen</button>
                <button data-edit-stage="${stage.id}">Bearbeiten</button>
                <button data-rest-before="${stage.id}">Ruhetag davor</button>
                <button data-rest-after="${stage.id}">Ruhetag danach</button>
@@ -558,6 +562,7 @@ async function renderStages(){
     : '<div class="empty">Noch keine Etappen vorhanden.</div>';
 
   await renderDashboardStats();
+  await renderPlaces();
 }
 
 
@@ -677,6 +682,13 @@ async function showStageOnMap(stage){
       .addTo(trackLayer)
       .bindPopup(`<strong>${escapeHtml(stage.to)}</strong>`);
 
+    const places=loadPlacesLocal(activeTour.id).filter(place=>place.stageId===stage.id);
+    places.forEach(place=>{
+      L.marker([place.lat,place.lng])
+        .addTo(trackLayer)
+        .bindPopup(`<strong>${escapeHtml(place.name)}</strong><br>${escapeHtml(place.category)}<br>${Number(place.distanceKm||0).toFixed(2)} km von der Etappe`);
+    });
+
     map.fitBounds(line.getBounds(),{padding:[20,20]});
   },150);
 }
@@ -694,7 +706,27 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   const deleteRest=event.target.dataset.deleteRest;
   const splitId=event.target.dataset.splitStage;
   const mergeId=event.target.dataset.mergeStage;
+  const supplyId=event.target.dataset.supplyStage;
 
+
+
+  if(supplyId){
+    const stage=stages.find(item=>item.id===supplyId);
+    if(stage&&!stage.restDay){
+      currentSupplyStageId=stage.id;
+      currentSupplyCategory="camping";
+      currentSupplyResults=[];
+      document.querySelectorAll("[data-supply-category]").forEach(button=>{
+        button.classList.toggle("active",button.dataset.supplyCategory==="camping");
+      });
+      document.getElementById("supplyStageInfo").innerHTML=
+        `<strong>${escapeHtml(stage.name)}</strong><br>${escapeHtml(stage.from)} → ${escapeHtml(stage.to)} · ${Number(stage.distanceKm||0).toFixed(1)} km`;
+      document.getElementById("supplyStatus").textContent="Kategorie auswählen und suchen.";
+      document.getElementById("supplyResults").innerHTML="";
+      document.getElementById("supplyDialog").showModal();
+    }
+    return;
+  }
 
   if(restBefore){
     insertRestDayLocal(activeTour.id,restBefore,"before");
@@ -791,6 +823,194 @@ document.getElementById("stageTimeline")?.addEventListener("click",(event)=>{
   if(!item) return;
 
   jumpToStage(item.dataset.timelineStage);
+});
+
+
+function stageTrackSegment(trackPoints,stage){
+  if(!trackPoints?.length) return [];
+
+  let startIndex=0,endIndex=trackPoints.length-1;
+  let startBest=Infinity,endBest=Infinity;
+
+  trackPoints.forEach((point,index)=>{
+    const ds=(point.lat-stage.startCoord.lat)**2+(point.lng-stage.startCoord.lng)**2;
+    const de=(point.lat-stage.endCoord.lat)**2+(point.lng-stage.endCoord.lng)**2;
+    if(ds<startBest){startBest=ds;startIndex=index}
+    if(de<endBest){endBest=de;endIndex=index}
+  });
+
+  if(startIndex>endIndex)[startIndex,endIndex]=[endIndex,startIndex];
+  return trackPoints.slice(startIndex,endIndex+1);
+}
+
+function renderSupplyResults(results){
+  const container=document.getElementById("supplyResults");
+
+  container.innerHTML=results.length
+    ?results.map((place,index)=>`
+      <article class="poi-row">
+        <h4>${escapeHtml(place.name)}</h4>
+        <div class="poi-meta">
+          <span class="pill">${escapeHtml(place.category)}</span>
+          <span class="pill">${Number(place.distanceKm||0).toFixed(2)} km von der Etappe</span>
+        </div>
+        <button data-save-supply="${index}" class="primary">Speichern</button>
+      </article>
+    `).join("")
+    :'<div class="empty">Keine passenden Orte gefunden.</div>';
+}
+
+document.querySelectorAll("[data-supply-category]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    currentSupplyCategory=button.dataset.supplyCategory;
+    document.querySelectorAll("[data-supply-category]").forEach(item=>{
+      item.classList.toggle("active",item===button);
+    });
+  });
+});
+
+document.getElementById("runSupplySearchBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour||!currentSupplyStageId) return;
+
+  const stages=loadStagesLocal(activeTour.id);
+  const stage=stages.find(item=>item.id===currentSupplyStageId);
+  const track=await getTrack(activeTour.id);
+
+  if(!stage||!track?.points?.length) return;
+
+  const segment=stageTrackSegment(track.points,stage);
+  if(segment.length<2){
+    alert("Etappentrack konnte nicht bestimmt werden.");
+    return;
+  }
+
+  const maxDistance=Number(document.getElementById("supplyMaxDistance").value||1);
+  const bounds=boundsForStage(segment,maxDistance+0.5);
+  const query=buildOverpassQuery(bounds,currentSupplyCategory);
+
+  const status=document.getElementById("supplyStatus");
+  status.textContent="Suche läuft …";
+  currentSupplyResults=[];
+
+  const endpoints=[
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter"
+  ];
+
+  let lastError=null;
+
+  for(const endpoint of endpoints){
+    try{
+      const response=await fetch(endpoint,{
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+        body:`data=${encodeURIComponent(query)}`
+      });
+
+      if(!response.ok) throw new Error(`Serverantwort ${response.status}`);
+
+      const data=await response.json();
+
+      currentSupplyResults=(data.elements||[])
+        .map(element=>normalizeOverpassElement(element,currentSupplyCategory))
+        .filter(Boolean)
+        .map(place=>({
+          ...place,
+          stageId:stage.id,
+          distanceKm:distanceToStageKm(place,segment)
+        }))
+        .filter(place=>place.distanceKm<=maxDistance)
+        .sort((a,b)=>a.distanceKm-b.distanceKm)
+        .slice(0,40);
+
+      status.textContent=`${currentSupplyResults.length} Treffer gefunden.`;
+      renderSupplyResults(currentSupplyResults);
+      return;
+    }catch(error){
+      lastError=error;
+    }
+  }
+
+  status.textContent=`Suche fehlgeschlagen: ${lastError?.message||"Unbekannter Fehler"}`;
+});
+
+document.getElementById("supplyResults")?.addEventListener("click",async(event)=>{
+  const index=event.target.dataset.saveSupply;
+  if(index===undefined) return;
+
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const place=currentSupplyResults[Number(index)];
+  if(!place) return;
+
+  addPlaceLocal(activeTour.id,place);
+  event.target.textContent="Gespeichert";
+  event.target.disabled=true;
+  await renderPlaces();
+});
+
+async function renderPlaces(){
+  const activeTour=await getActiveTour();
+  const list=document.getElementById("placeList");
+
+  if(!activeTour){
+    list.innerHTML='<div class="empty">Keine aktive Tour.</div>';
+    return;
+  }
+
+  const places=loadPlacesLocal(activeTour.id);
+  document.getElementById("placeCount").textContent=String(places.length);
+  document.getElementById("campingCount").textContent=String(places.filter(p=>p.category==="camping").length);
+  document.getElementById("waterCount").textContent=String(places.filter(p=>p.category==="water").length);
+  document.getElementById("shopCount").textContent=String(places.filter(p=>p.category==="shop").length);
+
+  list.innerHTML=places.length
+    ?places.map(place=>`
+      <article class="place-card">
+        <h3>${escapeHtml(place.name)}</h3>
+        <div class="poi-meta">
+          <span class="pill">${escapeHtml(place.category)}</span>
+          <span class="pill">${Number(place.distanceKm||0).toFixed(2)} km von der Etappe</span>
+        </div>
+        <p class="stage-coordinates">${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}</p>
+        <div class="card-actions">
+          <button data-show-place="${place.id}">Auf Karte</button>
+          <button class="danger" data-delete-place="${place.id}">Löschen</button>
+        </div>
+      </article>
+    `).join("")
+    :'<div class="empty">Noch keine Orte gespeichert. Suche Orte direkt bei einer Etappe.</div>';
+}
+
+document.getElementById("placeList")?.addEventListener("click",async(event)=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const places=loadPlacesLocal(activeTour.id);
+  const deleteId=event.target.dataset.deletePlace;
+  const showId=event.target.dataset.showPlace;
+
+  if(deleteId&&confirm("Ort wirklich löschen?")){
+    deletePlaceLocal(activeTour.id,deleteId);
+    await renderPlaces();
+  }
+
+  if(showId){
+    const place=places.find(item=>item.id===showId);
+    if(!place) return;
+
+    document.querySelector('[data-page="map"]').click();
+    setTimeout(()=>{
+      initMap();
+      map.setView([place.lat,place.lng],15);
+      L.marker([place.lat,place.lng])
+        .addTo(trackLayer)
+        .bindPopup(`<strong>${escapeHtml(place.name)}</strong>`)
+        .openPopup();
+    },150);
+  }
 });
 
 splitStageForm?.addEventListener("submit",async(event)=>{
@@ -1020,12 +1240,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4056";
+  window.location.href = "./?v=4060";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4056");
+    navigator.serviceWorker.register("sw.js?v=4060");
   });
 }
 
