@@ -1,5 +1,12 @@
-const CACHE="3113-adventures-v4-sprint-6-5";
-const FILES=["./?v=4065","./index.html","./assets/css/app.css?v=4065","./assets/js/app.js?v=4065","./assets/js/database.js?v=4065","./assets/js/i18n.js?v=4065","./assets/js/gpx.js?v=4065","./assets/js/stages.js?v=4065","./assets/js/places.js?v=4065","./lang/de.json?v=4065","./lang/en.json?v=4065","./manifest.webmanifest","./icons/icon.svg"];
+const CACHE="3113-adventures-v4-sprint-6-7";
+const FILES=[
+  "./?v=4067","./index.html","./assets/css/app.css?v=4067",
+  "./assets/js/app.js?v=4067","./assets/js/database.js?v=4067",
+  "./assets/js/i18n.js?v=4067","./assets/js/gpx.js?v=4067",
+  "./assets/js/stages.js?v=4067","./assets/js/places.js?v=4067",
+  "./lang/de.json?v=4067","./lang/en.json?v=4067",
+  "./manifest.webmanifest","./icons/icon.svg"
+];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request).then(hit=>hit||caches.match("./index.html"))))});

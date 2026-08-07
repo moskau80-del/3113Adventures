@@ -115,3 +115,8 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .stage-preferred{margin-top:10px;padding:10px;border-radius:10px;background:#edf3e8}
 .stage-preferred strong,.stage-preferred span{display:block}
 .stage-preferred span{margin-top:3px;font-size:.82rem}
+
+.timeline-stop{display:block;margin-top:2px;font-size:.78rem;color:#65725f}
+.stage-destination{display:block;margin-top:6px;font-size:.8rem}
+
+.warning-note{margin-top:8px;font-size:.82rem;color:#6b736a}

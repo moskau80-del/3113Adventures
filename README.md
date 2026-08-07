@@ -1,12 +1,11 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 6.5
+# 3113 Adventures – Version 4.0.0 / Sprint 6.7
 
 ## Neu
-- pro Etappe einen bevorzugten gespeicherten Ort festlegen
-- bevorzugter Ort direkt in der Etappe sichtbar
-- Bevorzugung wieder entfernen
-- Orte-Liste markiert bevorzugte Stopps
-- Dashboard zeigt den bevorzugten Stopp der nächsten offenen Etappe
-- alle Funktionen aus Sprint 6.4 bleiben enthalten
+- bevorzugte Stopps werden niemals automatisch als Etappenziel übernommen
+- Klick auf `Stopp als Ziel übernehmen` öffnet zuerst einen Bestätigungsdialog
+- Änderung wird erst nach ausdrücklicher Bestätigung gespeichert
+- Abbrechen lässt die Etappe unverändert
+- alle Funktionen aus Sprint 6.6 bleiben enthalten
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 6.5` stehen.
+Oben rechts muss `v4.0.0 · Sprint 6.7` stehen.
