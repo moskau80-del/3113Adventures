@@ -109,3 +109,9 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .manual-place{margin-top:14px;padding-top:10px;border-top:1px solid #dde2da}
 .manual-place summary{cursor:pointer;font-weight:800}
 .search-progress{display:flex;gap:6px;align-items:center;margin-top:6px;font-size:.84rem}
+
+.preferred-place{border-left:6px solid #7d8e62}
+.preferred-badge{display:inline-block;background:#dfe7d6;border-radius:999px;padding:4px 8px;font-size:.78rem;font-weight:800}
+.stage-preferred{margin-top:10px;padding:10px;border-radius:10px;background:#edf3e8}
+.stage-preferred strong,.stage-preferred span{display:block}
+.stage-preferred span{margin-top:3px;font-size:.82rem}

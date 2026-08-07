@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4064";
+} from "./database.js?v=4065";
 
-import { loadLanguage, translate } from "./i18n.js?v=4064";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4064";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4064";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4064";
+import { loadLanguage, translate } from "./i18n.js?v=4065";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4065";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4065";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredPlaceLocal, clearPreferredPlaceLocal, getPreferredPlaceForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4065";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -104,6 +104,7 @@ async function renderDashboardStats(){
   const progressLabel=document.getElementById("dashProgressLabel");
   const progressBar=document.getElementById("dashProgressBar");
   const nextStage=document.getElementById("dashNextStage");
+  const nextPreferredPlace=document.getElementById("dashNextPreferredPlace");
 
   if(!activeTour){
     stageCount.textContent="0";
@@ -113,6 +114,7 @@ async function renderDashboardStats(){
     progressLabel.textContent="0 %";
     progressBar.style.width="0%";
     nextStage.textContent="Noch keine aktive Tour.";
+    if(nextPreferredPlace) nextPreferredPlace.textContent="Noch keine aktive Tour.";
     return;
   }
 
@@ -145,7 +147,15 @@ async function renderDashboardStats(){
     nextStage.innerHTML=stages.length
       ? "<strong>Alle Wanderetappen abgeschlossen.</strong>"
       : "Noch keine geplante Etappe vorhanden.";
+    if(nextPreferredPlace) nextPreferredPlace.textContent="Kein weiterer Stopp geplant.";
     return;
+  }
+
+  const preferredPlace=getPreferredPlaceForStage(activeTour.id,next.id);
+  if(nextPreferredPlace){
+    nextPreferredPlace.innerHTML=preferredPlace
+      ? `<div class="next-stage-card"><strong>${escapeHtml(preferredPlace.name)}</strong><span>${escapeHtml(preferredPlace.category)}</span><span>${Number(preferredPlace.distanceKm||0).toFixed(2)} km von der Etappe</span></div>`
+      : "Für die nächste Etappe ist noch kein bevorzugter Ort festgelegt.";
   }
 
   nextStage.innerHTML=`
@@ -500,6 +510,16 @@ function nearestPlaceByCategory(places,category){
     .sort((a,b)=>Number(a.distanceKm||0)-Number(b.distanceKm||0))[0]||null;
 }
 
+
+function stagePreferredHtml(tourId,stageId){
+  const place=getPreferredPlaceForStage(tourId,stageId);
+  if(!place) return "";
+  return `<div class="stage-preferred">
+    <strong>★ Bevorzugter Stopp: ${escapeHtml(place.name)}</strong>
+    <span>${escapeHtml(place.category)} · ${Number(place.distanceKm||0).toFixed(2)} km von der Etappe</span>
+  </div>`;
+}
+
 function stageSupplyHtml(tourId,stageId){
   const places=getPlacesForStage(tourId,stageId);
 
@@ -581,7 +601,7 @@ async function renderStages(){
           ${stage.endCoord.lat.toFixed(5)}, ${stage.endCoord.lng.toFixed(5)}
         </div>
         ${stage.notes?`<p>${escapeHtml(stage.notes)}</p>`:""}
-        ${stage.restDay?"":`<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>`}
+        ${stage.restDay?"":`${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>`}
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
@@ -1073,14 +1093,17 @@ async function renderPlaces(){
 
   list.innerHTML=visiblePlaces.length
     ?visiblePlaces.map(place=>`
-      <article class="place-card ${place.favorite?"favorite":""}">
+      <article class="place-card ${place.favorite?"favorite":""} ${place.preferred?"preferred-place":""}">
         <h3>${escapeHtml(place.name)}</h3>
         <div class="poi-meta">
           <span class="pill">${escapeHtml(place.category)}</span>
           <span class="pill">${Number(place.distanceKm||0).toFixed(2)} km von der Etappe</span>
         </div>
         <p class="stage-coordinates">${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}</p>
+        ${place.preferred?'<span class="preferred-badge">Bevorzugter Stopp</span>':""}
         <div class="card-actions">
+          <button data-preferred-place="${place.id}">${place.preferred?"Bevorzugt ✓":"Als bevorzugt"}</button>
+          ${place.preferred?`<button data-clear-preferred="${place.stageId}">Bevorzugung entfernen</button>`:""}
           <button data-favorite-place="${place.id}" class="favorite-star">${place.favorite?"★ Favorit":"☆ Favorit"}</button>
           <button data-show-place="${place.id}">Auf Karte</button>
           <button class="danger" data-delete-place="${place.id}">Löschen</button>
@@ -1109,7 +1132,25 @@ document.getElementById("placeList")?.addEventListener("click",async(event)=>{
   const deleteId=event.target.dataset.deletePlace;
   const showId=event.target.dataset.showPlace;
   const favoriteId=event.target.dataset.favoritePlace;
+  const preferredId=event.target.dataset.preferredPlace;
+  const clearPreferredStageId=event.target.dataset.clearPreferred;
 
+
+  if(preferredId){
+    setPreferredPlaceLocal(activeTour.id,preferredId);
+    await renderPlaces();
+    await renderStages();
+    await renderDashboardStats();
+    return;
+  }
+
+  if(clearPreferredStageId){
+    clearPreferredPlaceLocal(activeTour.id,clearPreferredStageId);
+    await renderPlaces();
+    await renderStages();
+    await renderDashboardStats();
+    return;
+  }
 
   if(favoriteId){
     toggleFavoriteLocal(activeTour.id,favoriteId);
@@ -1366,12 +1407,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4064";
+  window.location.href = "./?v=4065";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4064");
+    navigator.serviceWorker.register("sw.js?v=4065");
   });
 }
 

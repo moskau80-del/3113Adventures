@@ -1,14 +1,12 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 6.4
+# 3113 Adventures – Version 4.0.0 / Sprint 6.5
 
 ## Neu
-- Versorgungssuche wird in kleinere Teilabfragen zerlegt
-- dadurch weniger Overpass-504-Fehler
-- automatischer Wechsel zwischen zwei Overpass-Servern
-- Timeout pro Teilabfrage
-- Suchfortschritt mit erfolgreichen/fehlgeschlagenen Teilabfragen
-- doppelte OSM-Treffer werden zusammengeführt
-- manuelle Orte direkt pro Etappe erfassen
-- alle Funktionen aus Sprint 6.3 bleiben enthalten
+- pro Etappe einen bevorzugten gespeicherten Ort festlegen
+- bevorzugter Ort direkt in der Etappe sichtbar
+- Bevorzugung wieder entfernen
+- Orte-Liste markiert bevorzugte Stopps
+- Dashboard zeigt den bevorzugten Stopp der nächsten offenen Etappe
+- alle Funktionen aus Sprint 6.4 bleiben enthalten
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 6.4` stehen.
+Oben rechts muss `v4.0.0 · Sprint 6.5` stehen.

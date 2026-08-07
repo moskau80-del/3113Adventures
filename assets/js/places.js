@@ -30,7 +30,8 @@ export function savePlacesLocal(tourId,places){
     distanceKm:Number(place.distanceKm||0),
     tags:place.tags||{},
     savedAt:place.savedAt||new Date().toISOString(),
-    favorite:Boolean(place.favorite)
+    favorite:Boolean(place.favorite),
+    preferred:Boolean(place.preferred)
   }));
 
   const serialized=JSON.stringify(compact);
@@ -219,4 +220,37 @@ export function dedupePlaces(places){
   }
 
   return result;
+}
+
+
+export function setPreferredPlaceLocal(tourId,placeId){
+  const places=loadPlacesLocal(tourId);
+  const selected=places.find(place=>place.id===placeId);
+  if(!selected) return places;
+
+  return savePlacesLocal(
+    tourId,
+    places.map(place=>({
+      ...place,
+      preferred:place.stageId===selected.stageId
+        ? place.id===placeId
+        : Boolean(place.preferred)
+    }))
+  );
+}
+
+export function clearPreferredPlaceLocal(tourId,stageId){
+  return savePlacesLocal(
+    tourId,
+    loadPlacesLocal(tourId).map(place=>({
+      ...place,
+      preferred:place.stageId===stageId?false:Boolean(place.preferred)
+    }))
+  );
+}
+
+export function getPreferredPlaceForStage(tourId,stageId){
+  return loadPlacesLocal(tourId).find(
+    place=>place.stageId===stageId&&place.preferred
+  )||null;
 }
