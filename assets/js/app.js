@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4091";
+} from "./database.js?v=4092";
 
-import { loadLanguage, translate } from "./i18n.js?v=4091";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4091";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4091";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson } from "./gear.js?v=4091";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4091";
+import { loadLanguage, translate } from "./i18n.js?v=4092";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4092";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4092";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson } from "./gear.js?v=4092";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4092";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2022,6 +2022,7 @@ document.getElementById("importFullTourInput")?.addEventListener("change",async(
 
 
 let activePackPerson="person1";
+const collapsedPackCategories=new Set();
 
 async function renderTourPack(){
   const activeTour=await getActiveTour();
@@ -2063,40 +2064,85 @@ async function renderTourPack(){
     rows.push({item,entry,quantity,lineWeight});
   });
 
-  rows.sort((a,b)=>String(a.item.name||"").localeCompare(String(b.item.name||"")));
+  rows.sort((a,b)=>
+    String(a.item.category||"Weiteres").localeCompare(String(b.item.category||"Weiteres")) ||
+    String(a.item.name||"").localeCompare(String(b.item.name||""))
+  );
 
   document.getElementById("packTotalWeight").textContent=formatKg3FromGrams(total);
   document.getElementById("packWornWeight").textContent=formatKg3FromGrams(worn);
   document.getElementById("packNetWeight").textContent=formatKg3FromGrams(total-worn);
   document.getElementById("packItemCount").textContent=String(rows.length);
 
-  container.innerHTML=rows.length
-    ?rows.map(({item,entry,quantity,lineWeight})=>`
-      <div class="pack-item-row">
-        <div class="pack-item-main">
-          <strong>${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</strong>
-          <span>${escapeHtml(item.category||"")} · Einzelgewicht ${Number(item.weightG||0)} g</span>
+  if(!rows.length){
+    container.innerHTML='<div class="pack-empty">Noch keine Artikel in dieser Packliste. Füge Artikel in „Mein Transa“ über Person 1 oder Person 2 hinzu.</div>';
+    return;
+  }
+
+  const groups=new Map();
+  rows.forEach(row=>{
+    const category=row.item.category||"Weiteres";
+    if(!groups.has(category)) groups.set(category,[]);
+    groups.get(category).push(row);
+  });
+
+  container.innerHTML=[...groups.entries()].map(([category,groupRows])=>{
+    const categoryWeight=groupRows.reduce((sum,row)=>sum+row.lineWeight,0);
+    const categoryWorn=groupRows.filter(row=>row.entry.worn).reduce((sum,row)=>sum+row.lineWeight,0);
+    const categoryNet=categoryWeight-categoryWorn;
+    const key=`${activePackPerson}:${category}`;
+    const collapsed=collapsedPackCategories.has(key);
+
+    return `<section class="pack-category ${collapsed?"collapsed":""}">
+      <button type="button" class="pack-category-header" data-pack-category-toggle="${escapeHtml(key)}">
+        <div>
+          <strong>${escapeHtml(category)}</strong>
+          <span class="muted small">${groupRows.length} Position${groupRows.length===1?"":"en"}</span>
         </div>
-
-        <label>
-          <span>Menge</span>
-          <input type="number" data-pack-quantity="${item.id}" min="1" max="${availableQuantityForPerson(activeTour.id,activePackPerson,item.id,Number(item.stock??item.quantity??1))}" step="1" value="${quantity}">
-          <small class="muted">Bestand ${Number(item.stock??item.quantity??1)}</small>
-        </label>
-
-        <label>
-          <input type="checkbox" data-pack-worn="${item.id}" ${entry.worn?"checked":""}>
-          am Körper
-        </label>
-
-        <div class="pack-item-weight">${formatKg3FromGrams(lineWeight)}</div>
-
-        <div class="pack-item-actions">
-          <button class="danger" data-pack-remove="${item.id}" type="button">Entfernen</button>
+        <div class="pack-category-meta">
+          <span class="pill">Total ${formatKg3FromGrams(categoryWeight)}</span>
+          <span class="pill">Körper ${formatKg3FromGrams(categoryWorn)}</span>
+          <span class="pill">Netto ${formatKg3FromGrams(categoryNet)}</span>
+          <span>${collapsed?"▸":"▾"}</span>
         </div>
+      </button>
+
+      <div class="pack-category-body">
+        ${groupRows.map(({item,entry,quantity,lineWeight})=>`
+          <div class="pack-item-row ${item.consumable?"consumable":""} ${entry.worn?"worn":""}">
+            <div class="pack-item-main">
+              <strong>${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</strong>
+              <span>${Number(item.weightG||0)} g pro Stück</span>
+              ${item.consumable?'<span class="pack-consumable">Verbrauchsartikel</span>':""}
+              ${entry.worn?'<span class="pack-worn-badge">am Körper</span>':""}
+            </div>
+
+            <label>
+              <span>Menge</span>
+              <input type="number"
+                     data-pack-quantity="${item.id}"
+                     min="1"
+                     max="${availableQuantityForPerson(activeTour.id,activePackPerson,item.id,Number(item.stock??item.quantity??1))}"
+                     step="1"
+                     value="${quantity}">
+              <small class="muted">Bestand ${Number(item.stock??item.quantity??1)}</small>
+            </label>
+
+            <label>
+              <input type="checkbox" data-pack-worn="${item.id}" ${entry.worn?"checked":""}>
+              am Körper
+            </label>
+
+            <div class="pack-item-weight">${formatKg3FromGrams(lineWeight)}</div>
+
+            <div class="pack-item-actions">
+              <button class="danger" data-pack-remove="${item.id}" type="button">Entfernen</button>
+            </div>
+          </div>
+        `).join("")}
       </div>
-    `).join("")
-    :'<div class="pack-empty">Noch keine Artikel in dieser Packliste. Füge Artikel über „Mein Transa“ hinzu oder ziehe sie auf die gewünschte Person.</div>';
+    </section>`;
+  }).join("");
 }
 
 document.getElementById("packPerson1Btn")?.addEventListener("click",async()=>{
@@ -2172,6 +2218,14 @@ document.getElementById("tourPackList")?.addEventListener("change",async(event)=
 });
 
 document.getElementById("tourPackList")?.addEventListener("click",async(event)=>{
+  const categoryKey=event.target.closest("[data-pack-category-toggle]")?.dataset.packCategoryToggle;
+  if(categoryKey){
+    if(collapsedPackCategories.has(categoryKey)) collapsedPackCategories.delete(categoryKey);
+    else collapsedPackCategories.add(categoryKey);
+    await renderTourPack();
+    return;
+  }
+
   const removeId=event.target.dataset.packRemove;
   if(!removeId) return;
 
@@ -2676,12 +2730,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4091";
+  window.location.href = "./?v=4092";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4091");
+    navigator.serviceWorker.register("sw.js?v=4092");
   });
 }
 
