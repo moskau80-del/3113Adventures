@@ -1,13 +1,16 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 6.9
+# 3113 Adventures – Version 4.0.0 / Sprint 7.0
 
 ## Neu
-- pro Etappe zwei bevorzugte Orte: Start und Ziel
-- gespeicherten Ort separat als bevorzugten Start oder bevorzugtes Ziel markieren
-- beide Vorschläge direkt in der Etappe sichtbar
-- Übernahme von Start oder Ziel nur nach ausdrücklicher Bestätigung
-- Start- und Zielbevorzugung getrennt wieder entfernen
-- Monatsübersicht zeigt weiterhin das bevorzugte Ziel
-- alle Funktionen aus Sprint 6.8 bleiben enthalten
+- neue Versorgungskategorie `👟 Schuhe / Outdoor`
+- Suche nach Schuh-, Sport-, Running- und Outdoor-Geschäften entlang der Etappe
+- Topo Athletic wird besonders gekennzeichnet, wenn die Marke aus den OSM-Daten erkennbar ist
+- Altra wird besonders gekennzeichnet, wenn die Marke aus den OSM-Daten erkennbar ist
+- Decathlon wird besonders gekennzeichnet
+- Geschäfte ohne verlässliche Markenangabe bleiben neutral als Schuh-/Outdoor-Geschäft
+- Schuhversorgung kann wie andere Versorgungspunkte gespeichert und einer Etappe zugeordnet werden
+- alle Funktionen aus Sprint 6.9 bleiben enthalten
+
+Hinweis: OSM enthält nicht bei jedem Händler Markeninformationen. Die App behauptet Topo/Altra deshalb nur, wenn entsprechende Daten vorhanden sind.
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 6.9` stehen.
+Oben rechts muss `v4.0.0 · Sprint 7.0` stehen.

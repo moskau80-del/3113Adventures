@@ -128,3 +128,5 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .stage-preferred-start{margin-top:10px;padding:10px;border-radius:10px;background:#eaf2fb}
 .stage-preferred-end{margin-top:10px;padding:10px;border-radius:10px;background:#edf3e8}
 .stage-preferred-start strong,.stage-preferred-start span,.stage-preferred-end strong,.stage-preferred-end span{display:block}
+
+.footwear-hint{font-size:.8rem;font-weight:700}

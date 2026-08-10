@@ -127,6 +127,14 @@ export function buildOverpassQuery(bounds,category){
     ],
     toilet:[
       'nwr["amenity"="toilets"]'
+    ],
+    footwear:[
+      'nwr["shop"="shoes"]',
+      'nwr["shop"="sports"]',
+      'nwr["shop"="outdoor"]',
+      'nwr["shop"="sports"]["sport"="running"]',
+      'nwr["brand"~"Topo Athletic|Altra|Decathlon",i]',
+      'nwr["name"~"Topo Athletic|Altra|Decathlon",i]'
     ]
   };
 

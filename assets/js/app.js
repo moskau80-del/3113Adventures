@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4069";
+} from "./database.js?v=4070";
 
-import { loadLanguage, translate } from "./i18n.js?v=4069";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4069";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4069";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4069";
+import { loadLanguage, translate } from "./i18n.js?v=4070";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4070";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4070";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4070";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -506,6 +506,16 @@ function formatHours(value){
 }
 
 
+function footwearBrandHint(place){
+  if(place.category!=="footwear") return "";
+  const text=[place.name,place.tags?.brand,place.tags?.brands,place.tags?.operator,place.tags?.description]
+    .filter(Boolean).join(" ").toLowerCase();
+  if(text.includes("decathlon")) return "🏬 Decathlon";
+  if(text.includes("topo athletic")||text.includes("topo")) return "👟 Topo Athletic";
+  if(text.includes("altra")) return "👟 Altra";
+  return "👟 Schuh-/Outdoor-Geschäft";
+}
+
 function nearestPlaceByCategory(places,category){
   return places
     .filter(place=>place.category===category)
@@ -550,7 +560,7 @@ function stageSupplyHtml(tourId,stageId){
     ["camping","⛺ Camping"],
     ["water","💧 Wasser"],
     ["shop","🛒 Einkauf"],
-    ["transport","🚆 ÖV"]
+    ["transport","🚆 ÖV"],["footwear","👟 Schuhe"]
   ];
 
   return `<div class="stage-supply-grid">
@@ -765,7 +775,7 @@ async function showStageOnMap(stage){
     places.forEach(place=>{
       L.marker([place.lat,place.lng])
         .addTo(trackLayer)
-        .bindPopup(`<strong>${escapeHtml(place.name)}</strong><br>${escapeHtml(place.category)}<br>${Number(place.distanceKm||0).toFixed(2)} km von der Etappe${place.favorite?"<br>★ Favorit":""}`);
+        .bindPopup(`<strong>${escapeHtml(place.name)}</strong>${place.category==="footwear"?`<span>${escapeHtml(footwearBrandHint(place))}</span>`:""}<br>${escapeHtml(place.category)}<br>${Number(place.distanceKm||0).toFixed(2)} km von der Etappe${place.favorite?"<br>★ Favorit":""}`);
     });
 
     map.fitBounds(line.getBounds(),{padding:[20,20]});
@@ -1232,7 +1242,7 @@ document.getElementById("placeList")?.addEventListener("click",async(event)=>{
       map.setView([place.lat,place.lng],15);
       L.marker([place.lat,place.lng])
         .addTo(trackLayer)
-        .bindPopup(`<strong>${escapeHtml(place.name)}</strong>`)
+        .bindPopup(`<strong>${escapeHtml(place.name)}</strong>${place.category==="footwear"?`<span>${escapeHtml(footwearBrandHint(place))}</span>`:""}`)
         .openPopup();
     },150);
   }
@@ -1532,12 +1542,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4069";
+  window.location.href = "./?v=4070";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4069");
+    navigator.serviceWorker.register("sw.js?v=4070");
   });
 }
 
