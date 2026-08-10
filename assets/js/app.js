@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4080";
+} from "./database.js?v=4081";
 
-import { loadLanguage, translate } from "./i18n.js?v=4080";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4080";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4080";
-import { loadGearLocal, upsertGearLocal, deleteGearLocal } from "./gear.js?v=4080";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4080";
+import { loadLanguage, translate } from "./i18n.js?v=4081";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4081";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4081";
+import { loadGearLocal, upsertGearLocal, deleteGearLocal, loadTourPackLocal, toggleGearInTourPackLocal, updateTourPackItemLocal } from "./gear.js?v=4081";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4081";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -680,6 +680,7 @@ async function renderStages(){
 
   await renderDashboardStats();
   renderGear();
+  await renderTourPack();
   await renderPlaces();
 }
 
@@ -2012,6 +2013,95 @@ document.getElementById("importFullTourInput")?.addEventListener("change",async(
 });
 
 
+
+async function renderTourPack(){
+  const activeTour=await getActiveTour();
+  const container=document.getElementById("tourPackList");
+  if(!container) return;
+
+  if(!activeTour){
+    container.innerHTML='<div class="empty">Keine aktive Tour.</div>';
+    document.getElementById("packTotalWeight").textContent="0 g";
+    document.getElementById("packWornWeight").textContent="0 g";
+    document.getElementById("packNetWeight").textContent="0 g";
+    document.getElementById("packItemCount").textContent="0";
+    return;
+  }
+
+  const gear=loadGearLocal();
+  const pack=loadTourPackLocal(activeTour.id);
+  const byId=new Map(gear.map(item=>[item.id,item]));
+
+  let total=0;
+  let worn=0;
+
+  pack.forEach(item=>{
+    const gearItem=byId.get(item.gearId);
+    if(!gearItem) return;
+    const weight=Number(gearItem.weightG||0)*Number(item.quantity||1);
+    total+=weight;
+    if(item.worn) worn+=weight;
+  });
+
+  document.getElementById("packTotalWeight").textContent=`${Math.round(total)} g`;
+  document.getElementById("packWornWeight").textContent=`${Math.round(worn)} g`;
+  document.getElementById("packNetWeight").textContent=`${Math.round(total-worn)} g`;
+  document.getElementById("packItemCount").textContent=String(pack.length);
+
+  container.innerHTML=gear.length
+    ?gear.map(item=>{
+      const packItem=pack.find(entry=>entry.gearId===item.id);
+      return `<div class="pack-row">
+        <div>
+          <div class="pack-name">${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</div>
+          <small>${Number(item.weightG||0)} g · ${escapeHtml(item.category)}</small>
+        </div>
+        <label>
+          <input type="checkbox" data-pack-toggle="${item.id}" ${packItem?"checked":""}>
+          In Packliste
+        </label>
+        ${packItem?`
+          <label>
+            Menge
+            <input type="number" data-pack-quantity="${item.id}" min="1" step="1" value="${Number(packItem.quantity||1)}" style="width:70px">
+          </label>
+          <label>
+            <input type="checkbox" data-pack-worn="${item.id}" ${packItem.worn?"checked":""}>
+            am Körper
+          </label>
+        `:""}
+      </div>`;
+    }).join("")
+    :'<div class="empty">Noch keine Ausrüstung in „Mein Transa“ vorhanden.</div>';
+}
+
+document.getElementById("tourPackList")?.addEventListener("change",async(event)=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const toggleId=event.target.dataset.packToggle;
+  const qtyId=event.target.dataset.packQuantity;
+  const wornId=event.target.dataset.packWorn;
+
+  if(toggleId){
+    toggleGearInTourPackLocal(activeTour.id,toggleId);
+  }
+
+  if(qtyId){
+    updateTourPackItemLocal(activeTour.id,qtyId,{
+      quantity:Math.max(1,Number(event.target.value||1))
+    });
+  }
+
+  if(wornId){
+    updateTourPackItemLocal(activeTour.id,wornId,{
+      worn:event.target.checked
+    });
+  }
+
+  await renderTourPack();
+});
+
 const gearDialog=document.getElementById("gearDialog");
 const gearForm=document.getElementById("gearForm");
 
@@ -2091,6 +2181,7 @@ gearForm?.addEventListener("submit",(event)=>{
 
   gearDialog.close();
   renderGear();
+  renderTourPack();
 });
 
 document.getElementById("gearList")?.addEventListener("click",(event)=>{
@@ -2106,6 +2197,7 @@ document.getElementById("gearList")?.addEventListener("click",(event)=>{
   if(deleteId&&confirm("Ausrüstungsartikel wirklich löschen?")){
     deleteGearLocal(deleteId);
     renderGear();
+    renderTourPack();
   }
 });
 
@@ -2201,12 +2293,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4080";
+  window.location.href = "./?v=4081";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4080");
+    navigator.serviceWorker.register("sw.js?v=4081");
   });
 }
 
