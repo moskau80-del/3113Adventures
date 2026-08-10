@@ -1,10 +1,15 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 7.2
+# 3113 Adventures – Version 4.0.0 / Sprint 7.4
 
-## Korrektur
-- `👟 Schuhe / Outdoor` ist jetzt im Dialog `Versorgung suchen` als echte Suchkategorie auswählbar.
-- Der Fehler in 7.0/7.1 war: Schuhe war bei manueller Erfassung und Anzeige vorhanden, aber der Suchbutton im Versorgungsdialog fehlte.
-- Suche umfasst Schuh-, Sport-, Running- und Outdoor-Geschäfte sowie erkennbare Topo Athletic-, Altra-, Salomon- und Decathlon-Einträge.
-- alle Funktionen aus Sprint 7.1 bleiben enthalten.
+## Neu
+- frei wählbares Schuhwechsel-Intervall in Kilometern
+- Einstellung wird pro Tour lokal gespeichert
+- Standardwert 700 km
+- Etappenübersicht markiert automatisch die Etappe, in der ein Schuhwechsel ungefähr fällig wird
+- Hinweis zeigt den ungefähren Gesamtkilometerstand
+- Monats-/Zeitachsenübersicht zeigt Schuhwechsel-Hinweise ebenfalls an
+- nächster Schuhwechsel-Richtwert wird oberhalb der Etappen angezeigt
+- Ruhetage zählen nicht zur Schuhkilometer-Berechnung
+- alle Funktionen aus Sprint 7.3 bleiben enthalten
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 7.2` stehen.
+Oben rechts muss `v4.0.0 · Sprint 7.4` stehen.

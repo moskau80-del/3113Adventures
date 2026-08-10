@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4072";
+} from "./database.js?v=4074";
 
-import { loadLanguage, translate } from "./i18n.js?v=4072";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4072";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo } from "./stages.js?v=4072";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4072";
+import { loadLanguage, translate } from "./i18n.js?v=4074";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4074";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm , saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4074";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4074";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -143,10 +143,19 @@ async function renderDashboardStats(){
   progressLabel.textContent=`${percent.toFixed(0)} %`;
   progressBar.style.width=`${percent}%`;
 
-  const next=stages.find(stage=>!stage.completed&&!stage.restDay);
+  const walkingStages=stages
+    .filter(stage=>!stage.restDay)
+    .sort((a,b)=>{
+      const dateA=a.date||"9999-12-31";
+      const dateB=b.date||"9999-12-31";
+      if(dateA!==dateB) return dateA.localeCompare(dateB);
+      return Number(a.order||0)-Number(b.order||0);
+    });
+
+  const next=walkingStages.find(stage=>!stage.completed);
 
   if(!next){
-    nextStage.innerHTML=stages.length
+    nextStage.innerHTML=walkingStages.length
       ? "<strong>Alle Wanderetappen abgeschlossen.</strong>"
       : "Noch keine geplante Etappe vorhanden.";
     if(nextPreferredPlace) nextPreferredPlace.textContent="Kein weiterer Stopp geplant.";
@@ -524,6 +533,17 @@ function nearestPlaceByCategory(places,category){
 }
 
 
+
+function stageShoeChangeHtml(stage,shoeMarkers){
+  const marker=shoeMarkers[stage.id];
+  if(!marker) return "";
+
+  return `<div class="shoe-change-alert">
+    <strong>👟 Schuhwechsel ungefähr fällig</strong>
+    <span>${marker.thresholds.map(km=>`ca. bei km ${Math.round(km)}`).join(" · ")}</span>
+  </div>`;
+}
+
 function stagePlanningStatusHtml(tourId,stage){
   if(stage.restDay) return "";
   const places=getPlacesForStage(tourId,stage.id);
@@ -589,6 +609,17 @@ async function renderStages(){
   }
 
   const stages=loadStagesLocal(activeTour.id);
+  const shoeInterval=loadShoeIntervalLocal(activeTour.id,700);
+  const shoeMarkers=getShoeChangeMarkers(stages,shoeInterval);
+  const shoeInput=document.getElementById("shoeChangeIntervalKm");
+  if(shoeInput) shoeInput.value=shoeInterval;
+  const shoeStatus=document.getElementById("shoePlanningStatus");
+  if(shoeStatus){
+    const nextShoeKm=getNextShoeChangeKm(stages,shoeInterval);
+    shoeStatus.textContent=nextShoeKm
+      ? `Schuhwechsel geplant alle ${shoeInterval} km · nächster Richtwert bei km ${Math.round(nextShoeKm)}`
+      : `Schuhwechsel geplant alle ${shoeInterval} km`;
+  }
   const distances=stages.map(stage=>Number(stage.distanceKm||0));
 
   document.getElementById("stageCount").textContent=String(stages.length);
@@ -631,7 +662,7 @@ async function renderStages(){
           ${stage.endCoord.lat.toFixed(5)}, ${stage.endCoord.lng.toFixed(5)}
         </div>
         ${stage.notes?`<p>${escapeHtml(stage.notes)}</p>`:""}
-        ${stage.restDay?"":`${stagePlanningStatusHtml(activeTour.id,stage)}${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>`}
+        ${stage.restDay?"":`${stageShoeChangeHtml(stage,shoeMarkers)}${stagePlanningStatusHtml(activeTour.id,stage)}${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>`}
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
@@ -698,7 +729,7 @@ function renderStageTimeline(stages){
                   getPreferredEndForStage(stage.tourId,stage.id)
                     ? `<small class="timeline-stop">★ ${escapeHtml(getPreferredEndForStage(stage.tourId,stage.id).name)}</small>`
                     : ""
-                }`}
+                }${shoeMarkers[stage.id]?`<small class="timeline-shoe">👟 Schuhwechsel ca. km ${shoeMarkers[stage.id].thresholds.map(km=>Math.round(km)).join(" / ")}</small>`:""}`}
             </span>
           </div>`).join("")}
       </div>
@@ -1357,6 +1388,23 @@ document.getElementById("preferredDestinationDialog")?.addEventListener("close",
   pendingPreferredDestinationStageId=null;
 });
 
+
+document.getElementById("saveShoeIntervalBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const input=document.getElementById("shoeChangeIntervalKm");
+  const interval=Number(input?.value||0);
+
+  if(!Number.isFinite(interval)||interval<100){
+    alert("Bitte ein Schuhwechsel-Intervall ab 100 km eingeben.");
+    return;
+  }
+
+  saveShoeIntervalLocal(activeTour.id,interval);
+  await renderStages();
+});
+
 document.getElementById("generateStagesBtn")?.addEventListener("click",async()=>{
   const activeTour=await getActiveTour();
   if(!activeTour) return;
@@ -1543,12 +1591,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4072";
+  window.location.href = "./?v=4074";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4072");
+    navigator.serviceWorker.register("sw.js?v=4074");
   });
 }
 

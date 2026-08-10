@@ -130,3 +130,10 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .stage-preferred-start strong,.stage-preferred-start span,.stage-preferred-end strong,.stage-preferred-end span{display:block}
 
 .footwear-hint{font-size:.8rem;font-weight:700}
+
+.input-with-unit{display:flex;align-items:center;gap:8px}
+.input-with-unit input{flex:1}
+.shoe-change-alert{margin-top:10px;padding:10px 12px;border-radius:10px;background:#fff1d9;border-left:5px solid #c28c2c}
+.shoe-change-alert strong,.shoe-change-alert span{display:block}
+.shoe-change-alert span{font-size:.82rem;margin-top:3px}
+.timeline-shoe{display:block;margin-top:3px;font-size:.78rem;font-weight:800}

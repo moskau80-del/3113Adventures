@@ -361,3 +361,62 @@ export function getStageStorageInfo(tourId){
     origin:window.location.origin
   };
 }
+
+
+const SHOE_INTERVAL_PREFIX="3113-v4-shoe-interval:";
+
+export function saveShoeIntervalLocal(tourId,intervalKm){
+  const value=Math.max(0,Number(intervalKm)||0);
+  localStorage.setItem(`${SHOE_INTERVAL_PREFIX}${tourId}`,String(value));
+  return value;
+}
+
+export function loadShoeIntervalLocal(tourId,defaultValue=700){
+  const raw=localStorage.getItem(`${SHOE_INTERVAL_PREFIX}${tourId}`);
+  const value=Number(raw);
+  return Number.isFinite(value)&&value>0?value:defaultValue;
+}
+
+export function getShoeChangeMarkers(stages,intervalKm){
+  const interval=Math.max(0,Number(intervalKm)||0);
+  if(!interval) return {};
+
+  const markers={};
+  let cumulative=0;
+  let nextThreshold=interval;
+
+  for(const stage of stages){
+    if(stage.restDay) continue;
+
+    const distance=Number(stage.distanceKm||0);
+    const before=cumulative;
+    cumulative+=distance;
+
+    const thresholds=[];
+    while(nextThreshold>before && nextThreshold<=cumulative+1e-9){
+      thresholds.push(nextThreshold);
+      nextThreshold+=interval;
+    }
+
+    if(thresholds.length){
+      markers[stage.id]={
+        thresholds,
+        cumulativeKm:cumulative
+      };
+    }
+  }
+
+  return markers;
+}
+
+export function getNextShoeChangeKm(stages,intervalKm){
+  const interval=Math.max(0,Number(intervalKm)||0);
+  if(!interval) return null;
+
+  const completedKm=stages
+    .filter(stage=>!stage.restDay&&stage.completed)
+    .reduce((sum,stage)=>sum+Number(stage.distanceKm||0),0);
+
+  const next=Math.floor(completedKm/interval+1)*interval;
+  return next;
+}
