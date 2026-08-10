@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40951";
+} from "./database.js?v=40952";
 
-import { loadLanguage, translate } from "./i18n.js?v=40951";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40951";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40951";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40951";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40951";
+import { loadLanguage, translate } from "./i18n.js?v=40952";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40952";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40952";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40952";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40952";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -697,7 +697,7 @@ async function renderStages(){
   renderGear();
   await renderTourPack();
   await renderTourShoes();
-  await renderPrintPreview();
+  if(typeof renderPrintPreview==='function') { await if(typeof renderPrintPreview==='function') { renderPrintPreview(); } }
   await renderPlaces();
 }
 
@@ -2854,6 +2854,70 @@ document.getElementById("deleteSelectedGearBtn")?.addEventListener("click",async
 });
 
 
+
+async function renderPrintPreview(){
+  const preview=document.getElementById("printPreview");
+  if(!preview) return;
+
+  const mode=document.getElementById("printMode")?.value||"gear";
+  const gear=loadGearLocal();
+
+  if(mode==="gear"){
+    const rows=[...gear].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+    preview.innerHTML=`
+      <h2>3113 Adventures – Artikelliste</h2>
+      <table>
+        <thead><tr><th>Artikel</th><th>Marke</th><th>Kategorie</th><th>Gewicht</th><th>Bestand</th><th>Lagerort</th></tr></thead>
+        <tbody>${rows.map(item=>`
+          <tr>
+            <td>${escapeHtml(item.name)}</td>
+            <td>${escapeHtml(item.brand||"")}</td>
+            <td>${escapeHtml(item.category||"")}</td>
+            <td>${Number(item.weightG||0)} g</td>
+            <td>${Number(item.stock??item.quantity??1)}</td>
+            <td>${escapeHtml(item.location||"")}</td>
+          </tr>`).join("")}</tbody>
+      </table>`;
+    return;
+  }
+
+  const activeTour=await getActiveTour();
+  if(!activeTour){
+    preview.innerHTML="<p>Keine aktive Tour.</p>";
+    return;
+  }
+
+  const personKey=mode==="person2"?"person2":"person1";
+  const names=loadPackNamesLocal(activeTour.id);
+  const label=personKey==="person1"?names.person1:names.person2;
+  const pack=loadTourPersonPackLocal(activeTour.id,personKey);
+  const byId=new Map(gear.map(item=>[item.id,item]));
+
+  let total=0,worn=0;
+  const rows=pack.map(entry=>{
+    const item=byId.get(entry.gearId);
+    if(!item) return null;
+    const weight=Number(item.weightG||0)*Number(entry.quantity||1);
+    total+=weight;
+    if(entry.worn) worn+=weight;
+    return {item,entry,weight};
+  }).filter(Boolean);
+
+  preview.innerHTML=`
+    <h2>${escapeHtml(activeTour.name||"Tour")} – Packliste ${escapeHtml(label)}</h2>
+    <p><strong>Total:</strong> ${formatKg3FromGrams(total)} · <strong>am Körper:</strong> ${formatKg3FromGrams(worn)} · <strong>Netto:</strong> ${formatKg3FromGrams(total-worn)}</p>
+    <table>
+      <thead><tr><th>Artikel</th><th>Menge</th><th>Gewicht</th><th>am Körper</th></tr></thead>
+      <tbody>${rows.map(({item,entry,weight})=>`
+        <tr>
+          <td>${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</td>
+          <td>${Number(entry.quantity||1)}</td>
+          <td>${formatKg3FromGrams(weight)}</td>
+          <td>${entry.worn?"Ja":"Nein"}</td>
+        </tr>`).join("")}</tbody>
+    </table>`;
+}
+
 async function initialize() {
   let language = "de";
   let theme = "system";
@@ -2943,12 +3007,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40951";
+  window.location.href = "./?v=40952";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40951");
+    navigator.serviceWorker.register("sw.js?v=40952");
   });
 }
 
