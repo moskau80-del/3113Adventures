@@ -2771,6 +2771,25 @@ function openGearDialog(item=null){
   gearDialog.showModal();
 }
 
+
+function gearAllocatedQuantity(tourId,gearId){
+  return ["person1","person2"].reduce((sum,personKey)=>{
+    return sum+loadTourPersonPackLocal(tourId,personKey)
+      .filter(entry=>entry.gearId===gearId)
+      .reduce((subtotal,entry)=>subtotal+Number(entry.quantity||1),0);
+  },0);
+}
+
+function gearAvailabilityInfo(tourId,item){
+  const stock=Math.max(0,Number(item.stock??item.quantity??1));
+  const allocated=gearAllocatedQuantity(tourId,item.id);
+  return {
+    stock,
+    allocated,
+    available:Math.max(0,stock-allocated)
+  };
+}
+
 async function renderGear(){
   const items=loadGearLocal();
   const activeTour=await getActiveTour();
@@ -3325,12 +3344,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40910";
+  window.location.href = "./?v=4091111";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40910");
+    navigator.serviceWorker.register("sw.js?v=4091111");
   });
 }
 
