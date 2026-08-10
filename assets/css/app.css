@@ -523,3 +523,17 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
   .stage-card-modern .shoe-stage-warning{margin-left:0}
   .stage-statbar{gap:8px 12px}
 }
+
+/* Sprint 9.10 map refinements */
+.map-legend{
+  display:flex;flex-wrap:wrap;gap:14px;align-items:center;
+  margin:0 0 10px;padding:9px 12px;background:#fff;
+  border:1px solid #dfe7f0;border-radius:10px;font-size:.75rem;color:#52677d
+}
+.map-legend span{display:flex;align-items:center;gap:5px}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+.legend-dot.tour{background:#0d4f91}
+.legend-dot.stage{background:#4d8f4a}
+.legend-dot.preferred{background:#dd8a22}
+#mapCanvas{border-radius:14px;overflow:hidden;box-shadow:0 6px 22px rgba(26,63,101,.08)}
+.map-popup strong{display:block;margin-bottom:4px;color:#0b467d}

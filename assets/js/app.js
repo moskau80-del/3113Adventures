@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4099";
+} from "./database.js?v=40910";
 
-import { loadLanguage, translate } from "./i18n.js?v=4099";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4099";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4099";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4099";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4099";
+import { loadLanguage, translate } from "./i18n.js?v=40910";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40910";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40910";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40910";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40910";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -368,8 +368,37 @@ async function renderMapTrack() {
     .addTo(trackLayer)
     .bindPopup(`<div class="map-popup"><strong>${translate("gpx.end", "Ziel")}</strong>${last.lat.toFixed(5)}, ${last.lng.toFixed(5)}</div>`);
 
+  // Show all planned stages directly on the tour map.
+  const stages=loadStagesLocal(activeTour.id).filter(stage=>!stage.restDay);
+  stages.forEach((stage,index)=>{
+    if(stage.startCoord){
+      L.circleMarker([stage.startCoord.lat,stage.startCoord.lng],{
+        radius:6,weight:2,fillOpacity:1
+      }).addTo(trackLayer)
+        .bindPopup(`<div class="map-popup"><strong>Etappe ${index+1}</strong>${escapeHtml(stage.from||"Start")}</div>`);
+    }
+
+    if(stage.endCoord){
+      L.circleMarker([stage.endCoord.lat,stage.endCoord.lng],{
+        radius:7,weight:2,fillOpacity:1
+      }).addTo(trackLayer)
+        .bindPopup(`<div class="map-popup"><strong>Etappe ${index+1} – Ziel</strong>${escapeHtml(stage.to||"Ziel")}</div>`);
+    }
+
+    const preferredStart=getPreferredStartForStage(activeTour.id,stage.id);
+    const preferredEnd=getPreferredEndForStage(activeTour.id,stage.id);
+
+    [preferredStart,preferredEnd].filter(Boolean).forEach(place=>{
+      if(Number.isFinite(Number(place.lat))&&Number.isFinite(Number(place.lon))){
+        L.marker([Number(place.lat),Number(place.lon)])
+          .addTo(trackLayer)
+          .bindPopup(`<div class="map-popup"><strong>★ ${escapeHtml(place.name)}</strong>${escapeHtml(place.category||"Bevorzugter Ort")}<br>Etappe ${index+1}</div>`);
+      }
+    });
+  });
+
   map.fitBounds(line.getBounds(), {
-    padding: [20, 20]
+    padding: [28, 28]
   });
 }
 
@@ -3289,12 +3318,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4099";
+  window.location.href = "./?v=40910";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4099");
+    navigator.serviceWorker.register("sw.js?v=40910");
   });
 }
 

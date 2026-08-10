@@ -1,18 +1,15 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 9.9
+# 3113 Adventures – Version 4.0.0 / Sprint 9.10
 
-## Etappenansicht verfeinert
-- nummerierter Etappen-Badge
-- Datum und Route klarer hervorgehoben
-- separate kompakte Kennzahlenzeile für Distanz, Aufstieg, Abstieg und Gehzeit
-- Etappenname bleibt als dezente Zusatzinformation erhalten
-- Aktionsbuttons kompakter
-- Zeitachse optisch ruhiger und stärker in die Etappenkarte integriert
-- Versorgung und Schuhwarnungen sauber ausgerichtet
-- mobile Darstellung angepasst
+## Karte & Etappenplanung
+- geplante Etappen werden zusätzlich auf der Gesamtkarte markiert
+- Etappenstart und Etappenziel sind auf der Karte sichtbar
+- bevorzugte Start-/Zielorte werden auf der Karte dargestellt
+- Kartenlegende ergänzt
+- `Auf Karte` springt zur Karte und fokussiert die ausgewählte Etappe
+- Kartendarstellung optisch an das neue App-Design angepasst
 
 ## Wichtig
-Sprint 9.9 ist ein reiner UI-/Layout-Sprint.
-Die Daten- und Speicherlogik bleibt unverändert.
+Keine Änderung an der Speicherlogik der Touren oder Etappen.
 
 ## Kontrolle
-Oben muss `v4.0.0 · Sprint 9.9` stehen.
+Oben muss `v4.0.0 · Sprint 9.10` stehen.
