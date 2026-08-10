@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41001";
+} from "./database.js?v=41002";
 
-import { loadLanguage, translate } from "./i18n.js?v=41001";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41001";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41001";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41001";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41001";
+import { loadLanguage, translate } from "./i18n.js?v=41002";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41002";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41002";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41002";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41002";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -3447,28 +3447,106 @@ async function restoreCloudSnapshot(snapshot){
   });
 }
 
+
+const CLOUD_TRACK_CHUNK_POINTS=4000;
+
+function splitTrackForCloud(track){
+  const points=Array.isArray(track?.points)?track.points:[];
+  const base={...track};
+  delete base.points;
+
+  const chunks=[];
+  for(let i=0;i<points.length;i+=CLOUD_TRACK_CHUNK_POINTS){
+    chunks.push(points.slice(i,i+CLOUD_TRACK_CHUNK_POINTS));
+  }
+
+  return {base,chunks};
+}
+
+async function buildCloudChunks(){
+  const tours=await getAllTours();
+  const settings=await getAllSettings();
+  const chunks=[];
+
+  chunks.push({
+    chunk_key:"meta",
+    payload:{
+      schema:"3113-adventures-cloud-chunks",
+      schemaVersion:2,
+      appVersion:"v4.0.0 · Sprint 10.0.2",
+      exportedAt:new Date().toISOString(),
+      tours,
+      settings,
+      localStorage:collect3113LocalStorage()
+    }
+  });
+
+  for(const tour of tours){
+    const track=await getTrack(tour.id);
+    if(!track) continue;
+
+    const split=splitTrackForCloud(track);
+
+    chunks.push({
+      chunk_key:`track-meta:${tour.id}`,
+      payload:{
+        tourId:tour.id,
+        base:split.base,
+        chunkCount:split.chunks.length
+      }
+    });
+
+    split.chunks.forEach((points,index)=>{
+      chunks.push({
+        chunk_key:`track:${tour.id}:${String(index).padStart(5,"0")}`,
+        payload:{tourId:tour.id,index,points}
+      });
+    });
+  }
+
+  return chunks;
+}
+
 async function uploadCloudSnapshot(){
   if(!cloudClient) throw new Error("Supabase-Verbindung ist nicht eingerichtet.");
   const user=await cloudCurrentUser();
   if(!user) throw new Error("Bitte zuerst anmelden.");
 
-  const payload=await buildCloudSnapshot();
+  const chunks=await buildCloudChunks();
   const now=new Date().toISOString();
 
-  const {error}=await cloudClient
-    .from("user_snapshots")
-    .upsert({
-      user_id:user.id,
-      payload,
-      updated_at:now
-    },{onConflict:"user_id"});
+  cloudSetStatus(`Cloud-Speichern: ${chunks.length} Datenpakete werden übertragen …`);
 
-  if(error) throw error;
+  // Remove old chunk set for this user first. RLS limits this delete to the current user.
+  const {error:deleteError}=await cloudClient
+    .from("user_sync_chunks")
+    .delete()
+    .eq("user_id",user.id);
+
+  if(deleteError) throw deleteError;
+
+  for(let i=0;i<chunks.length;i++){
+    const chunk=chunks[i];
+
+    cloudSetStatus(`Cloud-Speichern: Paket ${i+1} von ${chunks.length} …`);
+
+    const {error}=await cloudClient
+      .from("user_sync_chunks")
+      .upsert({
+        user_id:user.id,
+        chunk_key:chunk.chunk_key,
+        payload:chunk.payload,
+        updated_at:now
+      },{onConflict:"user_id,chunk_key"});
+
+    if(error) throw error;
+  }
 
   localStorage.setItem("3113-cloud-last-sync",now);
   const last=document.getElementById("cloudLastSync");
   if(last) last.textContent=`Zuletzt gespeichert: ${new Date(now).toLocaleString("de-CH")}`;
-  return payload;
+
+  return {chunks:chunks.length,updatedAt:now};
 }
 
 async function downloadCloudSnapshot(){
@@ -3476,21 +3554,81 @@ async function downloadCloudSnapshot(){
   const user=await cloudCurrentUser();
   if(!user) throw new Error("Bitte zuerst anmelden.");
 
+  cloudSetStatus("Cloud-Daten werden geladen …");
+
   const {data,error}=await cloudClient
-    .from("user_snapshots")
-    .select("payload,updated_at")
+    .from("user_sync_chunks")
+    .select("chunk_key,payload,updated_at")
     .eq("user_id",user.id)
-    .maybeSingle();
+    .order("chunk_key",{ascending:true});
 
   if(error) throw error;
-  if(!data?.payload) throw new Error("In der Cloud ist noch kein App-Stand gespeichert.");
+  if(!data?.length) throw new Error("In der Cloud ist noch kein App-Stand gespeichert.");
 
-  await restoreCloudSnapshot(data.payload);
+  const metaRow=data.find(row=>row.chunk_key==="meta");
+  if(!metaRow?.payload) throw new Error("Cloud-Datensatz ist unvollständig: Metadaten fehlen.");
+
+  const meta=metaRow.payload;
+  if(meta.schema!=="3113-adventures-cloud-chunks"){
+    throw new Error("Cloud-Datensatz hat ein unbekanntes Format.");
+  }
+
+  await clearAppDatabase();
+
+  for(const setting of meta.settings||[]){
+    await setSetting(setting.key,setting.value);
+  }
+
+  for(const tour of meta.tours||[]){
+    await saveTour(tour);
+  }
+
+  const trackMetaRows=data.filter(row=>row.chunk_key.startsWith("track-meta:"));
+
+  for(const row of trackMetaRows){
+    const info=row.payload||{};
+    const tourId=info.tourId;
+    if(!tourId) continue;
+
+    const pointRows=data
+      .filter(item=>item.chunk_key.startsWith(`track:${tourId}:`))
+      .sort((a,b)=>Number(a.payload?.index||0)-Number(b.payload?.index||0));
+
+    const points=pointRows.flatMap(item=>Array.isArray(item.payload?.points)?item.payload.points:[]);
+
+    await saveTrack({
+      ...(info.base||{}),
+      tourId,
+      points
+    });
+  }
+
+  const toDelete=[];
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key&&key.startsWith("3113-")&&key!==CLOUD_CONFIG_KEY&&key!==CLOUD_AUTOLOAD_KEY){
+      toDelete.push(key);
+    }
+  }
+  toDelete.forEach(key=>localStorage.removeItem(key));
+
+  Object.entries(meta.localStorage||{}).forEach(([key,value])=>{
+    if(key.startsWith("3113-")&&key!==CLOUD_CONFIG_KEY&&key!==CLOUD_AUTOLOAD_KEY){
+      localStorage.setItem(key,String(value));
+    }
+  });
+
+  const updatedAt=data.reduce((latest,row)=>{
+    if(!row.updated_at) return latest;
+    return !latest||row.updated_at>latest?row.updated_at:latest;
+  },null);
 
   const last=document.getElementById("cloudLastSync");
-  if(last) last.textContent=`Cloud-Stand geladen: ${new Date(data.updated_at).toLocaleString("de-CH")}`;
+  if(last&&updatedAt){
+    last.textContent=`Cloud-Stand geladen: ${new Date(updatedAt).toLocaleString("de-CH")}`;
+  }
 
-  return data;
+  return {chunks:data.length,updatedAt};
 }
 
 document.getElementById("saveCloudConfigBtn")?.addEventListener("click",async()=>{
@@ -3586,7 +3724,7 @@ document.getElementById("cloudUploadBtn")?.addEventListener("click",async()=>{
   try{
     cloudSetBusy(true);
     await uploadCloudSnapshot();
-    cloudSetStatus("Vollständiger App-Stand in der Cloud gespeichert.");
+    cloudSetStatus("Vollständiger App-Stand in kleinen Datenpaketen in der Cloud gespeichert.");
   }catch(error){
     cloudSetStatus(`Cloud-Speichern fehlgeschlagen: ${error.message}`,true);
   }finally{
@@ -3752,12 +3890,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41001";
+  window.location.href = "./?v=41002";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41001");
+    navigator.serviceWorker.register("sw.js?v=41002");
   });
 }
 
