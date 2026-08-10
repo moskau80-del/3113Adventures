@@ -474,3 +474,52 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
   #stageList article{padding:14px}
   #stageList .card-actions{justify-content:flex-start}
 }
+
+/* ===== Sprint 9.9 Etappen-Feinschliff ===== */
+.stage-card-modern{position:relative;overflow:hidden}
+.stage-card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.stage-number-badge{
+  flex:0 0 38px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:#0a4c87;color:#fff;font-weight:900;font-size:1rem;
+  box-shadow:0 4px 10px rgba(13,79,145,.18)
+}
+.stage-card-modern.rest-day .stage-number-badge{background:#5a914f}
+.stage-title-block{min-width:0}
+.stage-title-block h3{margin:2px 0 0;font-size:1.12rem;line-height:1.25;color:#10243d}
+.stage-date-line{font-size:.76rem;color:#65758b;font-weight:800}
+.stage-name-sub{font-size:.74rem;color:#7a8797;margin-top:3px}
+.stage-statbar{
+  display:flex;flex-wrap:wrap;gap:10px 18px;margin:0 0 12px 50px;
+  color:#124f86;font-size:.84rem;font-weight:800
+}
+.stage-card-modern .stage-coordinates{margin-left:50px;font-size:.72rem;color:#7a8797}
+.stage-card-modern .stage-supply,
+.stage-card-modern .stage-inline-timeline,
+.stage-card-modern .shoe-stage-warning{margin-left:50px}
+.stage-card-modern .card-actions{
+  padding-top:12px;border-top:1px solid #edf1f5;margin-top:14px
+}
+.stage-card-modern .card-actions button{
+  font-size:.78rem;padding:7px 9px!important;border-radius:8px!important
+}
+.stage-card-modern .card-actions .danger{
+  color:#a73f3f!important;border-color:#efcccc!important
+}
+.stage-inline-timeline{
+  background:linear-gradient(to bottom,transparent 0,transparent 15px,#f7fbff 15px,#f7fbff 64px,transparent 64px);
+  border-radius:10px
+}
+.stage-inline-line{height:2px}
+.stage-inline-point.supply .stage-inline-dot{
+  width:16px;height:16px;background:#0d4f91;border:3px solid #fff;box-shadow:0 0 0 2px #0d4f91
+}
+.stage-inline-point.start .stage-inline-dot{background:#fff;box-shadow:0 0 0 2px #5a8f45}
+.stage-inline-point.end .stage-inline-dot{background:#fff;box-shadow:0 0 0 2px #d34b4b}
+@media(max-width:700px){
+  .stage-statbar,
+  .stage-card-modern .stage-coordinates,
+  .stage-card-modern .stage-supply,
+  .stage-card-modern .stage-inline-timeline,
+  .stage-card-modern .shoe-stage-warning{margin-left:0}
+  .stage-statbar{gap:8px 12px}
+}
