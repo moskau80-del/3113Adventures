@@ -1,20 +1,27 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 8.5
+# 3113 Adventures – Version 4.0.0 / Sprint 8.6
 
-## Drag & Drop verbessert
-- jede Artikelkarte hat jetzt einen sichtbaren Griff `↕ Ziehen`
-- nur dieser Griff wird gezogen
-- Zielbereiche für Person 1 und Person 2 sind klar beschriftet
-- zusätzlich direkte Buttons `→ Person 1` und `→ Person 2` als einfache Alternative
-- nach dem Ablegen wird automatisch die betreffende Personen-Packliste angezeigt
+## Alte PackLager-Daten direkt übernehmen
+- kein Export aus der alten App erforderlich
+- neue Schaltfläche `Alte PackLager-Daten übernehmen`
+- liest direkt den alten Browser-Speicher `packlagerDataV1`
+- übernimmt:
+  - Artikelname
+  - Kategorie
+  - Gewicht
+  - Bestand/Menge
+  - Lagerort
+  - Hersteller/Marke
+  - Preis
+  - Notizen
+- bestehende neue Artikel bleiben erhalten
 
-## CSV statt JSON
-- Artikel-Export jetzt als CSV
-- Semikolon als Trennzeichen, gut für deutschsprachiges Excel
-- UTF-8 mit BOM für Umlaute
-- Artikel-Import jetzt aus CSV
-- Spalten:
-  id;name;brand;category;weightG;stock;location;favorite;wishlist;notes
-- vorhandene Artikel werden anhand der ID aktualisiert bzw. ergänzt
+## Artikeldarstellung
+- wieder kompakter und tabellarischer wie in der alten PackLager-App
+- Spalten für Artikel, Kategorie, Gewicht, Bestand, Lagerort und Aktionen
+- Drag & Drop sowie Person-1/Person-2-Zuordnung bleiben erhalten
+
+## Wichtig
+Direkte Übernahme aus `localStorage` funktioniert nur, wenn alte PackLager-App und 3113 Adventures unter derselben Origin laufen (gleiche Domain + Protokoll + Port). Andernfalls kann ein Browser aus Sicherheitsgründen nicht auf den Speicher der anderen Webadresse zugreifen.
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 8.5` stehen.
+Oben rechts muss `v4.0.0 · Sprint 8.6` stehen.
