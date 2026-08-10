@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "dashboard": "Übersicht",
+    "tours": "Touren",
+    "stages": "Etappen",
+    "map": "Karte",
+    "places": "Orte",
+    "settings": "Einstellungen"
+  },
+  "dashboard": {
+    "subtitle": "Die neue modulare PWA-Grundlage ist aktiv.",
+    "sprintText": "Tourenverwaltung, GPX-Import, Karte und lokale Datenbank sind aktiv.",
+    "currentTour": "Aktuelle Tour",
+    "noTour": "Noch keine Tour ausgewählt."
+  },
+  "pages": {
+    "toursTitle": "Touren",
+    "toursText": "Verwalte deine Fernwanderungen.",
+    "stagesTitle": "Etappen",
+    "stagesText": "Folgt später.",
+    "mapTitle": "Karte / GPX",
+    "mapText": "Folgt später.",
+    "placesTitle": "Orte",
+    "placesText": "Folgt später."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "appearance": "Darstellung",
+    "system": "System",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "save": "Speichern",
+    "refresh": "App-Dateien aktualisieren",
+    "saved": "Einstellungen gespeichert."
+  },
+  "database": {
+    "title": "Lokale Datenbank",
+    "text": "IndexedDB ist vorbereitet und speichert Einstellungen lokal auf diesem Gerät.",
+    "ready": "IndexedDB ist bereit."
+  },
+  "tours": {
+    "add": "+ Tour",
+    "dialogTitle": "Tour",
+    "name": "Name",
+    "description": "Beschreibung",
+    "start": "Startdatum",
+    "target": "Zieldatum",
+    "distance": "Gesamtdistanz km",
+    "active": "Als aktive Tour verwenden",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "activate": "Aktivieren",
+    "activeLabel": "Aktive Tour",
+    "noTours": "Noch keine Touren vorhanden.",
+    "confirmDelete": "Tour wirklich löschen?"
+  },
+  "gpx": {
+    "subtitle": "Importiere den GPX-Track für die aktive Tour.",
+    "importTitle": "GPX-Track",
+    "choose": "GPX-Datei auswählen",
+    "export": "GPX exportieren",
+    "delete": "GPX löschen",
+    "noTrack": "Noch kein GPX-Track importiert.",
+    "summary": "Track-Zusammenfassung",
+    "points": "Trackpunkte",
+    "distance": "berechnete Distanz",
+    "start": "Start",
+    "end": "Ziel",
+    "preview": "Trackvorschau",
+    "previewEmpty": "Nach dem Import erscheint hier eine einfache Trackvorschau.",
+    "imported": "GPX-Track importiert.",
+    "confirmDelete": "GPX-Track wirklich löschen?"
+  },
+  "map": {
+    "subtitle": "Zeigt den importierten GPX-Track der aktiven Tour.",
+    "wholeTrack": "Gesamtroute anzeigen",
+    "locate": "Meine Position",
+    "noLibrary": "Die Kartenbibliothek konnte nicht geladen werden.",
+    "noTrack": "Importiere zuerst einen GPX-Track."
+  }
+}

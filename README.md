@@ -1,25 +1,14 @@
-# 3113 Adventures – Sprint 10.2
+# 3113 Adventures – Sprint 10.2.1 Hotfix
 
-## Behoben: Mobile Navigation
-- Übersicht ist auf dem Handy direkt in der unteren Navigation erreichbar.
-- Packlisten sind auf dem Handy direkt erreichbar.
-- Mobile Navigation ist horizontal scrollbar, damit keine Funktion verschwindet.
+## GPX
+- GPX-Import wird nach `saveTrack()` direkt aus IndexedDB verifiziert.
+- Karte wird nach dem Import neu gerendert.
+- Status zeigt Dateiname, Anzahl Trackpunkte und Distanz.
+- dieselbe GPX-Datei kann erneut gewählt werden.
+- GPX-Löschen und Trackbearbeitung werden als lokale IndexedDB-Änderung markiert.
 
-## Behoben: bidirektionale Synchronisation
-Ursachen in 10.1/10.1.1:
-1. Gerätespezifische `3113-cloud-*` Werte wurden selbst in den Cloud-Snapshot aufgenommen.
-2. Beim Cloud-Laden konnten dadurch Sync-Zustände eines anderen Geräts übernommen werden.
-3. Der lokale Fingerprint enthielt `exportedAt`; dadurch änderte er sich bei jeder Prüfung.
-4. Änderungen in IndexedDB wurden nicht zuverlässig als lokale Änderungen markiert.
+## Synchronisation
+GPX-Tracks liegen in IndexedDB. Diese Änderungen werden jetzt sofort als lokale Änderung markiert,
+damit ein älterer Cloud-Stand den gerade importierten Track nicht überschreibt.
 
-10.2:
-- `3113-cloud-*` und Auth-Session bleiben immer lokal pro Gerät.
-- stabiler Fingerprint ohne Zeitstempel.
-- alle 10 Sekunden werden localStorage UND IndexedDB auf Änderungen geprüft.
-- lokale Änderung + unveränderte Cloud -> automatisch hochladen.
-- Cloud geändert + lokal unverändert -> automatisch laden.
-- beide geändert -> Konflikt, kein automatisches Überschreiben.
-- automatisches Laden direkt nach Login ist deaktiviert, wenn Auto-Sync aktiv ist.
-- manuelles Cloud speichern/laden bleibt als Notfallfunktion.
-
-Keine neue Supabase-SQL-Datei erforderlich.
+Keine Supabase-SQL-Anpassung erforderlich.

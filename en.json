@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tours": "Tours",
+    "stages": "Stages",
+    "map": "Map",
+    "places": "Places",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "subtitle": "The new modular PWA foundation is active.",
+    "sprintText": "Tour management, GPX import, map and local database are active.",
+    "currentTour": "Current tour",
+    "noTour": "No tour selected."
+  },
+  "pages": {
+    "toursTitle": "Tours",
+    "toursText": "Manage your long-distance hikes.",
+    "stagesTitle": "Stages",
+    "stagesText": "Coming later.",
+    "mapTitle": "Map / GPX",
+    "mapText": "Coming later.",
+    "placesTitle": "Places",
+    "placesText": "Coming later."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "appearance": "Appearance",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "save": "Save",
+    "refresh": "Refresh app files",
+    "saved": "Settings saved."
+  },
+  "database": {
+    "title": "Local database",
+    "text": "IndexedDB is prepared and stores settings locally on this device.",
+    "ready": "IndexedDB is ready."
+  },
+  "tours": {
+    "add": "+ Tour",
+    "dialogTitle": "Tour",
+    "name": "Name",
+    "description": "Description",
+    "start": "Start date",
+    "target": "Target date",
+    "distance": "Total distance km",
+    "active": "Use as active tour",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "activate": "Activate",
+    "activeLabel": "Active tour",
+    "noTours": "No tours yet.",
+    "confirmDelete": "Delete this tour?"
+  },
+  "gpx": {
+    "subtitle": "Import the GPX track for the active tour.",
+    "importTitle": "GPX track",
+    "choose": "Choose GPX file",
+    "export": "Export GPX",
+    "delete": "Delete GPX",
+    "noTrack": "No GPX track imported.",
+    "summary": "Track summary",
+    "points": "Track points",
+    "distance": "calculated distance",
+    "start": "Start",
+    "end": "End",
+    "preview": "Track preview",
+    "previewEmpty": "A simple track preview will appear after import.",
+    "imported": "GPX track imported.",
+    "confirmDelete": "Delete GPX track?"
+  },
+  "map": {
+    "subtitle": "Shows the imported GPX track for the active tour.",
+    "wholeTrack": "Show full route",
+    "locate": "My location",
+    "noLibrary": "The map library could not be loaded.",
+    "noTrack": "Import a GPX track first."
+  }
+}
