@@ -267,3 +267,5 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
   .pack-item-main{grid-column:1/-1}
   .pack-item-actions{justify-content:flex-start}
 }
+
+.gear-drag-handle,.pack-drop-grid,.pack-drop-zone{display:none!important}
