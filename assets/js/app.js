@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4088";
+} from "./database.js?v=4089";
 
-import { loadLanguage, translate } from "./i18n.js?v=4088";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4088";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4088";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4088";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4088";
+import { loadLanguage, translate } from "./i18n.js?v=4089";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4089";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4089";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4089";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4089";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2029,7 +2029,11 @@ async function renderTourPack(){
   if(!container) return;
 
   if(!activeTour){
-    container.innerHTML='<div class="empty">Keine aktive Tour.</div>';
+    container.innerHTML='<div class="pack-empty">Keine aktive Tour.</div>';
+    document.getElementById("packTotalWeight").textContent="0.000 kg";
+    document.getElementById("packWornWeight").textContent="0.000 kg";
+    document.getElementById("packNetWeight").textContent="0.000 kg";
+    document.getElementById("packItemCount").textContent="0";
     return;
   }
 
@@ -2049,38 +2053,51 @@ async function renderTourPack(){
   const byId=new Map(gear.map(item=>[item.id,item]));
 
   let total=0,worn=0;
-  pack.forEach(item=>{
-    const gearItem=byId.get(item.gearId);
-    if(!gearItem) return;
-    const weight=Number(gearItem.weightG||0)*Number(item.quantity||1);
-    total+=weight;
-    if(item.worn) worn+=weight;
+  const rows=[];
+
+  pack.forEach(entry=>{
+    const item=byId.get(entry.gearId);
+    if(!item) return;
+    const quantity=Math.max(1,Number(entry.quantity||1));
+    const lineWeight=Number(item.weightG||0)*quantity;
+    total+=lineWeight;
+    if(entry.worn) worn+=lineWeight;
+    rows.push({item,entry,quantity,lineWeight});
   });
 
-  document.getElementById("packTotalWeight").textContent=`${Math.round(total)} g`;
-  document.getElementById("packWornWeight").textContent=`${Math.round(worn)} g`;
-  document.getElementById("packNetWeight").textContent=`${Math.round(total-worn)} g`;
-  document.getElementById("packItemCount").textContent=String(pack.length);
+  rows.sort((a,b)=>String(a.item.name||"").localeCompare(String(b.item.name||"")));
 
-  container.innerHTML=gear.length
-    ?gear.map(item=>{
-      const packItem=pack.find(entry=>entry.gearId===item.id);
-      return `<div class="pack-row">
-        <div>
-          <div class="pack-name">${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</div>
-          <small>${Number(item.weightG||0)} g · ${escapeHtml(item.category)}</small>
+  document.getElementById("packTotalWeight").textContent=formatKg3FromGrams(total);
+  document.getElementById("packWornWeight").textContent=formatKg3FromGrams(worn);
+  document.getElementById("packNetWeight").textContent=formatKg3FromGrams(total-worn);
+  document.getElementById("packItemCount").textContent=String(rows.length);
+
+  container.innerHTML=rows.length
+    ?rows.map(({item,entry,quantity,lineWeight})=>`
+      <div class="pack-item-row">
+        <div class="pack-item-main">
+          <strong>${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</strong>
+          <span>${escapeHtml(item.category||"")} · Einzelgewicht ${Number(item.weightG||0)} g</span>
         </div>
+
         <label>
-          <input type="checkbox" data-pack-toggle="${item.id}" ${packItem?"checked":""}>
-          In Packliste
+          <span>Menge</span>
+          <input type="number" data-pack-quantity="${item.id}" min="1" step="1" value="${quantity}">
         </label>
-        ${packItem?`
-          <label>Menge <input type="number" data-pack-quantity="${item.id}" min="1" step="1" value="${Number(packItem.quantity||1)}" style="width:70px"></label>
-          <label><input type="checkbox" data-pack-worn="${item.id}" ${packItem.worn?"checked":""}> am Körper</label>
-        `:""}
-      </div>`;
-    }).join("")
-    :'<div class="empty">Noch keine Ausrüstung in „Mein Transa“ vorhanden.</div>';
+
+        <label>
+          <input type="checkbox" data-pack-worn="${item.id}" ${entry.worn?"checked":""}>
+          am Körper
+        </label>
+
+        <div class="pack-item-weight">${formatKg3FromGrams(lineWeight)}</div>
+
+        <div class="pack-item-actions">
+          <button class="danger" data-pack-remove="${item.id}" type="button">Entfernen</button>
+        </div>
+      </div>
+    `).join("")
+    :'<div class="pack-empty">Noch keine Artikel in dieser Packliste. Füge Artikel über „Mein Transa“ hinzu oder ziehe sie auf die gewünschte Person.</div>';
 }
 
 document.getElementById("packPerson1Btn")?.addEventListener("click",async()=>{
@@ -2117,6 +2134,20 @@ document.getElementById("tourPackList")?.addEventListener("change",async(event)=
   if(qtyId) updatePersonPackItemLocal(activeTour.id,activePackPerson,qtyId,{quantity:Math.max(1,Number(event.target.value||1))});
   if(wornId) updatePersonPackItemLocal(activeTour.id,activePackPerson,wornId,{worn:event.target.checked});
 
+  await renderTourPack();
+});
+
+document.getElementById("tourPackList")?.addEventListener("click",async(event)=>{
+  const removeId=event.target.dataset.packRemove;
+  if(!removeId) return;
+
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const pack=loadTourPersonPackLocal(activeTour.id,activePackPerson);
+  if(pack.some(item=>item.gearId===removeId)){
+    toggleGearInPersonPackLocal(activeTour.id,activePackPerson,removeId);
+  }
   await renderTourPack();
 });
 
@@ -2596,14 +2627,14 @@ async function renderPrintPreview(){
 
   preview.innerHTML=`
     <h2>${escapeHtml(activeTour.name||"Tour")} – Packliste ${escapeHtml(label)}</h2>
-    <p><strong>Total:</strong> ${Math.round(total)} g · <strong>am Körper:</strong> ${Math.round(worn)} g · <strong>Netto:</strong> ${Math.round(total-worn)} g</p>
+    <p><strong>Total:</strong> ${formatKg3FromGrams(total)} · <strong>am Körper:</strong> ${formatKg3FromGrams(worn)} · <strong>Netto:</strong> ${formatKg3FromGrams(total-worn)}</p>
     <table>
       <thead><tr><th>Artikel</th><th>Menge</th><th>Gewicht</th><th>am Körper</th></tr></thead>
       <tbody>${rows.map(({item,entry,weight})=>`
         <tr>
           <td>${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</td>
           <td>${Number(entry.quantity||1)}</td>
-          <td>${Math.round(weight)} g</td>
+          <td>${formatKg3FromGrams(weight)}</td>
           <td>${entry.worn?"Ja":"Nein"}</td>
         </tr>`).join("")}</tbody>
     </table>`;
@@ -2705,12 +2736,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4088";
+  window.location.href = "./?v=4089";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4088");
+    navigator.serviceWorker.register("sw.js?v=4089");
   });
 }
 
