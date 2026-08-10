@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4084";
+} from "./database.js?v=4085";
 
-import { loadLanguage, translate } from "./i18n.js?v=4084";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4084";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4084";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4084";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4084";
+import { loadLanguage, translate } from "./i18n.js?v=4085";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4085";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4085";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4085";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4085";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2114,15 +2114,86 @@ document.getElementById("tourPackList")?.addEventListener("change",async(event)=
   await renderTourPack();
 });
 
+
+function csvEscape(value){
+  const text=String(value??"");
+  if(/[",\n;]/.test(text)){
+    return `"${text.replace(/"/g,'""')}"`;
+  }
+  return text;
+}
+
 function exportGearItems(){
-  const payload={
-    schema:"3113-adventures-gear",
-    schemaVersion:1,
-    exportedAt:new Date().toISOString(),
-    items:loadGearLocal()
-  };
-  downloadJsonFile("3113-adventures-artikel.json",payload);
-  document.getElementById("gearTransferStatus").textContent=`${payload.items.length} Artikel exportiert.`;
+  const items=loadGearLocal();
+  const headers=[
+    "id","name","brand","category","weightG","stock",
+    "location","favorite","wishlist","notes"
+  ];
+
+  const rows=[headers.join(";")];
+
+  items.forEach(item=>{
+    rows.push([
+      item.id,
+      item.name,
+      item.brand,
+      item.category,
+      Number(item.weightG||0),
+      Number(item.stock??item.quantity??1),
+      item.location,
+      item.favorite?"1":"0",
+      item.wishlist?"1":"0",
+      item.notes
+    ].map(csvEscape).join(";"));
+  });
+
+  const blob=new Blob(["\ufeff"+rows.join("\n")],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;
+  link.download="3113-adventures-artikel.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+  document.getElementById("gearTransferStatus").textContent=
+    `${items.length} Artikel als CSV exportiert.`;
+}
+
+function parseCsvSemicolon(text){
+  const rows=[];
+  let row=[],field="",quoted=false;
+
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+
+    if(quoted){
+      if(ch==='"'&&text[i+1]==='"'){
+        field+='"'; i++;
+      }else if(ch==='"'){
+        quoted=false;
+      }else{
+        field+=ch;
+      }
+    }else{
+      if(ch==='"'){
+        quoted=true;
+      }else if(ch===";"){
+        row.push(field); field="";
+      }else if(ch==="\n"){
+        row.push(field); rows.push(row); row=[]; field="";
+      }else if(ch!=="\r"){
+        field+=ch;
+      }
+    }
+  }
+
+  if(field.length||row.length){
+    row.push(field); rows.push(row);
+  }
+
+  return rows;
 }
 
 document.getElementById("exportGearBtn")?.addEventListener("click",exportGearItems);
@@ -2130,27 +2201,56 @@ document.getElementById("exportGearBtn")?.addEventListener("click",exportGearIte
 document.getElementById("importGearInput")?.addEventListener("change",async(event)=>{
   const file=event.target.files?.[0];
   if(!file) return;
+
   const status=document.getElementById("gearTransferStatus");
 
   try{
-    const data=JSON.parse(await file.text());
-    const items=Array.isArray(data)?data:data?.items;
-    if(!Array.isArray(items)) throw new Error("Keine gültige Artikelliste gefunden.");
+    const text=(await file.text()).replace(/^\ufeff/,"");
+    const rows=parseCsvSemicolon(text);
+
+    if(rows.length<2) throw new Error("Die CSV-Datei enthält keine Artikel.");
+
+    const headers=rows[0].map(value=>value.trim());
+    const required=["name","category","weightG"];
+    required.forEach(header=>{
+      if(!headers.includes(header)) throw new Error(`Spalte ${header} fehlt.`);
+    });
 
     const existing=loadGearLocal();
     const byId=new Map(existing.map(item=>[item.id,item]));
+    let imported=0;
 
-    items.forEach(item=>{
-      const id=item.id||`gear-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
-      byId.set(id,{...item,id});
+    rows.slice(1).forEach(values=>{
+      if(values.every(value=>!String(value).trim())) return;
+
+      const row={};
+      headers.forEach((header,index)=>row[header]=values[index]??"");
+
+      const id=row.id||`gear-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+
+      byId.set(id,{
+        id,
+        name:row.name||"",
+        brand:row.brand||"",
+        category:row.category||"other",
+        weightG:Number(String(row.weightG).replace(",","."))||0,
+        stock:Number(row.stock||1),
+        quantity:Number(row.stock||1),
+        location:row.location||"",
+        favorite:["1","true","ja","yes"].includes(String(row.favorite).toLowerCase()),
+        wishlist:["1","true","ja","yes"].includes(String(row.wishlist).toLowerCase()),
+        notes:row.notes||"",
+        updatedAt:new Date().toISOString()
+      });
+      imported++;
     });
 
     saveGearLocal([...byId.values()]);
     renderGear();
     await renderTourPack();
-    status.textContent=`Import erfolgreich: ${items.length} Artikel übernommen.`;
+    status.textContent=`CSV-Import erfolgreich: ${imported} Artikel übernommen.`;
   }catch(error){
-    status.textContent=`Import fehlgeschlagen: ${error.message}`;
+    status.textContent=`CSV-Import fehlgeschlagen: ${error.message}`;
   }finally{
     event.target.value="";
   }
@@ -2205,7 +2305,7 @@ function renderGear(){
   const list=document.getElementById("gearList");
   list.innerHTML=filtered.length
     ?filtered.map(item=>`
-      <article class="gear-card ${item.favorite?"favorite":""} ${item.wishlist?"wishlist":""}" draggable="true" data-gear-drag="${item.id}">
+      <article class="gear-card ${item.favorite?"favorite":""} ${item.wishlist?"wishlist":""}">
         <div class="gear-select">
           <input type="checkbox" data-select-gear="${item.id}" ${selectedGearIds.has(item.id)?"checked":""} aria-label="Artikel auswählen">
           <div>
@@ -2223,6 +2323,9 @@ function renderGear(){
             </div>
             ${item.notes?`<p>${escapeHtml(item.notes)}</p>`:""}
             <div class="card-actions">
+              <span class="gear-drag-handle" draggable="true" data-gear-drag="${item.id}" title="Artikel in eine Personen-Packliste ziehen">↕ Ziehen</span>
+              <button data-add-gear-person1="${item.id}">→ Person 1</button>
+              <button data-add-gear-person2="${item.id}">→ Person 2</button>
               <button data-edit-gear="${item.id}">Bearbeiten</button>
               <button class="danger" data-delete-gear="${item.id}">Löschen</button>
             </div>
@@ -2264,6 +2367,28 @@ document.getElementById("gearList")?.addEventListener("change",(event)=>{
   if(!selectId) return;
   if(event.target.checked) selectedGearIds.add(selectId);
   else selectedGearIds.delete(selectId);
+});
+
+document.getElementById("gearList")?.addEventListener("click",async(event)=>{
+  const person1Id=event.target.dataset.addGearPerson1;
+  const person2Id=event.target.dataset.addGearPerson2;
+
+  if(person1Id||person2Id){
+    const activeTour=await getActiveTour();
+    if(!activeTour) return;
+
+    const personKey=person1Id?"person1":"person2";
+    const gearId=person1Id||person2Id;
+    const currentPack=loadTourPersonPackLocal(activeTour.id,personKey);
+
+    if(!currentPack.some(item=>item.gearId===gearId)){
+      toggleGearInPersonPackLocal(activeTour.id,personKey,gearId);
+    }
+
+    activePackPerson=personKey;
+    await renderTourPack();
+    return;
+  }
 });
 
 document.getElementById("gearList")?.addEventListener("click",(event)=>{
@@ -2313,19 +2438,17 @@ document.getElementById("deleteSelectedGearBtn")?.addEventListener("click",async
 let draggedGearId=null;
 
 document.getElementById("gearList")?.addEventListener("dragstart",(event)=>{
-  const card=event.target.closest("[data-gear-drag]");
-  if(!card) return;
+  const handle=event.target.closest("[data-gear-drag]");
+  if(!handle) return;
 
-  draggedGearId=card.dataset.gearDrag;
-  card.classList.add("dragging");
+  draggedGearId=handle.dataset.gearDrag;
+  handle.closest(".gear-card")?.classList.add("dragging");
   event.dataTransfer.effectAllowed="copy";
   event.dataTransfer.setData("text/plain",draggedGearId);
 });
 
 document.getElementById("gearList")?.addEventListener("dragend",(event)=>{
-  const card=event.target.closest("[data-gear-drag]");
-  if(card) card.classList.remove("dragging");
-
+  event.target.closest(".gear-card")?.classList.remove("dragging");
   draggedGearId=null;
   document.querySelectorAll(".pack-drop-zone").forEach(zone=>zone.classList.remove("drag-over"));
 });
@@ -2453,12 +2576,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4084";
+  window.location.href = "./?v=4085";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4084");
+    navigator.serviceWorker.register("sw.js?v=4085");
   });
 }
 

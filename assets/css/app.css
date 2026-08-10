@@ -208,3 +208,19 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
   .gear-grid{grid-template-columns:1fr}
   .pack-drop-grid{grid-template-columns:1fr}
 }
+
+.gear-drag-handle{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 9px;
+  border-radius:9px;
+  background:#eef1eb;
+  font-weight:800;
+  cursor:grab;
+  user-select:none;
+}
+.gear-drag-handle:active{cursor:grabbing}
+.pack-drop-zone{min-height:92px;display:flex;flex-direction:column;justify-content:center}
+.pack-drop-zone.drag-over{box-shadow:0 0 0 3px rgba(80,110,70,.12)}
+.gear-card.dragging{opacity:.35;transform:scale(.99)}
