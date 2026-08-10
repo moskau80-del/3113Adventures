@@ -310,3 +310,24 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 
 .shoe-supply-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .shoe-supply-note{font-size:.8rem;margin-top:6px}
+
+.roadbook-preview{display:grid;gap:14px;margin-top:14px}
+.roadbook-sheet{background:#fff;border:1px solid #dfe4dc;border-radius:16px;padding:20px}
+.roadbook-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.roadbook-head h3{margin:0}
+.roadbook-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.roadbook-stat{background:#f6f8f4;border-radius:12px;padding:12px}
+.roadbook-stat strong{display:block;font-size:1.05rem}
+.roadbook-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.roadbook-box{border:1px solid #e4e8e2;border-radius:12px;padding:12px}
+.roadbook-box h4{margin:0 0 8px}
+.roadbook-list{margin:0;padding-left:18px}
+@media(max-width:760px){
+  .roadbook-stats{grid-template-columns:repeat(2,1fr)}
+  .roadbook-grid{grid-template-columns:1fr}
+}
+@media print{
+  #roadbookPreview,#roadbookPreview *{visibility:visible!important}
+  #roadbookPreview{position:absolute;left:0;top:0;width:100%}
+  .roadbook-sheet{border:0}
+}

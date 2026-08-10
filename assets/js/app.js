@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40953";
+} from "./database.js?v=4096";
 
-import { loadLanguage, translate } from "./i18n.js?v=40953";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40953";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40953";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40953";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40953";
+import { loadLanguage, translate } from "./i18n.js?v=4096";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4096";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4096";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4096";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4096";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -698,6 +698,7 @@ async function renderStages(){
   await renderTourPack();
   await renderTourShoes();
   await renderPlaces();
+  if(typeof renderRoadbook==='function') await renderRoadbook();
 }
 
 
@@ -1284,6 +1285,7 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
     insertRestDayLocal(activeTour.id,restBefore,"before");
     recalculateStageDates(activeTour.id,activeTour.startDate||stages[0]?.date||new Date().toISOString().slice(0,10));
     await renderStages();
+    await renderRoadbook();
     return;
   }
 
@@ -2925,6 +2927,142 @@ document.getElementById("printNowBtn")?.addEventListener("click",async()=>{
   window.print();
 });
 
+
+function roadbookSupplyItems(tourId,stageId){
+  const places=getPlacesForStage(tourId,stageId);
+  const categories=[
+    ["camping","Camping"],
+    ["food","Lebensmittel"],
+    ["water","Wasser"],
+    ["restaurant","Restaurant"],
+    ["transport","ÖV"],
+    ["footwear","Schuhe"]
+  ];
+
+  return categories.map(([category,label])=>{
+    const matches=places
+      .filter(place=>place.category===category)
+      .sort((a,b)=>Number(a.distanceKm||999)-Number(b.distanceKm||999));
+    const best=matches[0];
+    return best
+      ? `<li><strong>${label}:</strong> ${escapeHtml(best.name)} · ${Number(best.distanceKm||0).toFixed(2)} km</li>`
+      : `<li><strong>${label}:</strong> –</li>`;
+  }).join("");
+}
+
+function roadbookShoeWarnings(tourId,stage,stages){
+  const names=loadPackNamesLocal(tourId);
+  const warnings=[];
+
+  ["person1","person2"].forEach(personKey=>{
+    const state=loadTourShoePersonLocal(tourId,personKey);
+    if(!state.gearId) return;
+
+    const info=getShoeChangeStageInfo(stages,state.currentKm,state.intervalKm);
+    if(info.stage?.id!==stage.id) return;
+
+    const gearItem=loadGearLocal().find(item=>item.id===state.gearId);
+    const personName=personKey==="person1"?names.person1:names.person2;
+    const shoeName=gearItem
+      ? (gearItem.brand?`${gearItem.brand} ${gearItem.name}`:gearItem.name)
+      : "Schuh";
+
+    warnings.push(
+      `<li><strong>${escapeHtml(personName)}:</strong> ${escapeHtml(shoeName)} · Wechsel voraussichtlich nach ca. ${Math.round(info.kmIntoStage||0)} km dieser Etappe</li>`
+    );
+  });
+
+  return warnings.length
+    ? warnings.join("")
+    : "<li>Kein Schuhwechsel auf dieser Etappe prognostiziert.</li>";
+}
+
+async function renderRoadbook(){
+  const preview=document.getElementById("roadbookPreview");
+  const select=document.getElementById("roadbookStageSelect");
+  if(!preview||!select) return;
+
+  const activeTour=await getActiveTour();
+  if(!activeTour){
+    select.innerHTML='<option value="">Keine aktive Tour</option>';
+    preview.innerHTML='<div class="empty">Keine aktive Tour.</div>';
+    return;
+  }
+
+  const stages=loadStagesLocal(activeTour.id);
+  const walkingStages=stages.filter(stage=>!stage.restDay);
+
+  const currentValue=select.value;
+  select.innerHTML=walkingStages.length
+    ? walkingStages.map(stage=>`<option value="${stage.id}">${escapeHtml(stage.name||`Etappe ${stage.order}`)} · ${stage.date||""}</option>`).join("")
+    : '<option value="">Keine Etappen</option>';
+
+  if(currentValue&&walkingStages.some(stage=>stage.id===currentValue)){
+    select.value=currentValue;
+  }
+
+  const stage=walkingStages.find(item=>item.id===select.value)||walkingStages[0];
+  if(!stage){
+    preview.innerHTML='<div class="empty">Noch keine Wanderetappen vorhanden.</div>';
+    return;
+  }
+
+  select.value=stage.id;
+
+  const preferredStart=getPreferredStartForStage(activeTour.id,stage.id);
+  const preferredEnd=getPreferredEndForStage(activeTour.id,stage.id);
+
+  preview.innerHTML=`
+    <article class="roadbook-sheet">
+      <div class="roadbook-head">
+        <div>
+          <h3>${escapeHtml(stage.name||`Etappe ${stage.order}`)}</h3>
+          <div class="muted">${escapeHtml(activeTour.name||"Tour")} · ${escapeHtml(stage.date||"")}</div>
+        </div>
+        <div class="pill">${Number(stage.distanceKm||0).toFixed(1)} km</div>
+      </div>
+
+      <div class="roadbook-stats">
+        <div class="roadbook-stat"><strong>${Number(stage.distanceKm||0).toFixed(1)} km</strong><span>Distanz</span></div>
+        <div class="roadbook-stat"><strong>${Math.round(Number(stage.ascentM||0))} m</strong><span>Aufstieg</span></div>
+        <div class="roadbook-stat"><strong>${Math.round(Number(stage.descentM||0))} m</strong><span>Abstieg</span></div>
+        <div class="roadbook-stat"><strong>${formatHours(stage.walkingHours||0)}</strong><span>Gehzeit</span></div>
+      </div>
+
+      <div class="roadbook-grid">
+        <div class="roadbook-box">
+          <h4>Start & Ziel</h4>
+          <p><strong>Start:</strong> ${escapeHtml(stage.from||"–")}</p>
+          <p><strong>Ziel:</strong> ${escapeHtml(stage.to||"–")}</p>
+          <p><strong>Bevorzugter Start:</strong> ${preferredStart?escapeHtml(preferredStart.name):"–"}</p>
+          <p><strong>Bevorzugtes Ziel:</strong> ${preferredEnd?escapeHtml(preferredEnd.name):"–"}</p>
+        </div>
+
+        <div class="roadbook-box">
+          <h4>Versorgung</h4>
+          <ul class="roadbook-list">${roadbookSupplyItems(activeTour.id,stage.id)}</ul>
+        </div>
+
+        <div class="roadbook-box">
+          <h4>Schuhe</h4>
+          <ul class="roadbook-list">${roadbookShoeWarnings(activeTour.id,stage,stages)}</ul>
+        </div>
+
+        <div class="roadbook-box">
+          <h4>Notizen</h4>
+          <p>${stage.notes?escapeHtml(stage.notes):"Keine Notizen."}</p>
+        </div>
+      </div>
+    </article>`;
+}
+
+document.getElementById("roadbookStageSelect")?.addEventListener("change",renderRoadbook);
+document.getElementById("roadbookRefreshBtn")?.addEventListener("click",renderRoadbook);
+document.getElementById("roadbookPrintBtn")?.addEventListener("click",async()=>{
+  await renderRoadbook();
+  window.print();
+});
+
 async function initialize() {
   let language = "de";
   let theme = "system";
@@ -3014,12 +3152,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40953";
+  window.location.href = "./?v=4096";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40953");
+    navigator.serviceWorker.register("sw.js?v=4096");
   });
 }
 
