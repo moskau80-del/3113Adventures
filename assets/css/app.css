@@ -594,3 +594,13 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
     min-width:72px;
   }
 }
+
+/* ===== Sprint 10.3 revision-based sync ===== */
+.cloud-live-status{position:relative}
+.cloud-live-status::after{
+  content:"vollständige Revisionen";
+  margin-left:auto;
+  font-size:.65rem;
+  color:#8190a1;
+  font-weight:500;
+}

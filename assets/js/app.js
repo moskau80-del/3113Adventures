@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=4102";
+} from "./database.js?v=4103";
 
-import { loadLanguage, translate } from "./i18n.js?v=4102";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4102";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4102";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4102";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4102";
+import { loadLanguage, translate } from "./i18n.js?v=4103";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4103";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4103";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4103";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4103";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -450,28 +450,66 @@ async function renderGpx() {
 }
 
 document.getElementById("gpxInput")?.addEventListener("change", async (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
+  const input=event.target;
+  const file=input.files?.[0];
+  if(!file) return;
 
-  const activeTour = await getActiveTour();
+  const activeTour=await getActiveTour();
 
-  if (!activeTour) {
-    alert(translate("dashboard.noTour", "Noch keine Tour ausgewählt."));
+  if(!activeTour){
+    alert(translate("dashboard.noTour","Noch keine Tour ausgewählt."));
+    input.value="";
     return;
   }
 
-  try {
-    const parsed = parseGpx(await file.text(), file.name);
+  const status=document.getElementById("gpxStatus");
 
-    await saveTrack({
+  try{
+    if(status) status.textContent="GPX wird importiert …";
+
+    const text=await file.text();
+    const parsed=parseGpx(text,file.name);
+
+    if(!parsed?.points?.length){
+      throw new Error("Die GPX-Datei enthält keine verwendbaren Trackpunkte.");
+    }
+
+    const trackToSave={
       ...parsed,
-      tourId: activeTour.id
-    });
+      originalText:parsed.originalText||text,
+      tourId:activeTour.id,
+      importedAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    };
 
+    await saveTrack(trackToSave);
+
+    const verified=await getTrack(activeTour.id);
+    if(!verified?.points?.length){
+      throw new Error("Der GPX-Track konnte nach dem Import nicht aus dem lokalen Speicher gelesen werden.");
+    }
+
+    await markIndexedDbChangeAndSync();
     await renderGpx();
-    await renderMapTrack();
-  } catch (error) {
-    alert(error.message);
+
+    initMap();
+    if(map){
+      setTimeout(async()=>{
+        map.invalidateSize();
+        await renderMapTrack();
+      },80);
+    }
+
+    if(status){
+      status.textContent=
+        `${verified.name||file.name} · GPX gespeichert · ${verified.points.length} Trackpunkte · ${Number(verified.distanceKm||0).toFixed(1)} km`;
+    }
+  }catch(error){
+    console.error("GPX-Import fehlgeschlagen:",error);
+    if(status) status.textContent=`GPX-Import fehlgeschlagen: ${error.message}`;
+    alert(`GPX-Import fehlgeschlagen: ${error.message}`);
+  }finally{
+    input.value="";
   }
 });
 
@@ -501,8 +539,9 @@ document.getElementById("deleteGpxBtn")?.addEventListener("click", async () => {
 
   if (confirm(translate("gpx.confirmDelete", "GPX-Track wirklich löschen?"))) {
     await deleteTrack(activeTour.id);
+    await markIndexedDbChangeAndSync();
     await renderGpx();
-    if (trackLayer) trackLayer.clearLayers();
+    if(trackLayer) trackLayer.clearLayers();
   }
 });
 
@@ -1252,6 +1291,7 @@ document.getElementById("trackEditorSaveBtn")?.addEventListener("click",async()=
   }
 
   await saveTrack({...track,points:updatedPoints,edited:true,updatedAt:new Date().toISOString()});
+  await markIndexedDbChangeAndSync();
 
   updateStageLocal(activeTour.id,{
     ...stage,
@@ -3465,18 +3505,20 @@ function splitTrackForCloud(track){
   return {base,chunks};
 }
 
-async function buildCloudChunks(){
+async function buildCloudChunks(revision){
   const tours=await getAllTours();
   const settings=await getAllSettings();
   const chunks=[];
 
   chunks.push({
-    chunk_key:"meta",
+    chunk_key:`rev:${revision}:meta`,
     payload:{
       schema:"3113-adventures-cloud-chunks",
-      schemaVersion:2,
-      appVersion:"v4.0.0 · Sprint 10.0.2",
+      schemaVersion:3,
+      revision,
+      appVersion:"v4.0.0 · Sprint 10.3",
       exportedAt:new Date().toISOString(),
+      sourceDevice:cloudDeviceId(),
       tours,
       settings,
       localStorage:collect3113LocalStorage()
@@ -3490,7 +3532,7 @@ async function buildCloudChunks(){
     const split=splitTrackForCloud(track);
 
     chunks.push({
-      chunk_key:`track-meta:${tour.id}`,
+      chunk_key:`rev:${revision}:track-meta:${tour.id}`,
       payload:{
         tourId:tour.id,
         base:split.base,
@@ -3500,7 +3542,7 @@ async function buildCloudChunks(){
 
     split.chunks.forEach((points,index)=>{
       chunks.push({
-        chunk_key:`track:${tour.id}:${String(index).padStart(5,"0")}`,
+        chunk_key:`rev:${revision}:track:${tour.id}:${String(index).padStart(5,"0")}`,
         payload:{tourId:tour.id,index,points}
       });
     });
@@ -3514,22 +3556,15 @@ async function uploadCloudSnapshot(){
   const user=await cloudCurrentUser();
   if(!user) throw new Error("Bitte zuerst anmelden.");
 
-  const chunks=await buildCloudChunks();
+  const revision=`${Date.now()}-${cloudDeviceId().slice(0,8)}-${Math.random().toString(16).slice(2,8)}`;
+  const chunks=await buildCloudChunks(revision);
   const now=new Date().toISOString();
 
-  cloudSetStatus(`Cloud-Speichern: ${chunks.length} Datenpakete werden übertragen …`);
+  cloudSetStatus(`Cloud-Speichern: ${chunks.length} Datenpakete werden vorbereitet …`);
 
-  // Remove old chunk set for this user first. RLS limits this delete to the current user.
-  const {error:deleteError}=await cloudClient
-    .from("user_sync_chunks")
-    .delete()
-    .eq("user_id",user.id);
-
-  if(deleteError) throw deleteError;
-
+  // 1) Upload every chunk of the new revision first.
   for(let i=0;i<chunks.length;i++){
     const chunk=chunks[i];
-
     cloudSetStatus(`Cloud-Speichern: Paket ${i+1} von ${chunks.length} …`);
 
     const {error}=await cloudClient
@@ -3544,30 +3579,72 @@ async function uploadCloudSnapshot(){
     if(error) throw error;
   }
 
+  // 2) Publish pointer LAST. Other devices continue using the old complete
+  // revision until this one is fully present.
+  const pointerPayload={
+    revision,
+    updatedAt:now,
+    sourceDevice:cloudDeviceId(),
+    chunkCount:chunks.length
+  };
+
+  const {error:pointerError}=await cloudClient
+    .from("user_sync_chunks")
+    .upsert({
+      user_id:user.id,
+      chunk_key:"current",
+      payload:pointerPayload,
+      updated_at:now
+    },{onConflict:"user_id,chunk_key"});
+
+  if(pointerError) throw pointerError;
+
   localStorage.setItem("3113-cloud-last-sync",now);
   const last=document.getElementById("cloudLastSync");
   if(last) last.textContent=`Zuletzt gespeichert: ${new Date(now).toLocaleString("de-CH")}`;
 
-  return {chunks:chunks.length,updatedAt:now};
+  return {
+    chunks:chunks.length,
+    updatedAt:now,
+    revision,
+    sourceDevice:cloudDeviceId()
+  };
 }
 
 async function downloadCloudSnapshot(){
+  if(localStorage.getItem(CLOUD_DIRTY_KEY)==="1" && cloudAutoSyncBusy){
+    throw new Error("Lokale Änderungen werden gerade synchronisiert. Cloud-Laden wurde zum Schutz der lokalen Daten abgebrochen.");
+  }
   if(!cloudClient) throw new Error("Supabase-Verbindung ist nicht eingerichtet.");
   const user=await cloudCurrentUser();
   if(!user) throw new Error("Bitte zuerst anmelden.");
 
   cloudSetStatus("Cloud-Daten werden geladen …");
 
+  const {data:pointerRows,error:pointerError}=await cloudClient
+    .from("user_sync_chunks")
+    .select("payload,updated_at")
+    .eq("user_id",user.id)
+    .eq("chunk_key","current")
+    .limit(1);
+
+  if(pointerError) throw pointerError;
+  const pointer=pointerRows?.[0]?.payload;
+  if(!pointer?.revision) throw new Error("In der Cloud ist noch kein vollständiger App-Stand gespeichert.");
+
+  const prefix=`rev:${pointer.revision}:`;
+
   const {data,error}=await cloudClient
     .from("user_sync_chunks")
     .select("chunk_key,payload,updated_at")
     .eq("user_id",user.id)
+    .like("chunk_key",`${prefix}%`)
     .order("chunk_key",{ascending:true});
 
   if(error) throw error;
-  if(!data?.length) throw new Error("In der Cloud ist noch kein App-Stand gespeichert.");
+  if(!data?.length) throw new Error("Der aktuelle Cloud-Stand ist unvollständig.");
 
-  const metaRow=data.find(row=>row.chunk_key==="meta");
+  const metaRow=data.find(row=>row.chunk_key===`${prefix}meta`);
   if(!metaRow?.payload) throw new Error("Cloud-Datensatz ist unvollständig: Metadaten fehlen.");
 
   const meta=metaRow.payload;
@@ -3585,7 +3662,7 @@ async function downloadCloudSnapshot(){
     await saveTour(tour);
   }
 
-  const trackMetaRows=data.filter(row=>row.chunk_key.startsWith("track-meta:"));
+  const trackMetaRows=data.filter(row=>row.chunk_key.startsWith(`${prefix}track-meta:`));
 
   for(const row of trackMetaRows){
     const info=row.payload||{};
@@ -3593,7 +3670,7 @@ async function downloadCloudSnapshot(){
     if(!tourId) continue;
 
     const pointRows=data
-      .filter(item=>item.chunk_key.startsWith(`track:${tourId}:`))
+      .filter(item=>item.chunk_key.startsWith(`${prefix}track:${tourId}:`))
       .sort((a,b)=>Number(a.payload?.index||0)-Number(b.payload?.index||0));
 
     const points=pointRows.flatMap(item=>Array.isArray(item.payload?.points)?item.payload.points:[]);
@@ -3620,27 +3697,46 @@ async function downloadCloudSnapshot(){
     }
   });
 
-  const updatedAt=data.reduce((latest,row)=>{
-    if(!row.updated_at) return latest;
-    return !latest||row.updated_at>latest?row.updated_at:latest;
-  },null);
+  const updatedAt=pointer.updatedAt||pointerRows?.[0]?.updated_at||null;
 
   const last=document.getElementById("cloudLastSync");
   if(last&&updatedAt){
     last.textContent=`Cloud-Stand geladen: ${new Date(updatedAt).toLocaleString("de-CH")}`;
   }
 
-  return {chunks:data.length,updatedAt};
+  return {
+    chunks:data.length,
+    updatedAt,
+    revision:pointer.revision,
+    sourceDevice:pointer.sourceDevice||meta.sourceDevice||null
+  };
 }
 
 
 const CLOUD_AUTOSYNC_KEY="3113-cloud-autosync-v1";
 const CLOUD_DIRTY_KEY="3113-cloud-dirty-v1";
 const CLOUD_REMOTE_UPDATED_KEY="3113-cloud-remote-updated-v1";
+const CLOUD_DEVICE_ID_KEY="3113-cloud-device-id-v1";
+const CLOUD_LOCAL_CHANGED_KEY="3113-cloud-local-changed-v1";
+
 let cloudAutoSyncTimer=null;
 let cloudAutoSyncBusy=false;
 let cloudLastLocalFingerprint="";
 let cloudPollTimer=null;
+
+
+function cloudDeviceId(){
+  let id=localStorage.getItem(CLOUD_DEVICE_ID_KEY);
+  if(!id){
+    id=(crypto?.randomUUID?.()||`device-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    localStorage.setItem(CLOUD_DEVICE_ID_KEY,id);
+  }
+  return id;
+}
+
+function markLocalChangedNow(){
+  localStorage.setItem(CLOUD_LOCAL_CHANGED_KEY,new Date().toISOString());
+}
 
 function setCloudSyncIndicator(state,message){
   const dot=document.getElementById("cloudSyncDot");
@@ -3655,10 +3751,21 @@ function autoSyncEnabled(){
 
 function markCloudDirty(){
   if(!autoSyncEnabled()) return;
+  markLocalChangedNow();
   localStorage.setItem(CLOUD_DIRTY_KEY,"1");
   setCloudSyncIndicator(navigator.onLine?"pending":"offline",
     navigator.onLine?"Änderungen warten auf Synchronisation":"Offline – Änderungen ausstehend");
   scheduleCloudAutoSync();
+}
+
+async function markIndexedDbChangeAndSync(){
+  if(!autoSyncEnabled()) return;
+  markLocalChangedNow();
+  localStorage.setItem(CLOUD_DIRTY_KEY,"1");
+  setCloudSyncIndicator(navigator.onLine?"pending":"offline",
+    navigator.onLine?"Lokale Änderung wird synchronisiert":"Offline – Änderung vorgemerkt");
+  clearTimeout(cloudAutoSyncTimer);
+  cloudAutoSyncTimer=setTimeout(()=>runCloudAutoSync("indexeddb-change"),700);
 }
 
 function scheduleCloudAutoSync(delay=1800){
@@ -3700,13 +3807,20 @@ async function remoteCloudInfo(){
 
   const {data,error}=await cloudClient
     .from("user_sync_chunks")
-    .select("updated_at")
+    .select("payload,updated_at")
     .eq("user_id",user.id)
-    .order("updated_at",{ascending:false})
+    .eq("chunk_key","current")
     .limit(1);
 
   if(error) throw error;
-  return data?.[0]?.updated_at||null;
+  const row=data?.[0];
+  if(!row?.payload?.revision) return null;
+
+  return {
+    revision:row.payload.revision,
+    updatedAt:row.payload.updatedAt||row.updated_at,
+    sourceDevice:row.payload.sourceDevice||null
+  };
 }
 
 async function runCloudAutoSync(reason="timer"){
@@ -3736,46 +3850,46 @@ async function runCloudAutoSync(reason="timer"){
       currentFingerprint!==cloudLastLocalFingerprint;
 
     if(localChanged){
+      markLocalChangedNow();
       localStorage.setItem(CLOUD_DIRTY_KEY,"1");
     }
 
     const dirty=localStorage.getItem(CLOUD_DIRTY_KEY)==="1";
-    const remoteUpdated=await remoteCloudInfo();
-    const knownRemote=localStorage.getItem(CLOUD_REMOTE_UPDATED_KEY);
-    const remoteChanged=Boolean(remoteUpdated) && Boolean(knownRemote) &&
-      remoteUpdated!==knownRemote;
+    const remote=await remoteCloudInfo();
+    const knownRevision=localStorage.getItem(CLOUD_REMOTE_UPDATED_KEY);
+    const remoteChanged=Boolean(remote?.revision) &&
+      Boolean(knownRevision) &&
+      remote.revision!==knownRevision;
 
-    // Both devices changed since the last common state: never overwrite silently.
-    if(dirty && remoteChanged){
-      setCloudSyncIndicator("conflict","Konflikt – bitte Cloud laden oder speichern");
-      cloudSetStatus("Dieses Gerät und die Cloud wurden geändert. Es wurde nichts automatisch überschrieben.",true);
-      return;
-    }
-
-    // This device changed, cloud did not: upload this device.
-    if(dirty){
+    // Local change has priority if the cloud is still at the revision we know.
+    if(dirty && !remoteChanged){
       const result=await uploadCloudSnapshot();
       localStorage.setItem(CLOUD_DIRTY_KEY,"0");
-      localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.updatedAt);
+      localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.revision);
       cloudLastLocalFingerprint=await localCloudFingerprint();
       setCloudSyncIndicator("synced","✓ Synchronisiert");
       return;
     }
 
-    // Cloud changed, this device did not: download remote state.
-    if(remoteUpdated && (!knownRemote || remoteUpdated!==knownRemote)){
+    // Both sides changed independently: do not overwrite.
+    if(dirty && remoteChanged){
+      setCloudSyncIndicator("conflict","Konflikt – beide Geräte wurden geändert");
+      cloudSetStatus("Dieses Gerät und ein anderes Gerät wurden seit der letzten Synchronisation geändert. Es wurde nichts überschrieben.",true);
+      return;
+    }
+
+    // Only remote changed: download the fully published revision.
+    if(remote?.revision && (!knownRevision || remote.revision!==knownRevision)){
       const result=await downloadCloudSnapshot();
-      if(result.updatedAt){
-        localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.updatedAt);
-      }
+      localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.revision);
       localStorage.setItem(CLOUD_DIRTY_KEY,"0");
       cloudLastLocalFingerprint=await localCloudFingerprint();
       setCloudSyncIndicator("synced","✓ Synchronisiert");
       return;
     }
 
-    if(remoteUpdated){
-      localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,remoteUpdated);
+    if(remote?.revision){
+      localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,remote.revision);
     }
     cloudLastLocalFingerprint=currentFingerprint;
     setCloudSyncIndicator("synced","✓ Synchronisiert");
@@ -3790,7 +3904,7 @@ async function runCloudAutoSync(reason="timer"){
 function startCloudPolling(){
   clearInterval(cloudPollTimer);
   if(!autoSyncEnabled()) return;
-  cloudPollTimer=setInterval(()=>runCloudAutoSync("poll"),10000);
+  cloudPollTimer=setInterval(()=>runCloudAutoSync("poll"),5000);
 }
 
 function installLocalChangeWatcher(){
@@ -3820,7 +3934,13 @@ document.getElementById("cloudAutoSync")?.addEventListener("change",async event=
       cloudLastLocalFingerprint=await localCloudFingerprint();
       const remote=await remoteCloudInfo();
       const known=localStorage.getItem(CLOUD_REMOTE_UPDATED_KEY);
-      if(remote && !known) localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,remote);
+      if(!known && remote?.revision){
+        // First activation: use current cloud as baseline only if this device
+        // has no pending local edits. Otherwise upload/prompt on next cycle.
+        if(localStorage.getItem(CLOUD_DIRTY_KEY)!=="1"){
+          localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,remote.revision);
+        }
+      }
     }catch{}
     startCloudPolling();
     runCloudAutoSync("enabled");
@@ -3828,6 +3948,19 @@ document.getElementById("cloudAutoSync")?.addEventListener("change",async event=
     clearInterval(cloudPollTimer);
     clearTimeout(cloudAutoSyncTimer);
     setCloudSyncIndicator("idle","Automatische Synchronisation aus");
+  }
+});
+
+
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden && autoSyncEnabled()){
+    setTimeout(()=>runCloudAutoSync("visibility"),250);
+  }
+});
+
+window.addEventListener("focus",()=>{
+  if(autoSyncEnabled()){
+    setTimeout(()=>runCloudAutoSync("focus"),250);
   }
 });
 
@@ -3944,7 +4077,7 @@ document.getElementById("cloudUploadBtn")?.addEventListener("click",async()=>{
     cloudSetBusy(true);
     const result=await uploadCloudSnapshot();
     localStorage.setItem(CLOUD_DIRTY_KEY,"0");
-    localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.updatedAt);
+    localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.revision);
     cloudLastLocalFingerprint=await localCloudFingerprint();
     setCloudSyncIndicator("synced","✓ Synchronisiert");
     cloudSetStatus("Vollständiger App-Stand in kleinen Datenpaketen in der Cloud gespeichert.");
@@ -3962,7 +4095,7 @@ document.getElementById("cloudDownloadBtn")?.addEventListener("click",async()=>{
     cloudSetBusy(true);
     const result=await downloadCloudSnapshot();
     localStorage.setItem(CLOUD_DIRTY_KEY,"0");
-    if(result.updatedAt) localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.updatedAt);
+    if(result.revision) localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.revision);
     setCloudSyncIndicator("synced","✓ Synchronisiert");
     cloudSetStatus("Cloud-Stand geladen. App wird neu gestartet.");
     setTimeout(()=>window.location.reload(),500);
@@ -4149,12 +4282,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4102";
+  window.location.href = "./?v=4103";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4102");
+    navigator.serviceWorker.register("sw.js?v=4103");
   });
 }
 
