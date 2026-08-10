@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41002";
+} from "./database.js?v=4101";
 
-import { loadLanguage, translate } from "./i18n.js?v=41002";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41002";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41002";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41002";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41002";
+import { loadLanguage, translate } from "./i18n.js?v=4101";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4101";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4101";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4101";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4101";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -3631,6 +3631,194 @@ async function downloadCloudSnapshot(){
   return {chunks:data.length,updatedAt};
 }
 
+
+const CLOUD_AUTOSYNC_KEY="3113-cloud-autosync-v1";
+const CLOUD_DIRTY_KEY="3113-cloud-dirty-v1";
+const CLOUD_REMOTE_UPDATED_KEY="3113-cloud-remote-updated-v1";
+let cloudAutoSyncTimer=null;
+let cloudAutoSyncBusy=false;
+let cloudLastLocalFingerprint="";
+let cloudPollTimer=null;
+
+function setCloudSyncIndicator(state,message){
+  const dot=document.getElementById("cloudSyncDot");
+  const label=document.getElementById("cloudSyncLabel");
+  if(dot) dot.className=`cloud-sync-dot ${state}`;
+  if(label) label.textContent=message;
+}
+
+function autoSyncEnabled(){
+  return localStorage.getItem(CLOUD_AUTOSYNC_KEY)==="1";
+}
+
+function markCloudDirty(){
+  if(!autoSyncEnabled()) return;
+  localStorage.setItem(CLOUD_DIRTY_KEY,"1");
+  setCloudSyncIndicator(navigator.onLine?"pending":"offline",
+    navigator.onLine?"Änderungen warten auf Synchronisation":"Offline – Änderungen ausstehend");
+  scheduleCloudAutoSync();
+}
+
+function scheduleCloudAutoSync(delay=1800){
+  if(!autoSyncEnabled()) return;
+  clearTimeout(cloudAutoSyncTimer);
+  cloudAutoSyncTimer=setTimeout(()=>runCloudAutoSync("local-change"),delay);
+}
+
+async function localCloudFingerprint(){
+  const snapshot=await buildCloudSnapshot();
+  // Avoid expensive cryptographic hashing; this is only change detection.
+  const text=JSON.stringify(snapshot);
+  let hash=2166136261;
+  for(let i=0;i<text.length;i++){
+    hash^=text.charCodeAt(i);
+    hash=Math.imul(hash,16777619);
+  }
+  return `${text.length}:${hash>>>0}`;
+}
+
+async function remoteCloudInfo(){
+  if(!cloudClient) return null;
+  const user=await cloudCurrentUser();
+  if(!user) return null;
+
+  const {data,error}=await cloudClient
+    .from("user_sync_chunks")
+    .select("updated_at")
+    .eq("user_id",user.id)
+    .order("updated_at",{ascending:false})
+    .limit(1);
+
+  if(error) throw error;
+  return data?.[0]?.updated_at||null;
+}
+
+async function runCloudAutoSync(reason="timer"){
+  if(!autoSyncEnabled()||cloudAutoSyncBusy) return;
+  if(!navigator.onLine){
+    setCloudSyncIndicator("offline","Offline – Änderungen ausstehend");
+    return;
+  }
+  if(!cloudClient) createCloudClient();
+  if(!cloudClient) return;
+
+  const user=await cloudCurrentUser();
+  if(!user){
+    setCloudSyncIndicator("idle","Automatische Synchronisation wartet auf Anmeldung");
+    return;
+  }
+
+  cloudAutoSyncBusy=true;
+  try{
+    setCloudSyncIndicator("syncing","Synchronisiere …");
+
+    const dirty=localStorage.getItem(CLOUD_DIRTY_KEY)==="1";
+    const remoteUpdated=await remoteCloudInfo();
+    const knownRemote=localStorage.getItem(CLOUD_REMOTE_UPDATED_KEY);
+
+    // Remote changed since this device last saw it and there are no local edits:
+    // safely pull it.
+    if(remoteUpdated && remoteUpdated!==knownRemote && !dirty){
+      await downloadCloudSnapshot();
+      localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,remoteUpdated);
+      cloudLastLocalFingerprint=await localCloudFingerprint();
+      setCloudSyncIndicator("synced","✓ Synchronisiert");
+      return;
+    }
+
+    // Both local and remote changed: do not silently overwrite either side.
+    if(remoteUpdated && knownRemote && remoteUpdated!==knownRemote && dirty){
+      setCloudSyncIndicator("conflict","Konflikt – bitte Cloud laden oder speichern");
+      cloudSetStatus("Auf diesem Gerät und in der Cloud gibt es Änderungen. Aus Sicherheitsgründen wurde nichts überschrieben.",true);
+      return;
+    }
+
+    const fingerprint=await localCloudFingerprint();
+    if(dirty || (cloudLastLocalFingerprint && fingerprint!==cloudLastLocalFingerprint)){
+      const result=await uploadCloudSnapshot();
+      localStorage.setItem(CLOUD_DIRTY_KEY,"0");
+      localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.updatedAt);
+      cloudLastLocalFingerprint=await localCloudFingerprint();
+      setCloudSyncIndicator("synced","✓ Synchronisiert");
+      return;
+    }
+
+    if(remoteUpdated){
+      localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,remoteUpdated);
+    }
+    cloudLastLocalFingerprint=fingerprint;
+    setCloudSyncIndicator("synced","✓ Synchronisiert");
+  }catch(error){
+    console.warn("Automatische Cloud-Synchronisation fehlgeschlagen:",error);
+    setCloudSyncIndicator("error","Synchronisation fehlgeschlagen");
+  }finally{
+    cloudAutoSyncBusy=false;
+  }
+}
+
+function startCloudPolling(){
+  clearInterval(cloudPollTimer);
+  if(!autoSyncEnabled()) return;
+  cloudPollTimer=setInterval(()=>runCloudAutoSync("poll"),30000);
+}
+
+function installLocalChangeWatcher(){
+  // localStorage writes are used throughout the app. Wrapping setItem lets the
+  // auto-sync engine see changes without rewriting every feature module.
+  if(localStorage.__3113Wrapped) return;
+  const originalSetItem=localStorage.setItem.bind(localStorage);
+  const ignored=new Set([
+    CLOUD_CONFIG_KEY,CLOUD_AUTOLOAD_KEY,CLOUD_AUTOSYNC_KEY,CLOUD_DIRTY_KEY,
+    CLOUD_REMOTE_UPDATED_KEY,"3113-cloud-last-sync"
+  ]);
+
+  localStorage.setItem=function(key,value){
+    originalSetItem(key,value);
+    if(String(key).startsWith("3113-")&&!ignored.has(String(key))){
+      markCloudDirty();
+    }
+  };
+  try{ localStorage.__3113Wrapped=true; }catch{}
+}
+
+document.getElementById("cloudAutoSync")?.addEventListener("change",async event=>{
+  localStorage.setItem(CLOUD_AUTOSYNC_KEY,event.target.checked?"1":"0");
+  if(event.target.checked){
+    setCloudSyncIndicator("pending","Automatische Synchronisation aktiv");
+    localStorage.setItem(CLOUD_DIRTY_KEY,"0");
+    try{
+      cloudLastLocalFingerprint=await localCloudFingerprint();
+      const remote=await remoteCloudInfo();
+      if(remote) localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,remote);
+    }catch{}
+    startCloudPolling();
+    runCloudAutoSync("enabled");
+  }else{
+    clearInterval(cloudPollTimer);
+    clearTimeout(cloudAutoSyncTimer);
+    setCloudSyncIndicator("idle","Automatische Synchronisation aus");
+  }
+});
+
+window.addEventListener("online",()=>{
+  if(autoSyncEnabled()){
+    setCloudSyncIndicator("pending","Online – Synchronisation wird fortgesetzt");
+    runCloudAutoSync("online");
+  }
+});
+
+window.addEventListener("offline",()=>{
+  if(autoSyncEnabled()){
+    setCloudSyncIndicator("offline","Offline – Änderungen ausstehend");
+  }
+});
+
+window.addEventListener("storage",event=>{
+  if(autoSyncEnabled() && event.key?.startsWith("3113-")){
+    runCloudAutoSync("other-tab");
+  }
+});
+
 document.getElementById("saveCloudConfigBtn")?.addEventListener("click",async()=>{
   const url=document.getElementById("cloudSupabaseUrl")?.value||"";
   const key=document.getElementById("cloudSupabaseKey")?.value||"";
@@ -3723,7 +3911,11 @@ document.getElementById("cloudSignOutBtn")?.addEventListener("click",async()=>{
 document.getElementById("cloudUploadBtn")?.addEventListener("click",async()=>{
   try{
     cloudSetBusy(true);
-    await uploadCloudSnapshot();
+    const result=await uploadCloudSnapshot();
+    localStorage.setItem(CLOUD_DIRTY_KEY,"0");
+    localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.updatedAt);
+    cloudLastLocalFingerprint=await localCloudFingerprint();
+    setCloudSyncIndicator("synced","✓ Synchronisiert");
     cloudSetStatus("Vollständiger App-Stand in kleinen Datenpaketen in der Cloud gespeichert.");
   }catch(error){
     cloudSetStatus(`Cloud-Speichern fehlgeschlagen: ${error.message}`,true);
@@ -3737,7 +3929,10 @@ document.getElementById("cloudDownloadBtn")?.addEventListener("click",async()=>{
 
   try{
     cloudSetBusy(true);
-    await downloadCloudSnapshot();
+    const result=await downloadCloudSnapshot();
+    localStorage.setItem(CLOUD_DIRTY_KEY,"0");
+    if(result.updatedAt) localStorage.setItem(CLOUD_REMOTE_UPDATED_KEY,result.updatedAt);
+    setCloudSyncIndicator("synced","✓ Synchronisiert");
     cloudSetStatus("Cloud-Stand geladen. App wird neu gestartet.");
     setTimeout(()=>window.location.reload(),500);
   }catch(error){
@@ -3753,6 +3948,11 @@ document.getElementById("cloudAutoLoad")?.addEventListener("change",event=>{
 
 async function initializeCloud(){
   createCloudClient();
+  installLocalChangeWatcher();
+
+  const autoSync=document.getElementById("cloudAutoSync");
+  if(autoSync) autoSync.checked=autoSyncEnabled();
+
   await renderCloudState();
 
   const lastSync=localStorage.getItem("3113-cloud-last-sync");
@@ -3763,8 +3963,23 @@ async function initializeCloud(){
 
   if(cloudClient){
     cloudClient.auth.onAuthStateChange(()=>{
-      setTimeout(()=>renderCloudState(),0);
+      setTimeout(async()=>{
+        await renderCloudState();
+        if(autoSyncEnabled()) runCloudAutoSync("auth");
+      },0);
     });
+  }
+
+  if(autoSyncEnabled()){
+    try{
+      cloudLastLocalFingerprint=await localCloudFingerprint();
+    }catch{}
+    startCloudPolling();
+    setCloudSyncIndicator(navigator.onLine?"pending":"offline",
+      navigator.onLine?"Automatische Synchronisation aktiv":"Offline – Änderungen ausstehend");
+    setTimeout(()=>runCloudAutoSync("startup"),1200);
+  }else{
+    setCloudSyncIndicator("idle","Automatische Synchronisation aus");
   }
 }
 
@@ -3890,12 +4105,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41002";
+  window.location.href = "./?v=4101";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41002");
+    navigator.serviceWorker.register("sw.js?v=4101");
   });
 }
 

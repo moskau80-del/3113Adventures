@@ -1,24 +1,29 @@
-# 3113 Adventures – Sprint 10.0.2 Hotfix
+# 3113 Adventures – Version 4.0.0 / Sprint 10.1
 
-## Warum
-Der komplette GPX-Track wurde bisher zusammen mit allen App-Daten als ein einziges großes JSONB-Feld gespeichert. Bei großen Tracks kann Supabase diesen Datenbank-Write wegen `statement timeout` abbrechen.
+## Automatische Synchronisation
+Unter `Einstellungen -> Cloud & mehrere Geräte` kann jetzt
+`Änderungen automatisch synchronisieren` aktiviert werden.
 
-## Änderung
-- Cloud-Snapshot wird in kleine Pakete zerlegt.
-- GPX-Tracks werden in Blöcke zu maximal 4.000 Punkten geteilt.
-- Metadaten, Touren, Einstellungen und localStorage werden separat gespeichert.
-- Upload zeigt den Fortschritt `Paket X von Y`.
-- Download setzt die GPX-Blöcke wieder zum vollständigen Track zusammen.
-- Lokale Datenstruktur der App bleibt unverändert.
+### Verhalten
+- lokale Änderungen werden nach kurzer Verzögerung automatisch hochgeladen
+- alle 30 Sekunden wird geprüft, ob auf einem anderen Gerät ein neuer Cloud-Stand vorliegt
+- beim App-Start wird ebenfalls geprüft
+- nach Rückkehr aus dem Offline-Modus wird synchronisiert
+- Statusanzeige:
+  - ✓ Synchronisiert
+  - Synchronisiere …
+  - Offline – Änderungen ausstehend
+  - Konflikt – bitte Cloud laden oder speichern
 
-## Einmalige Supabase-Anpassung
-Im Supabase SQL Editor `supabase/setup_10_0_2.sql` ausführen.
+### Konfliktschutz
+Wenn sowohl dieses Gerät als auch die Cloud seit der letzten bekannten
+Synchronisation geändert wurden, überschreibt Sprint 10.1 keinen Stand
+automatisch. Der Benutzer entscheidet dann über die bestehenden manuellen
+Buttons `Cloud speichern` oder `Cloud laden`.
 
-Danach:
-1. Sprint 10.0.2 installieren.
-2. Auf Hauptgerät anmelden.
-3. `Cloud speichern`.
-4. Auf zweitem Gerät anmelden.
-5. `Cloud laden`.
+### Manuelle Cloud-Buttons
+Bleiben als Backup-/Notfallfunktion erhalten.
 
-Die alte Tabelle `user_snapshots` kann bestehen bleiben; Sprint 10.0.2 verwendet `user_sync_chunks`.
+### Supabase
+Keine neue SQL-Datei erforderlich. Sprint 10.1 verwendet weiterhin
+`user_sync_chunks` aus Sprint 10.0.2.

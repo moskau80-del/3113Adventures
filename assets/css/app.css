@@ -560,3 +560,14 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
   .cloud-auth-grid{grid-template-columns:1fr}
   .cloud-sync-panel{align-items:flex-start;flex-direction:column}
 }
+
+/* ===== Sprint 10.1 automatic sync ===== */
+.cloud-live-status{
+  display:flex;align-items:center;gap:8px;margin:10px 0;padding:10px 12px;
+  border-radius:10px;background:#f7fafc;border:1px solid #e1e8ef;font-size:.82rem
+}
+.cloud-sync-dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:#8b98a8}
+.cloud-sync-dot.synced{background:#4c9651}
+.cloud-sync-dot.syncing,.cloud-sync-dot.pending{background:#d9952c}
+.cloud-sync-dot.offline{background:#7d8794}
+.cloud-sync-dot.error,.cloud-sync-dot.conflict{background:#c64c4c}
