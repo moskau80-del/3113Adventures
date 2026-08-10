@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4086";
+} from "./database.js?v=4087";
 
-import { loadLanguage, translate } from "./i18n.js?v=4086";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4086";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4086";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4086";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4086";
+import { loadLanguage, translate } from "./i18n.js?v=4087";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4087";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4087";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4087";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4087";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -681,6 +681,7 @@ async function renderStages(){
   await renderDashboardStats();
   renderGear();
   await renderTourPack();
+  await renderPrintPreview();
   await renderPlaces();
 }
 
@@ -2211,10 +2212,34 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
     if(rows.length<2) throw new Error("Die CSV-Datei enthält keine Artikel.");
 
     const headers=rows[0].map(value=>value.trim());
-    const required=["name","category","weightG"];
-    required.forEach(header=>{
-      if(!headers.includes(header)) throw new Error(`Spalte ${header} fehlt.`);
-    });
+    const normalized=headers.map(h=>h.toLowerCase());
+
+    function headerIndex(...names){
+      for(const name of names){
+        const i=normalized.indexOf(name.toLowerCase());
+        if(i>=0) return i;
+      }
+      return -1;
+    }
+
+    const idx={
+      id:headerIndex("id"),
+      name:headerIndex("name","item name","artikelname"),
+      brand:headerIndex("brand","manufacturer","hersteller"),
+      category:headerIndex("category","kategorie"),
+      weight:headerIndex("weightg","weight","gewicht"),
+      qty:headerIndex("stock","qty","menge"),
+      location:headerIndex("location","lagerplatz","lagerort"),
+      favorite:headerIndex("favorite","favorit"),
+      wishlist:headerIndex("wishlist","wunschliste"),
+      notes:headerIndex("notes","desc","notizen","beschreibung"),
+      price:headerIndex("price","preis"),
+      worn:headerIndex("worn"),
+      consumable:headerIndex("consumable")
+    };
+
+    if(idx.name<0) throw new Error("Spalte für Artikelname fehlt.");
+    if(idx.weight<0) throw new Error("Spalte für Gewicht fehlt.");
 
     const existing=loadGearLocal();
     const byId=new Map(existing.map(item=>[item.id,item]));
@@ -2223,23 +2248,24 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
     rows.slice(1).forEach(values=>{
       if(values.every(value=>!String(value).trim())) return;
 
-      const row={};
-      headers.forEach((header,index)=>row[header]=values[index]??"");
-
-      const id=row.id||`gear-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+      const val=i=>i>=0?(values[i]??""):"";
+      const id=val(idx.id)||`gear-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
 
       byId.set(id,{
         id,
-        name:row.name||"",
-        brand:row.brand||"",
-        category:row.category||"other",
-        weightG:Number(String(row.weightG).replace(",","."))||0,
-        stock:Number(row.stock||1),
-        quantity:Number(row.stock||1),
-        location:row.location||"",
-        favorite:["1","true","ja","yes"].includes(String(row.favorite).toLowerCase()),
-        wishlist:["1","true","ja","yes"].includes(String(row.wishlist).toLowerCase()),
-        notes:row.notes||"",
+        name:String(val(idx.name)).trim(),
+        brand:String(val(idx.brand)).trim(),
+        category:String(val(idx.category)).trim()||"other",
+        weightG:Number(String(val(idx.weight)).replace(",","."))||0,
+        stock:Number(val(idx.qty)||1),
+        quantity:Number(val(idx.qty)||1),
+        location:String(val(idx.location)).trim(),
+        favorite:["1","true","ja","yes"].includes(String(val(idx.favorite)).toLowerCase()),
+        wishlist:["1","true","ja","yes"].includes(String(val(idx.wishlist)).toLowerCase()),
+        notes:String(val(idx.notes)).trim(),
+        price:Number(String(val(idx.price)).replace(",","."))||0,
+        wornDefault:["1","true","ja","yes"].includes(String(val(idx.worn)).toLowerCase()),
+        consumable:["1","true","ja","yes"].includes(String(val(idx.consumable)).toLowerCase()),
         updatedAt:new Date().toISOString()
       });
       imported++;
@@ -2486,57 +2512,75 @@ document.querySelectorAll("[data-pack-drop-person]").forEach(zone=>{
 });
 
 
-document.getElementById("importLegacyPackLagerBtn")?.addEventListener("click",async()=>{
-  const status=document.getElementById("gearTransferStatus");
 
-  try{
-    const raw=localStorage.getItem("packlagerDataV1");
+async function renderPrintPreview(){
+  const preview=document.getElementById("printPreview");
+  if(!preview) return;
 
-    if(!raw){
-      throw new Error("Keine alten PackLager-Daten in diesem Browser/unter dieser Webadresse gefunden.");
-    }
+  const mode=document.getElementById("printMode")?.value||"gear";
+  const gear=loadGearLocal();
 
-    const legacy=JSON.parse(raw);
-    if(!legacy||!Array.isArray(legacy.gear)){
-      throw new Error("Der alte PackLager-Datensatz ist ungültig.");
-    }
-
-    const existing=loadGearLocal();
-    const byId=new Map(existing.map(item=>[item.id,item]));
-    let imported=0;
-
-    legacy.gear.forEach(old=>{
-      const id=old.id||`gear-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
-
-      byId.set(id,{
-        id,
-        name:old.name||"",
-        brand:old.brand||"",
-        category:old.category||"other",
-        weightG:Number(old.weight||0),
-        stock:Number(old.qty||1),
-        quantity:Number(old.qty||1),
-        location:old.location||"",
-        price:Number(old.price||0),
-        notes:old.notes||"",
-        favorite:false,
-        wishlist:false,
-        createdAt:old.createdAt||new Date().toISOString(),
-        updatedAt:new Date().toISOString(),
-        legacySource:"packlagerDataV1"
-      });
-
-      imported++;
-    });
-
-    saveGearLocal([...byId.values()]);
-    renderGear();
-    await renderTourPack();
-
-    status.textContent=`Altes PackLager erfolgreich übernommen: ${imported} Artikel.`;
-  }catch(error){
-    status.textContent=`Übernahme nicht möglich: ${error.message}`;
+  if(mode==="gear"){
+    const rows=[...gear].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+    preview.innerHTML=`
+      <h2>3113 Adventures – Artikelliste</h2>
+      <table>
+        <thead><tr><th>Artikel</th><th>Marke</th><th>Kategorie</th><th>Gewicht</th><th>Bestand</th><th>Lagerort</th></tr></thead>
+        <tbody>${rows.map(item=>`
+          <tr>
+            <td>${escapeHtml(item.name)}</td>
+            <td>${escapeHtml(item.brand||"")}</td>
+            <td>${escapeHtml(item.category||"")}</td>
+            <td>${Number(item.weightG||0)} g</td>
+            <td>${Number(item.stock??item.quantity??1)}</td>
+            <td>${escapeHtml(item.location||"")}</td>
+          </tr>`).join("")}</tbody>
+      </table>`;
+    return;
   }
+
+  const activeTour=await getActiveTour();
+  if(!activeTour){
+    preview.innerHTML="<p>Keine aktive Tour.</p>";
+    return;
+  }
+
+  const personKey=mode==="person2"?"person2":"person1";
+  const names=loadPackNamesLocal(activeTour.id);
+  const label=personKey==="person1"?names.person1:names.person2;
+  const pack=loadTourPersonPackLocal(activeTour.id,personKey);
+  const byId=new Map(gear.map(item=>[item.id,item]));
+
+  let total=0,worn=0;
+  const rows=pack.map(entry=>{
+    const item=byId.get(entry.gearId);
+    if(!item) return null;
+    const weight=Number(item.weightG||0)*Number(entry.quantity||1);
+    total+=weight;
+    if(entry.worn) worn+=weight;
+    return {item,entry,weight};
+  }).filter(Boolean);
+
+  preview.innerHTML=`
+    <h2>${escapeHtml(activeTour.name||"Tour")} – Packliste ${escapeHtml(label)}</h2>
+    <p><strong>Total:</strong> ${Math.round(total)} g · <strong>am Körper:</strong> ${Math.round(worn)} g · <strong>Netto:</strong> ${Math.round(total-worn)} g</p>
+    <table>
+      <thead><tr><th>Artikel</th><th>Menge</th><th>Gewicht</th><th>am Körper</th></tr></thead>
+      <tbody>${rows.map(({item,entry,weight})=>`
+        <tr>
+          <td>${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</td>
+          <td>${Number(entry.quantity||1)}</td>
+          <td>${Math.round(weight)} g</td>
+          <td>${entry.worn?"Ja":"Nein"}</td>
+        </tr>`).join("")}</tbody>
+    </table>`;
+}
+
+document.getElementById("printPreviewBtn")?.addEventListener("click",renderPrintPreview);
+document.getElementById("printMode")?.addEventListener("change",renderPrintPreview);
+document.getElementById("printNowBtn")?.addEventListener("click",async()=>{
+  await renderPrintPreview();
+  window.print();
 });
 
 async function initialize() {
@@ -2628,12 +2672,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4086";
+  window.location.href = "./?v=4087";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4086");
+    navigator.serviceWorker.register("sw.js?v=4087");
   });
 }
 

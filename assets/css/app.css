@@ -236,3 +236,12 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .gear-table tr.wishlist-row{box-shadow:inset 5px 0 0 #7d8e62}
 .gear-table tr.favorite-row{background:#fffdf3}
 .gear-table tr.dragging{opacity:.4}
+
+.print-preview{background:#fff;border:1px solid #dfe4dc;border-radius:14px;padding:20px;margin-top:14px}
+.print-preview table{width:100%;border-collapse:collapse}
+.print-preview th,.print-preview td{padding:8px 10px;border-bottom:1px solid #ddd;text-align:left}
+@media print{
+  body *{visibility:hidden!important}
+  #printPreview,#printPreview *{visibility:visible!important}
+  #printPreview{position:absolute;left:0;top:0;width:100%;border:0}
+}
