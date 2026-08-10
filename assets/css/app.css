@@ -331,3 +331,51 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
   #roadbookPreview{position:absolute;left:0;top:0;width:100%}
   .roadbook-sheet{border:0}
 }
+
+.stage-inline-timeline{
+  position:relative;
+  height:72px;
+  margin:16px 8px 10px;
+}
+.stage-inline-line{
+  position:absolute;
+  left:2%;
+  right:2%;
+  top:22px;
+  height:3px;
+  background:#1f5f9c;
+  border-radius:3px;
+}
+.stage-inline-point{
+  position:absolute;
+  top:11px;
+  transform:translateX(-50%);
+  text-align:center;
+  min-width:70px;
+}
+.stage-inline-dot{
+  display:block;
+  width:14px;
+  height:14px;
+  margin:4px auto 6px;
+  border-radius:50%;
+  background:#fff;
+  border:4px solid #1f5f9c;
+  box-sizing:border-box;
+}
+.stage-inline-point.start .stage-inline-dot{border-color:#5a8f45}
+.stage-inline-point.end .stage-inline-dot{border-color:#c84f4f}
+.stage-inline-point.supply .stage-inline-dot{border-color:#1f5f9c}
+.stage-inline-label{
+  display:block;
+  font-size:.72rem;
+  line-height:1.15;
+  max-width:110px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@media(max-width:700px){
+  .stage-inline-timeline{overflow-x:auto}
+  .stage-inline-label{font-size:.68rem;max-width:85px}
+}

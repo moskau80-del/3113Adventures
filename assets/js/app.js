@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40962";
+} from "./database.js?v=4097";
 
-import { loadLanguage, translate } from "./i18n.js?v=40962";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40962";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40962";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40962";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40962";
+import { loadLanguage, translate } from "./i18n.js?v=4097";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4097";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4097";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4097";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4097";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -602,6 +602,41 @@ function stageSupplyHtml(tourId,stageId){
   </div>`;
 }
 
+
+function stageInlineTimelineHtml(stage){
+  if(stage.restDay) return "";
+
+  const distance=Number(stage.distanceKm||0);
+  const startLabel="Start";
+  const endLabel="Ziel";
+
+  const supplyPlaces=getPlacesForStage(stage.tourId,stage.id)
+    .slice()
+    .sort((a,b)=>Number(a.distanceKm||999)-Number(b.distanceKm||999))
+    .slice(0,3);
+
+  const points=[
+    {label:startLabel,position:0,type:"start"},
+    ...supplyPlaces.map((place,index)=>({
+      label:place.name,
+      position:Math.min(90,Math.max(10,20+index*25)),
+      type:"supply"
+    })),
+    {label:endLabel,position:100,type:"end"}
+  ];
+
+  return `
+    <div class="stage-inline-timeline">
+      <div class="stage-inline-line"></div>
+      ${points.map(point=>`
+        <div class="stage-inline-point ${point.type}" style="left:${point.position}%">
+          <span class="stage-inline-dot"></span>
+          <span class="stage-inline-label">${escapeHtml(point.label)}</span>
+        </div>
+      `).join("")}
+    </div>`;
+}
+
 async function renderStages(){
   const activeTour=await getActiveTour();
   const list=document.getElementById("stageList");
@@ -655,8 +690,6 @@ async function renderStages(){
   diagnostic.textContent=
     `Speicher: ${info.count} Etappen · ${info.characters} Zeichen · ${info.origin}`;
 
-  renderStageTimeline(stages,shoeMarkers);
-
   list.innerHTML=stages.length
     ? stages.map(stage=>`
       <article id="stage-card-${stage.id}" class="stage-card ${stage.completed?"completed":""} ${stage.restDay?"rest-day":""}">
@@ -677,7 +710,7 @@ async function renderStages(){
           ${Number(stage.endCoord.lat||0).toFixed(5)}, ${Number(stage.endCoord.lng||0).toFixed(5)}
         </div>`:""}
         ${stage.notes?`<p>${escapeHtml(stage.notes)}</p>`:""}
-        ${stage.restDay?"":`${stageShoePersonWarningHtml(stage,shoePlan,packNames)}${stageShoeChangeHtml(stage,shoeMarkers)}${stagePlanningStatusHtml(activeTour.id,stage)}${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>`}
+        ${stage.restDay?"":`${stageShoePersonWarningHtml(stage,shoePlan,packNames)}${stageShoeChangeHtml(stage,shoeMarkers)}${stagePlanningStatusHtml(activeTour.id,stage)}${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>${stageInlineTimelineHtml(stage)}`}
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
@@ -3176,12 +3209,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40962";
+  window.location.href = "./?v=4097";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40962");
+    navigator.serviceWorker.register("sw.js?v=4097");
   });
 }
 
