@@ -2771,8 +2771,9 @@ function openGearDialog(item=null){
   gearDialog.showModal();
 }
 
-function renderGear(){
+async function renderGear(){
   const items=loadGearLocal();
+  const activeTour=await getActiveTour();
   const query=(document.getElementById("gearSearch")?.value||"").trim().toLowerCase();
   const category=document.getElementById("gearCategoryFilter")?.value||"all";
   const sort=document.getElementById("gearSort")?.value||"name";
@@ -2816,12 +2817,15 @@ function renderGear(){
           <strong>${Number(item.weightG||0)} g</strong>
           <span class="muted small">${Number(item.stock??item.quantity??1)} × ${Number(item.weightG||0)} g</span>
         </td>
-        <td>${Number(item.stock??item.quantity??1)}</td>
+        <td>${activeTour?(()=>{
+          const info=gearAvailabilityInfo(activeTour.id,item);
+          return `<div class="stock-status"><strong>${info.available}</strong><span>frei von ${info.stock}</span>${info.allocated?`<span>${info.allocated} eingepackt</span>`:""}</div>`;
+        })():Number(item.stock??item.quantity??1)}</td>
         <td>${escapeHtml(item.location||"–")}</td>
         <td>
           <div class="gear-actions">
-            <button data-add-gear-person1="${item.id}">→ ${escapeHtml(currentPersonNames.person1)}</button>
-            <button data-add-gear-person2="${item.id}">→ ${escapeHtml(currentPersonNames.person2)}</button>
+            <button data-add-gear-person1="${item.id}" ${activeTour&&gearAvailabilityInfo(activeTour.id,item).available<=0?"disabled":""}>→ ${escapeHtml(currentPersonNames.person1)}</button>
+            <button data-add-gear-person2="${item.id}" ${activeTour&&gearAvailabilityInfo(activeTour.id,item).available<=0?"disabled":""}>→ ${escapeHtml(currentPersonNames.person2)}</button>
             <button data-edit-gear="${item.id}">Bearbeiten</button>
             <button class="danger" data-delete-gear="${item.id}">Löschen</button>
           </div>
@@ -2913,6 +2917,8 @@ document.getElementById("gearList")?.addEventListener("click",async(event)=>{
 
     activePackPerson=personKey;
     await renderTourPack();
+    await renderGear();
+    if(typeof renderSidebarSummary==="function") await renderSidebarSummary();
     return;
   }
 });
@@ -2956,8 +2962,9 @@ document.getElementById("deleteSelectedGearBtn")?.addEventListener("click",async
   const remaining=loadGearLocal().filter(item=>!selectedGearIds.has(item.id));
   saveGearLocal(remaining);
   selectedGearIds.clear();
-  renderGear();
+  await renderGear();
   await renderTourPack();
+  if(typeof renderSidebarSummary==="function") await renderSidebarSummary();
 });
 
 

@@ -537,3 +537,10 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
 .legend-dot.preferred{background:#dd8a22}
 #mapCanvas{border-radius:14px;overflow:hidden;box-shadow:0 6px 22px rgba(26,63,101,.08)}
 .map-popup strong{display:block;margin-bottom:4px;color:#0b467d}
+
+/* ===== Sprint 9.11 Mein Transa finalisation ===== */
+.stock-status{display:flex;flex-direction:column;line-height:1.15}
+.stock-status strong{font-size:1rem;color:#0b4d87}
+.stock-status span{font-size:.68rem;color:#718095;margin-top:2px}
+.gear-actions button:disabled{opacity:.35;cursor:not-allowed;background:#f3f5f7!important}
+#gearList tr:hover .gear-name strong{color:#0b4d87}
