@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40910";
+} from "./database.js?v=40912";
 
-import { loadLanguage, translate } from "./i18n.js?v=40910";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40910";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40910";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40910";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40910";
+import { loadLanguage, translate } from "./i18n.js?v=40912";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40912";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40912";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40912";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40912";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -84,6 +84,12 @@ function formatDate(value) {
 
   const locale = document.documentElement.lang === "en" ? "en-GB" : "de-CH";
   return new Intl.DateTimeFormat(locale).format(new Date(`${value}T12:00:00`));
+}
+
+
+function setTextSafe(id,value){
+  const element=document.getElementById(id);
+  if(element) element.textContent=String(value??"");
 }
 
 function escapeHtml(value) {
@@ -684,8 +690,11 @@ async function renderStages(){
   const status=document.getElementById("stageStatus");
   const diagnostic=document.getElementById("stageDiagnostic");
 
+  if(!list) return;
+
   if(!activeTour){
     list.innerHTML='<div class="empty">Keine aktive Tour.</div>';
+    if(status) status.textContent="Keine aktive Tour.";
     return;
   }
 
@@ -723,12 +732,12 @@ async function renderStages(){
     ? `${Math.min(...distances).toFixed(1)} km`
     : "0 km";
 
-  status.textContent=stages.length
+  if(status) status.textContent=stages.length
     ? `${stages.length} Etappen aus dem Browserspeicher geladen.`
     : "Noch keine Etappen vorhanden.";
 
   const info=getStageStorageInfo(activeTour.id);
-  diagnostic.textContent=
+  if(diagnostic) diagnostic.textContent=
     `Speicher: ${info.count} Etappen · ${info.characters} Zeichen · ${info.origin}`;
 
   list.innerHTML=stages.length
@@ -773,13 +782,23 @@ async function renderStages(){
     `).join("")
     : '<div class="empty">Noch keine Etappen vorhanden.</div>';
 
-  await renderDashboardStats();
-  await renderTourPack();
-  renderGear();
-  await renderTourShoes();
-  await renderPlaces();
-  if(typeof renderRoadbook==='function') await renderRoadbook();
-  if(typeof renderSidebarSummary==='function') await renderSidebarSummary();
+  const secondaryRenders=[
+    ["Dashboard",()=>renderDashboardStats()],
+    ["Packlisten",()=>renderTourPack()],
+    ["Mein Transa",()=>renderGear()],
+    ["Schuhe",()=>renderTourShoes()],
+    ["Orte",()=>renderPlaces()],
+    ["Roadbook",()=>typeof renderRoadbook==="function"?renderRoadbook():Promise.resolve()],
+    ["Seitenleiste",()=>typeof renderSidebarSummary==="function"?renderSidebarSummary():Promise.resolve()]
+  ];
+
+  for(const [name,render] of secondaryRenders){
+    try{
+      await render();
+    }catch(error){
+      console.error(`${name} konnte nicht aktualisiert werden:`,error);
+    }
+  }
 }
 
 
@@ -1716,6 +1735,7 @@ document.getElementById("supplyResults")?.addEventListener("click",async(event)=
 async function renderPlaces(){
   const activeTour=await getActiveTour();
   const list=document.getElementById("placeList");
+  if(!list) return;
 
   if(!activeTour){
     list.innerHTML='<div class="empty">Keine aktive Tour.</div>';
@@ -2791,6 +2811,9 @@ function gearAvailabilityInfo(tourId,item){
 }
 
 async function renderGear(){
+  const list=document.getElementById("gearList");
+  if(!list) return;
+
   const items=loadGearLocal();
   const activeTour=await getActiveTour();
   const query=(document.getElementById("gearSearch")?.value||"").trim().toLowerCase();
@@ -2810,17 +2833,16 @@ async function renderGear(){
     return String(a.name||"").localeCompare(String(b.name||""));
   });
 
-  document.getElementById("gearCount").textContent=String(items.length);
-  document.getElementById("gearWeightTotal").textContent=
+  setTextSafe("gearCount",String(items.length));
+  setTextSafe("gearWeightTotal",
     formatKg3FromGrams(
       items.reduce((sum,item)=>sum+Number(item.weightG||0)*Number(item.stock??item.quantity??1),0)
-    );
-  document.getElementById("gearShoeCount").textContent=
-    String(items.filter(item=>item.category==="shoes").length);
-  document.getElementById("gearFavoriteCount").textContent=
-    String(items.filter(item=>item.favorite).length);
+    ));
+  setTextSafe("gearShoeCount",
+    String(items.filter(item=>item.category==="shoes").length));
+  setTextSafe("gearFavoriteCount",
+    String(items.filter(item=>item.favorite).length));
 
-  const list=document.getElementById("gearList");
   list.innerHTML=filtered.length
     ?filtered.map(item=>`
       <tr class="${item.wishlist?"wishlist-row":""} ${item.favorite?"favorite-row":""}">
@@ -3280,25 +3302,52 @@ async function initialize() {
 
   applyTheme(theme);
 
-  try {
-    await renderTours();
-    await renderGpx();
+  const startupSteps=[
+    ["Touren",()=>renderTours()],
+    ["GPX",()=>renderGpx()],
+    ["Etappen",()=>renderStages()],
+    ["Mein Transa",()=>renderGear()],
+    ["Packlisten",()=>renderTourPack()],
+    ["Schuhe",()=>renderTourShoes()],
+    ["Orte",()=>renderPlaces()],
+    ["Roadbook",()=>typeof renderRoadbook==="function"?renderRoadbook():Promise.resolve()],
+    ["Seitenleiste",()=>typeof renderSidebarSummary==="function"?renderSidebarSummary():Promise.resolve()]
+  ];
 
-    const activeTour = await getActiveTour();
-    if (activeTour) {
-      document.getElementById("stageStartDate").value = activeTour.startDate || "";
+  const startupErrors=[];
+
+  try{
+    const activeTour=await getActiveTour();
+    if(activeTour){
+      const stageStart=document.getElementById("stageStartDate");
+      if(stageStart) stageStart.value=activeTour.startDate||"";
     }
+  }catch(error){
+    startupErrors.push(`Aktive Tour: ${error.message}`);
+  }
 
-    await renderStages();
+  for(const [name,step] of startupSteps){
+    try{
+      await step();
+    }catch(error){
+      console.error(`${name} konnte beim Start nicht geladen werden:`,error);
+      startupErrors.push(`${name}: ${error.message}`);
+    }
+  }
 
-    if (document.getElementById("map").classList.contains("active")) {
+  try{
+    const mapPage=document.getElementById("map");
+    if(mapPage?.classList.contains("active")){
       await renderMapTrack();
     }
+  }catch(error){
+    startupErrors.push(`Karte: ${error.message}`);
+  }
 
-    databaseStatus.textContent = translate("database.ready", "IndexedDB ist bereit.");
-  } catch (error) {
-    console.error("App-Daten konnten nicht geladen werden:", error);
-    databaseStatus.textContent = `Ladefehler: ${error.message}`;
+  if(databaseStatus){
+    databaseStatus.textContent=startupErrors.length
+      ? `App geladen · ${startupErrors.length} Teilfehler (siehe Konsole).`
+      : translate("database.ready", "IndexedDB ist bereit.");
   }
 }
 
@@ -3344,12 +3393,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4091111";
+  window.location.href = "./?v=40912";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4091111");
+    navigator.serviceWorker.register("sw.js?v=40912");
   });
 }
 

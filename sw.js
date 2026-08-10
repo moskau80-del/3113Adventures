@@ -1,11 +1,11 @@
-const CACHE="3113-adventures-v4-sprint-9-11-1";
+const CACHE="3113-adventures-v4-sprint-9-12";
 const FILES=[
-  "./?v=409111","./index.html","./assets/css/app.css?v=409111",
-  "./assets/js/app.js?v=409111","./assets/js/database.js?v=409111",
-  "./assets/js/i18n.js?v=409111","./assets/js/gpx.js?v=409111",
-  "./assets/js/stages.js?v=409111","./assets/js/places.js?v=409111",
-  "./assets/js/gear.js?v=409111","./lang/de.json?v=409111",
-  "./lang/en.json?v=409111","./manifest.webmanifest","./icons/icon-192.png","./icons/icon-512.png","./icons/icon.svg"
+  "./?v=40912","./index.html","./assets/css/app.css?v=40912",
+  "./assets/js/app.js?v=40912","./assets/js/database.js?v=40912",
+  "./assets/js/i18n.js?v=40912","./assets/js/gpx.js?v=40912",
+  "./assets/js/stages.js?v=40912","./assets/js/places.js?v=40912",
+  "./assets/js/gear.js?v=40912","./lang/de.json?v=40912",
+  "./lang/en.json?v=40912","./manifest.webmanifest","./icons/icon-192.png","./icons/icon-512.png","./icons/icon.svg"
 ];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
