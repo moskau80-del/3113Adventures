@@ -1,18 +1,11 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 7.5
+# 3113 Adventures – Sprint 7.5.1 Hotfix
 
-## Neu – Track-Editor
-- `Track bearbeiten` direkt bei jeder Wanderetappe
-- Start, Ziel und mehrere Bearbeitungspunkte auf der Karte per Drag & Drop verschieben
-- Live-Vorschau der geänderten Etappendistanz
-- `Rückgängig`
-- `Original wiederherstellen` solange der Editor geöffnet ist
-- Änderungen werden erst mit `Track speichern` übernommen
-- `Abbrechen` verwirft die Bearbeitung
-- beim ersten Speichern bleibt eine Kopie der ursprünglichen Trackpunkte im Track-Datensatz erhalten
-- Etappen-Start-/Zielkoordinaten und Distanz werden beim Speichern aktualisiert
-
-## Wichtig
-Sprint 7.5 ist zunächst ein manueller Track-Editor. Zwischen verschobenen Punkten wird eine direkte Linie verwendet. Automatisches Routing entlang von Wanderwegen ist für einen folgenden Sprint vorgesehen.
+## Behoben
+- JavaScript-Startfehler aus Sprint 7.5 behoben.
+- Ursache waren doppelte Imports der Schuhplanungsfunktionen in `app.js`.
+- Dadurch wurde das komplette Hauptskript nicht geladen: Register, aktive Tour und Etappen reagierten nicht.
+- Track-Editor aus 7.5 bleibt enthalten.
+- Bestehende Tour- und Etappendaten werden nicht gelöscht.
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 7.5` stehen.
+Oben rechts muss `v4.0.0 · Sprint 7.5.1` stehen.
