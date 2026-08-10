@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40751";
+} from "./database.js?v=40752";
 
-import { loadLanguage, translate } from "./i18n.js?v=40751";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40751";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40751";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40751";
+import { loadLanguage, translate } from "./i18n.js?v=40752";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40752";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40752";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40752";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -641,7 +641,7 @@ async function renderStages(){
   diagnostic.textContent=
     `Speicher: ${info.count} Etappen · ${info.characters} Zeichen · ${info.origin}`;
 
-  renderStageTimeline(stages);
+  renderStageTimeline(stages,shoeMarkers);
 
   list.innerHTML=stages.length
     ? stages.map(stage=>`
@@ -695,7 +695,7 @@ function jumpToStage(stageId){
   setTimeout(()=>element.classList.remove("flash"),1600);
 }
 
-function renderStageTimeline(stages){
+function renderStageTimeline(stages,shoeMarkers={}){
   const container=document.getElementById("stageTimeline");
   if(!container) return;
 
@@ -729,7 +729,7 @@ function renderStageTimeline(stages){
                   getPreferredEndForStage(stage.tourId,stage.id)
                     ? `<small class="timeline-stop">★ ${escapeHtml(getPreferredEndForStage(stage.tourId,stage.id).name)}</small>`
                     : ""
-                }${shoeMarkers[stage.id]?`<small class="timeline-shoe">👟 Schuhwechsel ca. km ${shoeMarkers[stage.id].thresholds.map(km=>Math.round(km)).join(" / ")}</small>`:""}`}
+                }${shoeMarkers?.[stage.id]?`<small class="timeline-shoe">👟 Schuhwechsel ca. km ${shoeMarkers?.[stage.id]?.thresholds.map(km=>Math.round(km)).join(" / ")}</small>`:""}`}
             </span>
           </div>`).join("")}
       </div>
@@ -1765,12 +1765,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40751";
+  window.location.href = "./?v=40752";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40751");
+    navigator.serviceWorker.register("sw.js?v=40752");
   });
 }
 
