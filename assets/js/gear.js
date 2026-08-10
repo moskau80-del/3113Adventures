@@ -142,3 +142,26 @@ export function availableQuantityForPerson(tourId,personKey,gearId,stock){
   const usedByOther=Number(other?.quantity||0);
   return Math.max(0,maxStock-usedByOther);
 }
+
+
+const SHOE_PERSON_PREFIX="3113-v4-shoe-person:";
+
+export function loadTourShoePersonLocal(tourId,personKey){
+  try{
+    const raw=localStorage.getItem(`${SHOE_PERSON_PREFIX}${tourId}:${personKey}`);
+    if(!raw) return {gearId:"",currentKm:0,intervalKm:700};
+    return {...{gearId:"",currentKm:0,intervalKm:700},...JSON.parse(raw)};
+  }catch{
+    return {gearId:"",currentKm:0,intervalKm:700};
+  }
+}
+
+export function saveTourShoePersonLocal(tourId,personKey,data){
+  const value={
+    gearId:data.gearId||"",
+    currentKm:Math.max(0,Number(data.currentKm||0)),
+    intervalKm:Math.max(100,Number(data.intervalKm||700))
+  };
+  localStorage.setItem(`${SHOE_PERSON_PREFIX}${tourId}:${personKey}`,JSON.stringify(value));
+  return value;
+}

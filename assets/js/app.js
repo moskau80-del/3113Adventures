@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4092";
+} from "./database.js?v=4093";
 
-import { loadLanguage, translate } from "./i18n.js?v=4092";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4092";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4092";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson } from "./gear.js?v=4092";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4092";
+import { loadLanguage, translate } from "./i18n.js?v=4093";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4093";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4093";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4093";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4093";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -686,6 +686,7 @@ async function renderStages(){
   await renderDashboardStats();
   renderGear();
   await renderTourPack();
+  await renderTourShoes();
   await renderPrintPreview();
   await renderPlaces();
 }
@@ -2024,6 +2025,83 @@ document.getElementById("importFullTourInput")?.addEventListener("change",async(
 let activePackPerson="person1";
 const collapsedPackCategories=new Set();
 
+
+async function renderTourShoes(){
+  const activeTour=await getActiveTour();
+  const gear=loadGearLocal().filter(item=>item.category==="shoes");
+
+  const pairs=[
+    {key:"person1",selectId:"shoePerson1Select",kmId:"shoePerson1Km",intervalId:"shoePerson1Interval",statusId:"shoePerson1Status",titleId:"shoePerson1Title"},
+    {key:"person2",selectId:"shoePerson2Select",kmId:"shoePerson2Km",intervalId:"shoePerson2Interval",statusId:"shoePerson2Status",titleId:"shoePerson2Title"}
+  ];
+
+  if(!activeTour){
+    pairs.forEach(cfg=>{
+      const select=document.getElementById(cfg.selectId);
+      if(select) select.innerHTML='<option value="">Keine aktive Tour</option>';
+      const status=document.getElementById(cfg.statusId);
+      if(status) status.textContent="Keine aktive Tour.";
+    });
+    return;
+  }
+
+  const names=loadPackNamesLocal(activeTour.id);
+
+  pairs.forEach(cfg=>{
+    const title=document.getElementById(cfg.titleId);
+    if(title) title.textContent=cfg.key==="person1"?names.person1:names.person2;
+
+    const state=loadTourShoePersonLocal(activeTour.id,cfg.key);
+    const select=document.getElementById(cfg.selectId);
+
+    if(select){
+      select.innerHTML='<option value="">Kein Schuh ausgewählt</option>'+
+        gear.map(item=>`<option value="${item.id}">${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</option>`).join("");
+      select.value=state.gearId||"";
+    }
+
+    const kmInput=document.getElementById(cfg.kmId);
+    const intervalInput=document.getElementById(cfg.intervalId);
+    if(kmInput) kmInput.value=Number(state.currentKm||0);
+    if(intervalInput) intervalInput.value=Number(state.intervalKm||700);
+
+    const selected=gear.find(item=>item.id===state.gearId);
+    const remaining=Math.max(0,Number(state.intervalKm||700)-Number(state.currentKm||0));
+    const status=document.getElementById(cfg.statusId);
+
+    if(status){
+      status.textContent=selected
+        ? `${selected.brand?selected.brand+" ":""}${selected.name} · ${Math.round(state.currentKm||0)} km gelaufen · ca. ${Math.round(remaining)} km bis Wechsel`
+        : "Noch kein aktives Schuhpaar gewählt.";
+    }
+  });
+}
+
+async function saveTourShoeFromControls(personKey){
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const suffix=personKey==="person1"?"1":"2";
+  const select=document.getElementById(`shoePerson${suffix}Select`);
+  const km=document.getElementById(`shoePerson${suffix}Km`);
+  const interval=document.getElementById(`shoePerson${suffix}Interval`);
+
+  saveTourShoePersonLocal(activeTour.id,personKey,{
+    gearId:select?.value||"",
+    currentKm:Number(km?.value||0),
+    intervalKm:Number(interval?.value||700)
+  });
+
+  await renderTourShoes();
+}
+
+["shoePerson1Select","shoePerson1Km","shoePerson1Interval"].forEach(id=>{
+  document.getElementById(id)?.addEventListener("change",()=>saveTourShoeFromControls("person1"));
+});
+["shoePerson2Select","shoePerson2Km","shoePerson2Interval"].forEach(id=>{
+  document.getElementById(id)?.addEventListener("change",()=>saveTourShoeFromControls("person2"));
+});
+
 async function renderTourPack(){
   const activeTour=await getActiveTour();
   const container=document.getElementById("tourPackList");
@@ -2730,12 +2808,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4092";
+  window.location.href = "./?v=4093";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4092");
+    navigator.serviceWorker.register("sw.js?v=4093");
   });
 }
 

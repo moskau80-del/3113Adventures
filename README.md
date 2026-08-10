@@ -1,16 +1,13 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 9.2
+# 3113 Adventures – Version 4.0.0 / Sprint 9.3
 
-## Packlisten finalisiert
-- Artikel nach Kategorien gruppiert
-- Kategorien ein- und ausklappbar
-- Teilgewichte je Kategorie:
-  - Total
-  - am Körper
-  - Netto
-- Verbrauchsartikel klar gekennzeichnet
-- am Körper getragene Artikel optisch hervorgehoben
-- Bestandskontrolle aus Sprint 9.0/9.1 bleibt aktiv
-- Packlistenvergleich bleibt bewusst entfernt
+## Schuhe mit Tour und Person verknüpft
+- je Person ein aktives Schuhpaar aus `Mein Transa`
+- nur Artikel der Kategorie `Schuhe` auswählbar
+- bereits gelaufene Kilometer erfassen
+- Wechselintervall je Person erfassen
+- Restkilometer bis zum Wechsel automatisch anzeigen
+- Einstellung wird pro Tour und Person gespeichert
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 9.2` stehen.
+Oben rechts muss `v4.0.0 · Sprint 9.3` stehen.
+Im Register `Packlisten` gibt es den Bereich `Schuhe der Tour`.
