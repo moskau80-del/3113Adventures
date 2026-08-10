@@ -379,3 +379,98 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
   .stage-inline-timeline{overflow-x:auto}
   .stage-inline-label{font-size:.68rem;max-width:85px}
 }
+
+:root{
+  --ui-bg:#f4f7fb;--ui-card:#fff;--ui-line:#dfe7f0;--ui-blue:#0d4f91;
+  --ui-blue-dark:#083867;--ui-soft:#eef4fb;--ui-text:#10243d;--ui-muted:#65758b;
+  --ui-green:#4d8f4a;--ui-orange:#dd8a22;
+}
+html,body{background:var(--ui-bg);color:var(--ui-text)}
+body{margin:0;min-height:100vh}
+header{
+  position:sticky;top:0;z-index:40;min-height:68px;display:flex;align-items:center;
+  justify-content:space-between;gap:18px;padding:10px 22px;background:#fff;
+  border-bottom:1px solid var(--ui-line);box-shadow:0 2px 12px rgba(15,45,80,.05)
+}
+.app-brand{display:flex;align-items:center;gap:12px}
+.app-brand img{width:44px;height:44px;border-radius:10px;object-fit:cover}
+.app-brand-text{display:flex;flex-direction:column}
+.app-brand-text strong{font-size:1.12rem;letter-spacing:.03em}
+.app-brand-text span{font-size:.72rem;color:var(--ui-muted)}
+.version-badge{font-size:.75rem;color:var(--ui-muted)}
+.topbar-actions{display:flex;gap:8px}
+.icon-button{border:1px solid var(--ui-line);background:#fff;border-radius:10px;padding:9px 11px}
+.main-nav{
+  position:fixed;left:0;top:68px;bottom:0;width:245px;overflow:auto;display:flex;
+  flex-direction:column;gap:5px;padding:18px 14px 230px;background:#fff;
+  border-right:1px solid var(--ui-line);z-index:30
+}
+.main-nav button{
+  width:100%;text-align:left;border:0;background:transparent;border-radius:10px;
+  padding:11px 13px;color:var(--ui-text);font-weight:700
+}
+.main-nav button:hover{background:var(--ui-soft)}
+.main-nav button.active{background:#e5f0fb;color:var(--ui-blue-dark)}
+main,.main-content{margin-left:245px;padding:24px;max-width:none}
+.page{max-width:1280px;margin:0 auto}
+.sidebar-tour-card,.sidebar-people-card{
+  position:fixed;left:14px;width:217px;z-index:31;border-radius:12px;background:#f0f6fc;
+  border:1px solid #d8e6f5;padding:12px;box-sizing:border-box
+}
+.sidebar-tour-card{bottom:128px}
+.sidebar-tour-card strong,.sidebar-tour-card span{display:block}
+.sidebar-tour-card span{font-size:.75rem;color:var(--ui-muted);margin-top:3px}
+.sidebar-people-card{bottom:14px;background:#fff}
+.sidebar-section-title{font-size:.72rem;font-weight:900;color:var(--ui-muted);margin-bottom:8px}
+.sidebar-people-card>div:not(.sidebar-section-title){
+  display:flex;justify-content:space-between;gap:8px;padding:5px 0;font-size:.8rem
+}
+.sidebar-people-card span{color:var(--ui-muted)}
+.card,.stage-card,.place-card,.gear-table-wrap,.roadbook-sheet{
+  border:1px solid var(--ui-line);box-shadow:0 6px 22px rgba(26,63,101,.06);border-radius:14px
+}
+#stageList article{
+  background:#fff;padding:18px;margin-bottom:12px;border:1px solid var(--ui-line);
+  border-radius:14px;box-shadow:0 4px 16px rgba(25,63,100,.05)
+}
+#stageList .card-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:12px}
+#stageList .card-actions button{
+  border:1px solid #d8e1ea;background:#fff;color:var(--ui-blue-dark);border-radius:9px;padding:8px 10px
+}
+#stageList .card-actions button:hover{background:var(--ui-soft)}
+.pill{background:#eef4fa;color:#194f82;border:1px solid #dde9f5}
+.stage-inline-timeline{margin-top:20px;margin-bottom:8px;min-height:78px}
+.stage-inline-line{background:var(--ui-blue)}
+.stage-inline-dot{border-color:var(--ui-blue)}
+.stage-inline-point.start .stage-inline-dot{border-color:var(--ui-green)}
+.stage-inline-point.end .stage-inline-dot{border-color:#d34b4b}
+.summary-grid>div,.roadbook-stat{background:#fff;border:1px solid var(--ui-line);box-shadow:none}
+.section-header h2{font-size:1.6rem;margin-bottom:4px}
+.section-header .muted{color:var(--ui-muted)}
+.primary{background:var(--ui-blue)!important;color:#fff!important;border-color:var(--ui-blue)!important}
+.secondary{border-color:#d7e1ec!important;background:#fff!important;color:var(--ui-blue-dark)!important}
+.gear-table th{background:#eef4fa;color:#244b70}
+.gear-table tbody tr:hover{background:#f8fbff}
+.shoe-stage-warning{background:#fff7e8;border-left-color:var(--ui-orange)}
+.mobile-bottom-nav{display:none}
+@media(max-width:900px){
+  header{padding:8px 12px}
+  .app-brand-text span,.topbar-center{display:none}
+  .main-nav,.sidebar-tour-card,.sidebar-people-card{display:none}
+  main,.main-content{margin-left:0;padding:14px 12px 86px}
+  .mobile-bottom-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;
+    grid-template-columns:repeat(6,1fr);background:#07345f;border-top:1px solid #0a4b83
+  }
+  .mobile-bottom-nav button{
+    border:0;background:transparent;color:#fff;padding:8px 3px;display:flex;
+    flex-direction:column;align-items:center;gap:2px;font-size:.9rem
+  }
+  .mobile-bottom-nav button span{font-size:.62rem;opacity:.9}
+}
+@media(max-width:560px){
+  .section-header{align-items:flex-start}
+  .section-header h2{font-size:1.35rem}
+  #stageList article{padding:14px}
+  #stageList .card-actions{justify-content:flex-start}
+}

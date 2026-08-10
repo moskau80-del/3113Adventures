@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4097";
+} from "./database.js?v=4098";
 
-import { loadLanguage, translate } from "./i18n.js?v=4097";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4097";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4097";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4097";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4097";
+import { loadLanguage, translate } from "./i18n.js?v=4098";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4098";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4098";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4098";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4098";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -732,6 +732,7 @@ async function renderStages(){
   await renderTourShoes();
   await renderPlaces();
   if(typeof renderRoadbook==='function') await renderRoadbook();
+  if(typeof renderSidebarSummary==='function') await renderSidebarSummary();
 }
 
 
@@ -1318,6 +1319,7 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
     insertRestDayLocal(activeTour.id,restBefore,"before");
     recalculateStageDates(activeTour.id,activeTour.startDate||stages[0]?.date||new Date().toISOString().slice(0,10));
     await renderStages();
+    await renderSidebarSummary();
     await renderRoadbook();
     return;
   }
@@ -3120,6 +3122,66 @@ document.getElementById("roadbookPrintBtn")?.addEventListener("click",async()=>{
   window.print();
 });
 
+
+function activatePage(pageId){
+  navButtons.forEach(button=>{
+    button.classList.toggle("active",button.dataset.page===pageId);
+  });
+  pages.forEach(page=>{
+    page.classList.toggle("active",page.id===pageId);
+  });
+
+  if(pageId==="map"){
+    setTimeout(async()=>{
+      initMap();
+      if(map){
+        map.invalidateSize();
+        await renderMapTrack();
+      }
+    },100);
+  }
+}
+
+document.querySelectorAll("[data-page-jump]").forEach(button=>{
+  button.addEventListener("click",()=>activatePage(button.dataset.pageJump));
+});
+
+async function renderSidebarSummary(){
+  const tour=await getActiveTour();
+  const tourName=document.getElementById("sidebarTourName");
+  const tourDates=document.getElementById("sidebarTourDates");
+  const tourStages=document.getElementById("sidebarTourStages");
+
+  if(tour){
+    const stages=loadStagesLocal(tour.id);
+    if(tourName) tourName.textContent=tour.name||"Aktive Tour";
+    if(tourDates) tourDates.textContent=[tour.startDate,tour.targetDate].filter(Boolean).join(" – ")||"–";
+    if(tourStages) tourStages.textContent=`${stages.filter(s=>!s.restDay).length} Etappen`;
+
+    const names=loadPackNamesLocal(tour.id);
+    const p1=document.getElementById("sidebarPerson1");
+    const p2=document.getElementById("sidebarPerson2");
+    if(p1) p1.textContent=names.person1;
+    if(p2) p2.textContent=names.person2;
+
+    const gear=loadGearLocal();
+    const byId=new Map(gear.map(item=>[item.id,item]));
+    const calc=(personKey)=>loadTourPersonPackLocal(tour.id,personKey).reduce((sum,entry)=>{
+      const item=byId.get(entry.gearId);
+      return sum+(item?Number(item.weightG||0)*Number(entry.quantity||1):0);
+    },0);
+
+    const w1=document.getElementById("sidebarPerson1Weight");
+    const w2=document.getElementById("sidebarPerson2Weight");
+    if(w1) w1.textContent=formatKg3FromGrams(calc("person1"));
+    if(w2) w2.textContent=formatKg3FromGrams(calc("person2"));
+  }else{
+    if(tourName) tourName.textContent="Keine aktive Tour";
+    if(tourDates) tourDates.textContent="–";
+    if(tourStages) tourStages.textContent="0 Etappen";
+  }
+}
+
 async function initialize() {
   let language = "de";
   let theme = "system";
@@ -3209,12 +3271,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4097";
+  window.location.href = "./?v=4098";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4097");
+    navigator.serviceWorker.register("sw.js?v=4098");
   });
 }
 

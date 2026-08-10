@@ -1,10 +1,10 @@
 {
   "name": "3113 Adventures",
   "short_name": "3113",
-  "start_url": "./?v=4097",
+  "start_url": "./?v=4098",
   "display": "standalone",
-  "background_color": "#f5f3ed",
-  "theme_color": "#41513d",
+  "background_color": "#f4f7fb",
+  "theme_color": "#07345f",
   "icons": [
     {
       "src": "./icons/icon-192.png",
