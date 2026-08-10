@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4083";
+} from "./database.js?v=4084";
 
-import { loadLanguage, translate } from "./i18n.js?v=4083";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4083";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4083";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4083";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4083";
+import { loadLanguage, translate } from "./i18n.js?v=4084";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4084";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4084";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4084";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4084";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2032,6 +2032,8 @@ async function renderTourPack(){
   document.getElementById("packPerson2Name").value=names.person2;
   document.getElementById("packPerson1Btn").textContent=names.person1;
   document.getElementById("packPerson2Btn").textContent=names.person2;
+  document.getElementById("packDropPerson1Label").textContent=names.person1;
+  document.getElementById("packDropPerson2Label").textContent=names.person2;
 
   document.getElementById("packPerson1Btn").classList.toggle("active",activePackPerson==="person1");
   document.getElementById("packPerson2Btn").classList.toggle("active",activePackPerson==="person2");
@@ -2203,12 +2205,12 @@ function renderGear(){
   const list=document.getElementById("gearList");
   list.innerHTML=filtered.length
     ?filtered.map(item=>`
-      <article class="gear-card ${item.favorite?"favorite":""} ${item.wishlist?"wishlist":""}">
+      <article class="gear-card ${item.favorite?"favorite":""} ${item.wishlist?"wishlist":""}" draggable="true" data-gear-drag="${item.id}">
         <div class="gear-select">
-          <input type="checkbox" data-select-gear="${item.id}" ${selectedGearIds.has(item.id)?"checked":""}>
-          <div style="flex:1">
+          <input type="checkbox" data-select-gear="${item.id}" ${selectedGearIds.has(item.id)?"checked":""} aria-label="Artikel auswählen">
+          <div>
             <h3>${escapeHtml(item.name)}</h3>
-            <div>${escapeHtml(item.brand||"")}</div>
+            ${item.brand?`<div class="muted">${escapeHtml(item.brand)}</div>`:""}
             <div class="gear-meta">
               <span class="pill">${escapeHtml(item.category)}</span>
               <span class="pill">${Number(item.weightG||0)} g</span>
@@ -2307,6 +2309,61 @@ document.getElementById("deleteSelectedGearBtn")?.addEventListener("click",async
   await renderTourPack();
 });
 
+
+let draggedGearId=null;
+
+document.getElementById("gearList")?.addEventListener("dragstart",(event)=>{
+  const card=event.target.closest("[data-gear-drag]");
+  if(!card) return;
+
+  draggedGearId=card.dataset.gearDrag;
+  card.classList.add("dragging");
+  event.dataTransfer.effectAllowed="copy";
+  event.dataTransfer.setData("text/plain",draggedGearId);
+});
+
+document.getElementById("gearList")?.addEventListener("dragend",(event)=>{
+  const card=event.target.closest("[data-gear-drag]");
+  if(card) card.classList.remove("dragging");
+
+  draggedGearId=null;
+  document.querySelectorAll(".pack-drop-zone").forEach(zone=>zone.classList.remove("drag-over"));
+});
+
+document.querySelectorAll("[data-pack-drop-person]").forEach(zone=>{
+  zone.addEventListener("dragover",(event)=>{
+    event.preventDefault();
+    event.dataTransfer.dropEffect="copy";
+    zone.classList.add("drag-over");
+  });
+
+  zone.addEventListener("dragleave",()=>{
+    zone.classList.remove("drag-over");
+  });
+
+  zone.addEventListener("drop",async(event)=>{
+    event.preventDefault();
+    zone.classList.remove("drag-over");
+
+    const activeTour=await getActiveTour();
+    if(!activeTour) return;
+
+    const gearId=event.dataTransfer.getData("text/plain")||draggedGearId;
+    const personKey=zone.dataset.packDropPerson;
+    if(!gearId||!personKey) return;
+
+    const currentPack=loadTourPersonPackLocal(activeTour.id,personKey);
+    const exists=currentPack.some(item=>item.gearId===gearId);
+
+    if(!exists){
+      toggleGearInPersonPackLocal(activeTour.id,personKey,gearId);
+    }
+
+    activePackPerson=personKey;
+    await renderTourPack();
+  });
+});
+
 async function initialize() {
   let language = "de";
   let theme = "system";
@@ -2396,12 +2453,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4083";
+  window.location.href = "./?v=4084";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4083");
+    navigator.serviceWorker.register("sw.js?v=4084");
   });
 }
 
