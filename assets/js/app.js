@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4082";
+} from "./database.js?v=4083";
 
-import { loadLanguage, translate } from "./i18n.js?v=4082";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4082";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4082";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4082";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4082";
+import { loadLanguage, translate } from "./i18n.js?v=4083";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4083";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4083";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4083";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4083";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2156,6 +2156,7 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
 
 const gearDialog=document.getElementById("gearDialog");
 const gearForm=document.getElementById("gearForm");
+let selectedGearIds=new Set();
 
 function openGearDialog(item=null){
   document.getElementById("gearId").value=item?.id||"";
@@ -2165,6 +2166,8 @@ function openGearDialog(item=null){
   document.getElementById("gearWeight").value=item?.weightG??"";
   document.getElementById("gearQuantity").value=item?.quantity??1;
   document.getElementById("gearLocation").value=item?.location||"";
+  document.getElementById("gearStock").value=item?.stock??item?.quantity??1;
+  document.getElementById("gearWishlist").checked=Boolean(item?.wishlist);
   document.getElementById("gearNotes").value=item?.notes||"";
   document.getElementById("gearFavorite").checked=Boolean(item?.favorite);
   gearDialog.showModal();
@@ -2174,16 +2177,24 @@ function renderGear(){
   const items=loadGearLocal();
   const query=(document.getElementById("gearSearch")?.value||"").trim().toLowerCase();
   const category=document.getElementById("gearCategoryFilter")?.value||"all";
+  const sort=document.getElementById("gearSort")?.value||"name";
 
-  const filtered=items.filter(item=>{
+  let filtered=items.filter(item=>{
     const matchesCategory=category==="all"||item.category===category;
     const text=[item.name,item.brand,item.category,item.location,item.notes].filter(Boolean).join(" ").toLowerCase();
     return matchesCategory&&(!query||text.includes(query));
   });
 
+  filtered=[...filtered].sort((a,b)=>{
+    if(sort==="weightAsc") return Number(a.weightG||0)-Number(b.weightG||0);
+    if(sort==="weightDesc") return Number(b.weightG||0)-Number(a.weightG||0);
+    if(sort==="category") return String(a.category||"").localeCompare(String(b.category||""))||String(a.name||"").localeCompare(String(b.name||""));
+    return String(a.name||"").localeCompare(String(b.name||""));
+  });
+
   document.getElementById("gearCount").textContent=String(items.length);
   document.getElementById("gearWeightTotal").textContent=
-    `${items.reduce((sum,item)=>sum+Number(item.weightG||0)*Number(item.quantity||1),0)} g`;
+    `${items.reduce((sum,item)=>sum+Number(item.weightG||0)*Number(item.stock??item.quantity??1),0)} g`;
   document.getElementById("gearShoeCount").textContent=
     String(items.filter(item=>item.category==="shoes").length);
   document.getElementById("gearFavoriteCount").textContent=
@@ -2192,20 +2203,28 @@ function renderGear(){
   const list=document.getElementById("gearList");
   list.innerHTML=filtered.length
     ?filtered.map(item=>`
-      <article class="gear-card ${item.favorite?"favorite":""}">
-        <h3>${escapeHtml(item.name)}</h3>
-        <div>${escapeHtml(item.brand||"")}</div>
-        <div class="gear-meta">
-          <span class="pill">${escapeHtml(item.category)}</span>
-          <span class="pill">${Number(item.weightG||0)} g</span>
-          <span class="pill">Bestand ${Number(item.quantity||0)}</span>
-          ${item.location?`<span class="pill">${escapeHtml(item.location)}</span>`:""}
-          ${item.favorite?'<span class="pill">★ Favorit</span>':""}
-        </div>
-        ${item.notes?`<p>${escapeHtml(item.notes)}</p>`:""}
-        <div class="card-actions">
-          <button data-edit-gear="${item.id}">Bearbeiten</button>
-          <button class="danger" data-delete-gear="${item.id}">Löschen</button>
+      <article class="gear-card ${item.favorite?"favorite":""} ${item.wishlist?"wishlist":""}">
+        <div class="gear-select">
+          <input type="checkbox" data-select-gear="${item.id}" ${selectedGearIds.has(item.id)?"checked":""}>
+          <div style="flex:1">
+            <h3>${escapeHtml(item.name)}</h3>
+            <div>${escapeHtml(item.brand||"")}</div>
+            <div class="gear-meta">
+              <span class="pill">${escapeHtml(item.category)}</span>
+              <span class="pill">${Number(item.weightG||0)} g</span>
+              <span class="pill">Bestand ${Number(item.stock??item.quantity??1)}</span>
+              ${item.location?`<span class="pill">${escapeHtml(item.location)}</span>`:""}
+            </div>
+            <div class="gear-flags">
+              ${item.favorite?'<span class="pill">★ Favorit</span>':""}
+              ${item.wishlist?'<span class="pill">Wunschliste</span>':""}
+            </div>
+            ${item.notes?`<p>${escapeHtml(item.notes)}</p>`:""}
+            <div class="card-actions">
+              <button data-edit-gear="${item.id}">Bearbeiten</button>
+              <button class="danger" data-delete-gear="${item.id}">Löschen</button>
+            </div>
+          </div>
         </div>
       </article>
     `).join("")
@@ -2226,6 +2245,8 @@ gearForm?.addEventListener("submit",(event)=>{
     weightG:Number(document.getElementById("gearWeight").value||0),
     quantity:Number(document.getElementById("gearQuantity").value||1),
     location:document.getElementById("gearLocation").value.trim(),
+    stock:Number(document.getElementById("gearStock").value||0),
+    wishlist:document.getElementById("gearWishlist").checked,
     notes:document.getElementById("gearNotes").value.trim(),
     favorite:document.getElementById("gearFavorite").checked,
     updatedAt:new Date().toISOString()
@@ -2234,6 +2255,13 @@ gearForm?.addEventListener("submit",(event)=>{
   gearDialog.close();
   renderGear();
   renderTourPack();
+});
+
+document.getElementById("gearList")?.addEventListener("change",(event)=>{
+  const selectId=event.target.dataset.selectGear;
+  if(!selectId) return;
+  if(event.target.checked) selectedGearIds.add(selectId);
+  else selectedGearIds.delete(selectId);
 });
 
 document.getElementById("gearList")?.addEventListener("click",(event)=>{
@@ -2255,6 +2283,29 @@ document.getElementById("gearList")?.addEventListener("click",(event)=>{
 
 document.getElementById("gearSearch")?.addEventListener("input",renderGear);
 document.getElementById("gearCategoryFilter")?.addEventListener("change",renderGear);
+document.getElementById("gearSort")?.addEventListener("change",renderGear);
+
+
+document.getElementById("selectAllGearBtn")?.addEventListener("click",()=>{
+  loadGearLocal().forEach(item=>selectedGearIds.add(item.id));
+  renderGear();
+});
+
+document.getElementById("clearGearSelectionBtn")?.addEventListener("click",()=>{
+  selectedGearIds.clear();
+  renderGear();
+});
+
+document.getElementById("deleteSelectedGearBtn")?.addEventListener("click",async()=>{
+  if(!selectedGearIds.size) return;
+  if(!confirm(`${selectedGearIds.size} ausgewählte Artikel wirklich löschen?`)) return;
+
+  const remaining=loadGearLocal().filter(item=>!selectedGearIds.has(item.id));
+  saveGearLocal(remaining);
+  selectedGearIds.clear();
+  renderGear();
+  await renderTourPack();
+});
 
 async function initialize() {
   let language = "de";
@@ -2345,12 +2396,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4082";
+  window.location.href = "./?v=4083";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4082");
+    navigator.serviceWorker.register("sw.js?v=4083");
   });
 }
 

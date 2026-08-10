@@ -167,3 +167,7 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .pack-person-tabs{display:flex;gap:8px;margin:12px 0}
 .pack-person-tabs button{border:0;border-radius:10px;padding:9px 12px}
 .pack-person-tabs button.active{background:var(--forest);color:#fff}
+
+.gear-select{display:flex;align-items:flex-start;gap:10px}
+.gear-card.wishlist{border-right:6px solid #7d8e62}
+.gear-flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
