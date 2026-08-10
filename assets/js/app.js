@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4076";
+} from "./database.js?v=4077";
 
-import { loadLanguage, translate } from "./i18n.js?v=4076";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4076";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4076";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4076";
+import { loadLanguage, translate } from "./i18n.js?v=4077";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4077";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4077";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4077";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -907,6 +907,8 @@ async function openTrackEditor(stage){
   trackEditorWorkingPoints=cloneTrackPoints(segment);
   trackEditorHistory=[];
 
+  const routingStatus=document.getElementById("trackRoutingStatus");
+  if(routingStatus) routingStatus.textContent="";
   const dialog=document.getElementById("trackEditorDialog");
   dialog.showModal();
 
@@ -937,6 +939,124 @@ async function openTrackEditor(stage){
     redrawTrackEditor();
   },100);
 }
+
+
+function trackEditorWaypointIndices(){
+  return trackEditorControlIndices(trackEditorWorkingPoints.length);
+}
+
+async function routeBetweenWaypoints(points){
+  if(!points.length) return [];
+
+  // Public routing service using GraphHopper demo endpoint is not reliable without key.
+  // Use Valhalla public endpoint as best-effort pedestrian routing.
+  const locations=points.map(point=>({
+    lat:point.lat,
+    lon:point.lng,
+    type:"break"
+  }));
+
+  const payload={
+    locations,
+    costing:"pedestrian",
+    units:"kilometers",
+    directions_options:{units:"kilometers"}
+  };
+
+  const url=`https://valhalla1.openstreetmap.de/route?json=${encodeURIComponent(JSON.stringify(payload))}`;
+
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),20000);
+
+  try{
+    const response=await fetch(url,{signal:controller.signal});
+    clearTimeout(timer);
+
+    if(!response.ok) throw new Error(`Routing-Server ${response.status}`);
+
+    const data=await response.json();
+    const shape=data?.trip?.legs?.map(leg=>leg.shape).filter(Boolean)||[];
+    if(!shape.length) throw new Error("Keine Route erhalten.");
+
+    function decodePolyline6(str){
+      let index=0,lat=0,lng=0;
+      const coordinates=[];
+      while(index<str.length){
+        let result=0,shift=0,b;
+        do{
+          b=str.charCodeAt(index++)-63;
+          result|=(b&0x1f)<<shift;
+          shift+=5;
+        }while(b>=0x20);
+        const dlat=(result&1)?~(result>>1):(result>>1);
+        lat+=dlat;
+
+        result=0;shift=0;
+        do{
+          b=str.charCodeAt(index++)-63;
+          result|=(b&0x1f)<<shift;
+          shift+=5;
+        }while(b>=0x20);
+        const dlng=(result&1)?~(result>>1):(result>>1);
+        lng+=dlng;
+
+        coordinates.push({lat:lat/1e6,lng:lng/1e6});
+      }
+      return coordinates;
+    }
+
+    let routed=[];
+    shape.forEach((encoded,index)=>{
+      const decoded=decodePolyline6(encoded);
+      if(index>0&&decoded.length) decoded.shift();
+      routed.push(...decoded);
+    });
+
+    return routed;
+  }catch(error){
+    clearTimeout(timer);
+    throw error;
+  }
+}
+
+document.getElementById("trackEditorRouteBtn")?.addEventListener("click",async()=>{
+  if(!trackEditorWorkingPoints.length) return;
+
+  const mode=document.getElementById("trackRoutingMode")?.value||"direct";
+  const status=document.getElementById("trackRoutingStatus");
+
+  if(mode==="direct"){
+    status.textContent="Direkte Verbindung aktiv. Keine Neuberechnung notwendig.";
+    return;
+  }
+
+  const indices=trackEditorWaypointIndices();
+  const waypoints=indices.map(index=>trackEditorWorkingPoints[index]);
+
+  if(waypoints.length<2){
+    status.textContent="Zu wenige Punkte zum Routen.";
+    return;
+  }
+
+  status.textContent="Route wird über Fuss-/Wanderwege berechnet …";
+
+  try{
+    const routed=await routeBetweenWaypoints(waypoints);
+
+    if(routed.length<2){
+      throw new Error("Keine verwertbare Route erhalten.");
+    }
+
+    trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+    trackEditorWorkingPoints=routed;
+    redrawTrackEditor();
+
+    status.textContent=`Routing erfolgreich · ${trackDistanceKm(routed).toFixed(1)} km`;
+  }catch(error){
+    console.error("Routing fehlgeschlagen:",error);
+    status.textContent=`Routing fehlgeschlagen: ${error.message}. Direkte Bearbeitung bleibt erhalten.`;
+  }
+});
 
 document.getElementById("trackEditorUndoBtn")?.addEventListener("click",()=>{
   const previous=trackEditorHistory.pop();
@@ -1786,12 +1906,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4076";
+  window.location.href = "./?v=4077";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4076");
+    navigator.serviceWorker.register("sw.js?v=4077");
   });
 }
 
