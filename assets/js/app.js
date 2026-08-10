@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=4100";
+} from "./database.js?v=41001";
 
-import { loadLanguage, translate } from "./i18n.js?v=4100";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4100";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4100";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4100";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4100";
+import { loadLanguage, translate } from "./i18n.js?v=41001";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41001";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41001";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41001";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41001";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -3355,6 +3355,9 @@ async function renderCloudState(){
   if(!cloudClient){
     if(badge) badge.textContent=config.url?"Verbindung prüfen":"Nicht verbunden";
     if(label) label.textContent="Nicht angemeldet";
+    cloudSetStatus(config.url
+      ?"Supabase-Konfiguration gefunden, Verbindung konnte aber nicht initialisiert werden."
+      :"Cloud ist noch nicht eingerichtet.",Boolean(config.url));
     return;
   }
 
@@ -3362,9 +3365,11 @@ async function renderCloudState(){
   if(user){
     if(badge) badge.textContent="Cloud aktiv";
     if(label) label.textContent=user.email||"Angemeldet";
+    cloudSetStatus(`Cloud verbunden · angemeldet als ${user.email||"Benutzer"}.`);
   }else{
     if(badge) badge.textContent="Bereit";
     if(label) label.textContent="Nicht angemeldet";
+    cloudSetStatus("Supabase-Verbindung ist eingerichtet. Bitte anmelden.");
   }
 }
 
@@ -3500,7 +3505,9 @@ document.getElementById("saveCloudConfigBtn")?.addEventListener("click",async()=
   saveCloudConfig(url,key);
   createCloudClient();
   await renderCloudState();
-  cloudSetStatus("Supabase-Verbindung auf diesem Gerät gespeichert.");
+  if(cloudClient){
+    cloudSetStatus("Supabase-Verbindung auf diesem Gerät gespeichert und initialisiert.");
+  }
 });
 
 document.getElementById("cloudSignUpBtn")?.addEventListener("click",async()=>{
@@ -3541,11 +3548,19 @@ document.getElementById("cloudSignInBtn")?.addEventListener("click",async()=>{
     if(error) throw error;
 
     await renderCloudState();
-    cloudSetStatus("Angemeldet.");
+    cloudSetStatus("Anmeldung erfolgreich.");
 
     if(localStorage.getItem(CLOUD_AUTOLOAD_KEY)==="1"){
-      await downloadCloudSnapshot();
-      window.location.reload();
+      try{
+        await downloadCloudSnapshot();
+        window.location.reload();
+      }catch(error){
+        if(String(error.message||"").includes("noch kein App-Stand")){
+          cloudSetStatus("Anmeldung erfolgreich. In der Cloud ist noch kein App-Stand gespeichert. Auf dem Hauptgerät zuerst „Cloud speichern“.");
+        }else{
+          throw error;
+        }
+      }
     }
   }catch(error){
     cloudSetStatus(`Anmeldung fehlgeschlagen: ${error.message}`,true);
@@ -3737,12 +3752,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4100";
+  window.location.href = "./?v=41001";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4100");
+    navigator.serviceWorker.register("sw.js?v=41001");
   });
 }
 
