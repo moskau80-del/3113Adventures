@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4094";
+} from "./database.js?v=4095";
 
-import { loadLanguage, translate } from "./i18n.js?v=4094";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4094";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4094";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4094";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4094";
+import { loadLanguage, translate } from "./i18n.js?v=4095";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4095";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4095";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4095";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4095";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -1217,6 +1217,8 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   const deleteId=event.target.dataset.deleteStage;
   const mapId=event.target.dataset.mapStage;
   const trackEditId=event.target.dataset.trackEditStage;
+  const shoeSupplyStageId=event.target.dataset.shoeSupplyStage;
+  const shoePersonKey=event.target.dataset.shoePerson;
   const restBefore=event.target.dataset.restBefore;
   const restAfter=event.target.dataset.restAfter;
   const deleteRest=event.target.dataset.deleteRest;
@@ -1329,6 +1331,40 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   if(deleteId&&confirm("Etappe wirklich löschen?")){
     deleteStageLocal(activeTour.id,deleteId);
     await renderStages();
+  }
+
+
+  if(shoeSupplyStageId){
+    const stage=stages.find(item=>item.id===shoeSupplyStageId);
+    if(stage){
+      currentSupplyStageId=stage.id;
+      const activeTour=await getActiveTour();
+      if(activeTour){
+        // switch to places page and preselect footwear search
+        document.querySelectorAll(".main-nav button").forEach(btn=>btn.classList.remove("active"));
+        document.querySelectorAll(".page").forEach(page=>page.classList.remove("active"));
+        document.querySelector('[data-page="places"]')?.classList.add("active");
+        document.getElementById("places")?.classList.add("active");
+
+        const categorySelect=document.getElementById("supplyCategory");
+        if(categorySelect) categorySelect.value="footwear";
+
+        const stageSelect=document.getElementById("supplyStageSelect");
+        if(stageSelect) stageSelect.value=stage.id;
+
+        await renderPlaces();
+
+        const personName=shoePersonKey==="person2"
+          ?loadPackNamesLocal(activeTour.id).person2
+          :loadPackNamesLocal(activeTour.id).person1;
+
+        const info=document.getElementById("placesStatus")||document.getElementById("supplyStatus");
+        if(info){
+          info.textContent=`Schuhwechsel ${personName}: Versorgung rund um Etappe ${stage.order||stage.number||""} vorbereiten.`;
+        }
+      }
+    }
+    return;
   }
 
   if(trackEditId){
@@ -2075,6 +2111,12 @@ function stageShoePersonWarningHtml(stage,shoePlan,names){
         `<div class="shoe-stage-warning">
           <strong>👟 Schuhwechsel ${escapeHtml(personName)}</strong>
           <span>voraussichtlich auf dieser Etappe${Number.isFinite(info.kmIntoStage)?` · ca. ${Math.round(info.kmIntoStage)} km nach Etappenstart`:""}</span>
+          <div class="shoe-supply-actions">
+            <button type="button" data-shoe-supply-stage="${stage.id}" data-shoe-person="${personKey}">
+              Schuhversorgung suchen
+            </button>
+          </div>
+          <span class="shoe-supply-note">Sucht gezielt nach Schuh-/Outdoor-Versorgung rund um diese Etappe.</span>
         </div>`
       );
     }
@@ -2873,12 +2915,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4094";
+  window.location.href = "./?v=4095";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4094");
+    navigator.serviceWorker.register("sw.js?v=4095");
   });
 }
 

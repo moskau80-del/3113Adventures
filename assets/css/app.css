@@ -307,3 +307,6 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 }
 .shoe-stage-warning strong{display:block}
 .shoe-stage-warning span{display:block;font-size:.82rem;margin-top:3px}
+
+.shoe-supply-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.shoe-supply-note{font-size:.8rem;margin-top:6px}

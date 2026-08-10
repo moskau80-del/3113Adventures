@@ -1,13 +1,15 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 9.4
+# 3113 Adventures – Version 4.0.0 / Sprint 9.5
 
-## Schuhwechsel mit Etappen verknüpft
-- je Person wird anhand der bereits gelaufenen Kilometer und des Wechselintervalls berechnet, wann der nächste Wechsel fällig wird
-- die App sucht automatisch die passende geplante Wanderetappe
-- im Bereich `Schuhe der Tour` wird die voraussichtliche Etappe angezeigt
-- in der Etappenübersicht erscheint bei der passenden Etappe ein eigener Schuhwechsel-Hinweis je Person
-- zusätzlich wird ungefähr angezeigt, nach wie vielen Kilometern innerhalb der Etappe der Wechsel fällig wird
-- Ruhetage zählen nicht zur Distanz
-- liegt der Wechsel nach dem Tourende, wird das entsprechend angezeigt
+## Schuhwechsel und Versorgung verknüpft
+- bei jeder automatisch ermittelten Schuhwechsel-Etappe erscheint `Schuhversorgung suchen`
+- ein Klick führt direkt in den Bereich `Orte`
+- die betreffende Etappe wird als Versorgungs-Etappe übernommen
+- Kategorie `Schuhe` / `footwear` wird vorbereitet
+- Person 1 / Person 2 bleibt im Kontext des Schuhwechsels erhalten
+- bestehende Schuhmarken-Hinweise (Topo, Altra, Salomon, Decathlon) bleiben nutzbar
+
+## Ziel
+Vom fälligen Schuhwechsel direkt zur passenden Händlersuche rund um die betreffende Etappe.
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 9.4` stehen.
+Oben rechts muss `v4.0.0 · Sprint 9.5` stehen.
