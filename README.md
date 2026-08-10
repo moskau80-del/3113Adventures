@@ -1,17 +1,13 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 7.7
+# 3113 Adventures – Version 4.0.0 / Sprint 7.9
 
-## Neu – Routing im Track-Editor
-- Routingmodus `Wander-/Fussweg`
-- Bearbeitungspunkte können wie bisher verschoben, ergänzt oder entfernt werden
-- neue Schaltfläche `Zwischen Punkten routen`
-- best-effort Fussgängerrouting über öffentliche Valhalla-/OSM-Infrastruktur
-- bei erfolgreichem Routing wird der Track entlang realer Wege neu aufgebaut
-- bei Routingfehler bleibt die manuelle direkte Bearbeitung erhalten
-- Rückgängig funktioniert auch nach einer Routing-Neuberechnung
-- gespeichert wird weiterhin erst nach ausdrücklichem Klick auf `Track speichern`
-
-## Hinweis
-Der öffentliche Routingdienst kann zeitweise nicht verfügbar sein. Die App fällt dann auf die manuelle Bearbeitung zurück und verändert nichts automatisch.
+## Neu
+- bevorzugten Start direkt aus dem Popup eines gespeicherten Ortes auf der Etappenkarte setzen
+- bevorzugtes Ziel direkt aus dem Popup setzen
+- Start oder Ziel direkt auf der Karte wieder entfernen
+- aktuelle Bevorzugung wird im Popup sichtbar markiert
+- Karte aktualisiert sich nach Änderungen
+- Etappe und GPX werden dadurch nicht automatisch geändert
+- tatsächliche Übernahme als Start/Ziel bleibt eine getrennte bestätigte Aktion
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 7.7` stehen.
+Oben rechts muss `v4.0.0 · Sprint 7.9` stehen.

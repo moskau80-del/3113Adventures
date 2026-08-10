@@ -144,3 +144,11 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 
 .inline-control{min-width:220px}
 .routing-preview{font-size:.82rem}
+
+.file-button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+
+.map-popup-actions{display:grid;gap:6px;margin-top:8px}
+.map-popup-actions button{width:100%;border:0;border-radius:8px;padding:7px 9px}
+.map-popup-badge{display:inline-block;margin-top:5px;padding:3px 7px;border-radius:999px;font-size:.76rem;font-weight:800}
+.map-popup-badge.start{background:#e7f0fb}
+.map-popup-badge.end{background:#e7f1e2}

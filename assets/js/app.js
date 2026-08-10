@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4077";
+} from "./database.js?v=4079";
 
-import { loadLanguage, translate } from "./i18n.js?v=4077";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4077";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4077";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4077";
+import { loadLanguage, translate } from "./i18n.js?v=4079";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4079";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4079";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4079";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -803,10 +803,33 @@ async function showStageOnMap(stage){
       .bindPopup(`<strong>${escapeHtml(stage.to)}</strong>`);
 
     const places=getPlacesForStage(activeTour.id,stage.id);
+    const preferredStart=getPreferredStartForStage(activeTour.id,stage.id);
+    const preferredEnd=getPreferredEndForStage(activeTour.id,stage.id);
+
     places.forEach(place=>{
+      const isStart=preferredStart?.id===place.id;
+      const isEnd=preferredEnd?.id===place.id;
+
+      const popupHtml=`
+        <div class="map-popup">
+          <strong>${escapeHtml(place.name)}</strong>
+          ${place.category==="footwear"?`<br><span>${escapeHtml(footwearBrandHint(place))}</span>`:""}
+          <br>${escapeHtml(place.category)}
+          <br>${Number(place.distanceKm||0).toFixed(2)} km von der Etappe
+          ${place.favorite?"<br>★ Favorit":""}
+          ${isStart?'<br><span class="map-popup-badge start">★ Bevorzugter Start</span>':""}
+          ${isEnd?'<br><span class="map-popup-badge end">★ Bevorzugtes Ziel</span>':""}
+          <div class="map-popup-actions">
+            <button data-map-preferred-start="${place.id}" data-stage-id="${stage.id}">${isStart?"Bevorzugter Start ✓":"Als bevorzugten Start"}</button>
+            <button data-map-preferred-end="${place.id}" data-stage-id="${stage.id}">${isEnd?"Bevorzugtes Ziel ✓":"Als bevorzugtes Ziel"}</button>
+            ${isStart?`<button data-map-clear-preferred-start="${stage.id}">Start entfernen</button>`:""}
+            ${isEnd?`<button data-map-clear-preferred-end="${stage.id}">Ziel entfernen</button>`:""}
+          </div>
+        </div>`;
+
       L.marker([place.lat,place.lng])
         .addTo(trackLayer)
-        .bindPopup(`<strong>${escapeHtml(place.name)}</strong>${place.category==="footwear"?`<span>${escapeHtml(footwearBrandHint(place))}</span>`:""}<br>${escapeHtml(place.category)}<br>${Number(place.distanceKm||0).toFixed(2)} km von der Etappe${place.favorite?"<br>★ Favorit":""}`);
+        .bindPopup(popupHtml);
     });
 
     map.fitBounds(line.getBounds(),{padding:[20,20]});
@@ -1120,6 +1143,36 @@ document.getElementById("trackEditorSaveBtn")?.addEventListener("click",async()=
 document.getElementById("trackEditorDialog")?.addEventListener("close",()=>{
   trackEditorStageId=null;
   trackEditorHistory=[];
+});
+
+
+document.addEventListener("click",async(event)=>{
+  const startPlaceId=event.target.dataset.mapPreferredStart;
+  const endPlaceId=event.target.dataset.mapPreferredEnd;
+  const clearStartStageId=event.target.dataset.mapClearPreferredStart;
+  const clearEndStageId=event.target.dataset.mapClearPreferredEnd;
+  const stageId=event.target.dataset.stageId;
+
+  if(!startPlaceId&&!endPlaceId&&!clearStartStageId&&!clearEndStageId) return;
+
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  if(startPlaceId) setPreferredStartLocal(activeTour.id,startPlaceId);
+  if(endPlaceId) setPreferredEndLocal(activeTour.id,endPlaceId);
+  if(clearStartStageId) clearPreferredStartLocal(activeTour.id,clearStartStageId);
+  if(clearEndStageId) clearPreferredEndLocal(activeTour.id,clearEndStageId);
+
+  await renderPlaces();
+  await renderStages();
+  await renderDashboardStats();
+
+  const targetStageId=stageId||clearStartStageId||clearEndStageId||currentMapStageId;
+  if(targetStageId){
+    const stages=loadStagesLocal(activeTour.id);
+    const stage=stages.find(item=>item.id===targetStageId);
+    if(stage) await showStageOnMap(stage);
+  }
 });
 
 document.getElementById("stageList")?.addEventListener("click",async(event)=>{
@@ -1817,6 +1870,131 @@ document.getElementById("exportStagesBtn")?.addEventListener("click",async()=>{
   URL.revokeObjectURL(link.href);
 });
 
+
+function downloadJsonFile(filename,data){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;
+  link.download=filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+document.getElementById("exportFullTourBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  const status=document.getElementById("backupStatus");
+
+  if(!activeTour){
+    status.textContent="Keine aktive Tour zum Exportieren.";
+    return;
+  }
+
+  try{
+    const track=await getTrack(activeTour.id);
+    const stages=loadStagesLocal(activeTour.id);
+    const places=loadPlacesLocal(activeTour.id);
+    const shoeIntervalKm=loadShoeIntervalLocal(activeTour.id,700);
+
+    const payload={
+      schema:"3113-adventures-tour-backup",
+      schemaVersion:1,
+      exportedAt:new Date().toISOString(),
+      appVersion:"v4.0.0 · Sprint 7.8",
+      tour:activeTour,
+      track:track||null,
+      stages,
+      places,
+      settings:{
+        shoeIntervalKm
+      }
+    };
+
+    const safeName=(activeTour.name||"tour")
+      .replace(/[^a-z0-9äöüß_-]+/gi,"-")
+      .replace(/^-+|-+$/g,"");
+
+    downloadJsonFile(`${safeName||"tour"}-3113-backup.json`,payload);
+
+    status.textContent=
+      `Export erstellt: ${stages.length} Etappen · ${places.length} Orte · ${track?.points?.length||0} GPX-Punkte.`;
+  }catch(error){
+    console.error("Backup-Export fehlgeschlagen:",error);
+    status.textContent=`Export fehlgeschlagen: ${error.message}`;
+  }
+});
+
+document.getElementById("importFullTourInput")?.addEventListener("change",async(event)=>{
+  const file=event.target.files?.[0];
+  const status=document.getElementById("backupStatus");
+  if(!file) return;
+
+  try{
+    const data=JSON.parse(await file.text());
+
+    if(data?.schema!=="3113-adventures-tour-backup"){
+      throw new Error("Diese Datei ist kein gültiges 3113-Adventures-Tourbackup.");
+    }
+
+    if(!data.tour?.id){
+      throw new Error("Tourdaten fehlen.");
+    }
+
+    const now=new Date().toISOString();
+    const importedTour={
+      ...data.tour,
+      active:true,
+      updatedAt:now,
+      createdAt:data.tour.createdAt||now
+    };
+
+    await saveTour(importedTour);
+
+    if(data.track?.points?.length){
+      await saveTrack({
+        ...data.track,
+        tourId:importedTour.id,
+        updatedAt:now
+      });
+    }
+
+    if(Array.isArray(data.stages)){
+      saveStagesLocal(importedTour.id,data.stages.map(stage=>({
+        ...stage,
+        tourId:importedTour.id
+      })));
+    }
+
+    if(Array.isArray(data.places)){
+      savePlacesLocal(importedTour.id,data.places.map(place=>({
+        ...place,
+        tourId:importedTour.id
+      })));
+    }
+
+    if(data.settings?.shoeIntervalKm){
+      saveShoeIntervalLocal(importedTour.id,Number(data.settings.shoeIntervalKm));
+    }
+
+    status.textContent=
+      `Import erfolgreich: ${data.stages?.length||0} Etappen · ${data.places?.length||0} Orte.`;
+
+    await renderTours();
+    await renderGpx();
+    await renderStages();
+    await renderPlaces();
+    await renderDashboardStats();
+  }catch(error){
+    console.error("Backup-Import fehlgeschlagen:",error);
+    status.textContent=`Import fehlgeschlagen: ${error.message}`;
+    alert(`Tour konnte nicht importiert werden: ${error.message}`);
+  }finally{
+    event.target.value="";
+  }
+});
+
 async function initialize() {
   let language = "de";
   let theme = "system";
@@ -1906,12 +2084,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4077";
+  window.location.href = "./?v=4079";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4077");
+    navigator.serviceWorker.register("sw.js?v=4079");
   });
 }
 
