@@ -297,3 +297,13 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .shoe-person-card{border:1px solid #e0e5de;border-radius:14px;padding:14px;background:#fff}
 .shoe-person-card h4{margin:0 0 10px}
 @media(max-width:760px){.shoe-person-grid{grid-template-columns:1fr}}
+
+.shoe-stage-warning{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#fff6df;
+  border-left:5px solid #c89d3d;
+}
+.shoe-stage-warning strong{display:block}
+.shoe-stage-warning span{display:block;font-size:.82rem;margin-top:3px}
