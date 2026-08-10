@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40952";
+} from "./database.js?v=40953";
 
-import { loadLanguage, translate } from "./i18n.js?v=40952";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40952";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40952";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40952";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40952";
+import { loadLanguage, translate } from "./i18n.js?v=40953";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40953";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40953";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40953";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40953";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -697,7 +697,6 @@ async function renderStages(){
   renderGear();
   await renderTourPack();
   await renderTourShoes();
-  if(typeof renderPrintPreview==='function') { await if(typeof renderPrintPreview==='function') { renderPrintPreview(); } }
   await renderPlaces();
 }
 
@@ -2918,6 +2917,14 @@ async function renderPrintPreview(){
     </table>`;
 }
 
+
+document.getElementById("printPreviewBtn")?.addEventListener("click",renderPrintPreview);
+document.getElementById("printMode")?.addEventListener("change",renderPrintPreview);
+document.getElementById("printNowBtn")?.addEventListener("click",async()=>{
+  await renderPrintPreview();
+  window.print();
+});
+
 async function initialize() {
   let language = "de";
   let theme = "system";
@@ -3007,12 +3014,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40952";
+  window.location.href = "./?v=40953";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40952");
+    navigator.serviceWorker.register("sw.js?v=40953");
   });
 }
 
