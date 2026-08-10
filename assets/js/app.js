@@ -10,12 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40791";
+} from "./database.js?v=4080";
 
-import { loadLanguage, translate } from "./i18n.js?v=40791";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40791";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40791";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40791";
+import { loadLanguage, translate } from "./i18n.js?v=4080";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4080";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4080";
+import { loadGearLocal, upsertGearLocal, deleteGearLocal } from "./gear.js?v=4080";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4080";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -678,6 +679,7 @@ async function renderStages(){
     : '<div class="empty">Noch keine Etappen vorhanden.</div>';
 
   await renderDashboardStats();
+  renderGear();
   await renderPlaces();
 }
 
@@ -2009,6 +2011,107 @@ document.getElementById("importFullTourInput")?.addEventListener("change",async(
   }
 });
 
+
+const gearDialog=document.getElementById("gearDialog");
+const gearForm=document.getElementById("gearForm");
+
+function openGearDialog(item=null){
+  document.getElementById("gearId").value=item?.id||"";
+  document.getElementById("gearName").value=item?.name||"";
+  document.getElementById("gearBrand").value=item?.brand||"";
+  document.getElementById("gearCategory").value=item?.category||"other";
+  document.getElementById("gearWeight").value=item?.weightG??"";
+  document.getElementById("gearQuantity").value=item?.quantity??1;
+  document.getElementById("gearLocation").value=item?.location||"";
+  document.getElementById("gearNotes").value=item?.notes||"";
+  document.getElementById("gearFavorite").checked=Boolean(item?.favorite);
+  gearDialog.showModal();
+}
+
+function renderGear(){
+  const items=loadGearLocal();
+  const query=(document.getElementById("gearSearch")?.value||"").trim().toLowerCase();
+  const category=document.getElementById("gearCategoryFilter")?.value||"all";
+
+  const filtered=items.filter(item=>{
+    const matchesCategory=category==="all"||item.category===category;
+    const text=[item.name,item.brand,item.category,item.location,item.notes].filter(Boolean).join(" ").toLowerCase();
+    return matchesCategory&&(!query||text.includes(query));
+  });
+
+  document.getElementById("gearCount").textContent=String(items.length);
+  document.getElementById("gearWeightTotal").textContent=
+    `${items.reduce((sum,item)=>sum+Number(item.weightG||0)*Number(item.quantity||1),0)} g`;
+  document.getElementById("gearShoeCount").textContent=
+    String(items.filter(item=>item.category==="shoes").length);
+  document.getElementById("gearFavoriteCount").textContent=
+    String(items.filter(item=>item.favorite).length);
+
+  const list=document.getElementById("gearList");
+  list.innerHTML=filtered.length
+    ?filtered.map(item=>`
+      <article class="gear-card ${item.favorite?"favorite":""}">
+        <h3>${escapeHtml(item.name)}</h3>
+        <div>${escapeHtml(item.brand||"")}</div>
+        <div class="gear-meta">
+          <span class="pill">${escapeHtml(item.category)}</span>
+          <span class="pill">${Number(item.weightG||0)} g</span>
+          <span class="pill">Bestand ${Number(item.quantity||0)}</span>
+          ${item.location?`<span class="pill">${escapeHtml(item.location)}</span>`:""}
+          ${item.favorite?'<span class="pill">★ Favorit</span>':""}
+        </div>
+        ${item.notes?`<p>${escapeHtml(item.notes)}</p>`:""}
+        <div class="card-actions">
+          <button data-edit-gear="${item.id}">Bearbeiten</button>
+          <button class="danger" data-delete-gear="${item.id}">Löschen</button>
+        </div>
+      </article>
+    `).join("")
+    :'<div class="empty">Noch keine passenden Ausrüstungsartikel vorhanden.</div>';
+}
+
+document.getElementById("addGearBtn")?.addEventListener("click",()=>openGearDialog());
+
+gearForm?.addEventListener("submit",(event)=>{
+  event.preventDefault();
+  const id=document.getElementById("gearId").value||`gear-${Date.now()}`;
+
+  upsertGearLocal({
+    id,
+    name:document.getElementById("gearName").value.trim(),
+    brand:document.getElementById("gearBrand").value.trim(),
+    category:document.getElementById("gearCategory").value,
+    weightG:Number(document.getElementById("gearWeight").value||0),
+    quantity:Number(document.getElementById("gearQuantity").value||1),
+    location:document.getElementById("gearLocation").value.trim(),
+    notes:document.getElementById("gearNotes").value.trim(),
+    favorite:document.getElementById("gearFavorite").checked,
+    updatedAt:new Date().toISOString()
+  });
+
+  gearDialog.close();
+  renderGear();
+});
+
+document.getElementById("gearList")?.addEventListener("click",(event)=>{
+  const editId=event.target.dataset.editGear;
+  const deleteId=event.target.dataset.deleteGear;
+  const items=loadGearLocal();
+
+  if(editId){
+    const item=items.find(entry=>entry.id===editId);
+    if(item) openGearDialog(item);
+  }
+
+  if(deleteId&&confirm("Ausrüstungsartikel wirklich löschen?")){
+    deleteGearLocal(deleteId);
+    renderGear();
+  }
+});
+
+document.getElementById("gearSearch")?.addEventListener("input",renderGear);
+document.getElementById("gearCategoryFilter")?.addEventListener("change",renderGear);
+
 async function initialize() {
   let language = "de";
   let theme = "system";
@@ -2098,12 +2201,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40791";
+  window.location.href = "./?v=4080";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40791");
+    navigator.serviceWorker.register("sw.js?v=4080");
   });
 }
 

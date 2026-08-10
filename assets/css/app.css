@@ -152,3 +152,8 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .map-popup-badge{display:inline-block;margin-top:5px;padding:3px 7px;border-radius:999px;font-size:.76rem;font-weight:800}
 .map-popup-badge.start{background:#e7f0fb}
 .map-popup-badge.end{background:#e7f1e2}
+
+.gear-card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 6px 20px #0000000d}
+.gear-card.favorite{border-left:6px solid #c3a245}
+.gear-card h3{margin:0 0 6px}
+.gear-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}

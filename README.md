@@ -1,17 +1,14 @@
-# 3113 Adventures – Sprint 7.9.1 Hotfix
+# 3113 Adventures – Version 4.0.0 / Sprint 8.0
 
-## Korrektur Kartenwahl
-- auf der Etappenkarte werden neben bereits gespeicherten Orten nun auch die zuletzt gefundenen Versorgungstreffer der geöffneten Etappe angezeigt
-- ein noch nicht gespeicherter Treffer wird beim Festlegen als bevorzugter Start/Ziel zuerst gespeichert
-- danach wird er als bevorzugter Start oder Ziel gesetzt
-- bereits gespeicherte Orte funktionieren weiterhin
-- keine automatische Übernahme in den GPX-Track
-
-## Verwendung
-1. Bei einer Etappe `Versorgung suchen` und gewünschte Kategorie suchen.
-2. Etappe `Auf Karte` öffnen.
-3. Marker anklicken.
-4. `Als bevorzugten Start` oder `Als bevorzugtes Ziel` wählen.
+## Neu – Mein Transa
+- neues Register `Mein Transa`
+- persönliche Ausrüstung lokal verwalten
+- Felder: Name/Modell, Marke, Kategorie, Gewicht, Bestand, Lagerort, Notizen, Favorit
+- Suche und Kategorienfilter
+- Übersicht mit Gesamtgewicht, Artikelanzahl, Schuhe und Favoriten
+- Artikel bearbeiten und löschen
+- Grundlage für spätere Verknüpfung mit Touren, Packlisten und Schuhkilometern
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 7.9.1` stehen.
+Oben rechts muss `v4.0.0 · Sprint 8.0` stehen.
+Es gibt ein neues Register `Mein Transa`.

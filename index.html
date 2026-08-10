@@ -1,5 +1,5 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#41513d"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="assets/css/app.css?v=40791"><title>3113 Adventures</title></head><body><header class="topbar"><div><span class="brand-number">3113</span><h1>Adventures</h1></div><span class="version">v4.0.0 · Sprint 7.9.1</span></header><nav class="main-nav"><button class="active" data-page="dashboard" data-i18n="nav.dashboard">Übersicht</button><button data-page="tours" data-i18n="nav.tours">Touren</button><button data-page="stages" data-i18n="nav.stages">Etappen</button><button data-page="map" data-i18n="nav.map">Karte</button><button data-page="places" data-i18n="nav.places">Orte</button><button data-page="settings" data-i18n="nav.settings">Einstellungen</button></nav><main><section id="dashboard" class="page active"><article class="hero"><span class="badge">VERSION 4</span><h2>3113 Adventures</h2><p><span data-i18n="dashboard.subtitle">Die neue modulare PWA-Grundlage ist aktiv.</span></p></article><article class="card"><h3 data-i18n="dashboard.currentTour">Aktuelle Tour</h3><div id="currentTourCard" class="muted" data-i18n="dashboard.noTour">Noch keine Tour ausgewählt.</div></article>
+  <link rel="stylesheet" href="assets/css/app.css?v=4080"><title>3113 Adventures</title></head><body><header class="topbar"><div><span class="brand-number">3113</span><h1>Adventures</h1></div><span class="version">v4.0.0 · Sprint 8.0</span></header><nav class="main-nav"><button class="active" data-page="dashboard" data-i18n="nav.dashboard">Übersicht</button><button data-page="tours" data-i18n="nav.tours">Touren</button><button data-page="stages" data-i18n="nav.stages">Etappen</button><button data-page="map" data-i18n="nav.map">Karte</button><button data-page="places" data-i18n="nav.places">Orte</button><button data-page="gear">Mein Transa</button><button data-page="settings" data-i18n="nav.settings">Einstellungen</button></nav><main><section id="dashboard" class="page active"><article class="hero"><span class="badge">VERSION 4</span><h2>3113 Adventures</h2><p><span data-i18n="dashboard.subtitle">Die neue modulare PWA-Grundlage ist aktiv.</span></p></article><article class="card"><h3 data-i18n="dashboard.currentTour">Aktuelle Tour</h3><div id="currentTourCard" class="muted" data-i18n="dashboard.noTour">Noch keine Tour ausgewählt.</div></article>
 <article class="card">
   <h3>Tour-Fortschritt</h3>
   <div class="summary-grid">
@@ -178,6 +178,50 @@
 </article>
 <div id="placeList"></div>
 </section>
+
+<section id="gear" class="page">
+  <div class="section-header">
+    <div>
+      <h2>Mein Transa</h2>
+      <p class="muted">Persönliche Ausrüstung verwalten und später mit Touren und Etappen verknüpfen.</p>
+    </div>
+    <button id="addGearBtn" class="primary">Artikel hinzufügen</button>
+  </div>
+
+  <article class="card">
+    <div class="summary-grid">
+      <div><strong id="gearCount">0</strong><span>Artikel</span></div>
+      <div><strong id="gearWeightTotal">0 g</strong><span>Gesamtgewicht</span></div>
+      <div><strong id="gearShoeCount">0</strong><span>Schuhe</span></div>
+      <div><strong id="gearFavoriteCount">0</strong><span>Favoriten</span></div>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="generator-grid">
+      <label class="form-label">
+        <span>Suche</span>
+        <input id="gearSearch" placeholder="Marke, Modell, Kategorie …">
+      </label>
+      <label class="form-label">
+        <span>Kategorie</span>
+        <select id="gearCategoryFilter">
+          <option value="all">Alle</option>
+          <option value="shoes">Schuhe</option>
+          <option value="backpack">Rucksack</option>
+          <option value="sleep">Schlafen</option>
+          <option value="clothing">Bekleidung</option>
+          <option value="cooking">Kochen</option>
+          <option value="electronics">Elektronik</option>
+          <option value="other">Weiteres</option>
+        </select>
+      </label>
+    </div>
+  </article>
+
+  <div id="gearList"></div>
+</section>
+
 <section id="settings" class="page"><article class="card"><h2 data-i18n="settings.title">Einstellungen</h2><label class="form-label"><span data-i18n="settings.language">Sprache</span><select id="languageSelect"><option value="de">Deutsch</option><option value="en">English</option></select></label><label class="form-label"><span data-i18n="settings.appearance">Darstellung</span><select id="themeSelect"><option value="system" data-i18n="settings.system">System</option><option value="light" data-i18n="settings.light">Hell</option><option value="dark" data-i18n="settings.dark">Dunkel</option></select></label><div class="button-row"><button id="saveSettings" class="primary" data-i18n="settings.save">Speichern</button><button id="refreshApp" class="secondary" data-i18n="settings.refresh">App-Dateien aktualisieren</button></div><p id="settingsStatus" class="muted"></p></article><article class="card"><h3 data-i18n="database.title">Lokale Datenbank</h3><p data-i18n="database.text">IndexedDB ist vorbereitet und speichert Einstellungen lokal auf diesem Gerät.</p><p id="databaseStatus" class="muted"></p></article>
 <article class="card">
   <h3>Tour sichern & wiederherstellen</h3>
@@ -192,7 +236,7 @@
   <div id="backupStatus" class="info-strip muted"></div>
 </article>
 </section></main><script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script type="module" src="assets/js/app.js?v=40791"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
+  <script type="module" src="assets/js/app.js?v=4080"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
 <dialog id="stageDialog">
   <form id="stageForm">
     <div class="dialog-header">
@@ -386,6 +430,40 @@
     <button id="trackEditorSaveBtn" class="primary" type="button">Track speichern</button>
     <button class="secondary" type="button" data-close="trackEditorDialog">Abbrechen</button>
   </div>
+</dialog>
+
+
+<dialog id="gearDialog">
+  <form id="gearForm">
+    <div class="dialog-header">
+      <h2>Ausrüstung</h2>
+      <button type="button" class="close-btn" data-close="gearDialog">×</button>
+    </div>
+    <input id="gearId" type="hidden">
+    <label class="form-label"><span>Name / Modell</span><input id="gearName" required></label>
+    <label class="form-label"><span>Marke</span><input id="gearBrand"></label>
+    <label class="form-label">
+      <span>Kategorie</span>
+      <select id="gearCategory">
+        <option value="shoes">Schuhe</option>
+        <option value="backpack">Rucksack</option>
+        <option value="sleep">Schlafen</option>
+        <option value="clothing">Bekleidung</option>
+        <option value="cooking">Kochen</option>
+        <option value="electronics">Elektronik</option>
+        <option value="other">Weiteres</option>
+      </select>
+    </label>
+    <label class="form-label"><span>Gewicht (g)</span><input id="gearWeight" type="number" min="0" step="1"></label>
+    <label class="form-label"><span>Bestand</span><input id="gearQuantity" type="number" min="0" step="1" value="1"></label>
+    <label class="form-label"><span>Lagerort</span><input id="gearLocation"></label>
+    <label class="form-label"><span>Notizen</span><textarea id="gearNotes" rows="3"></textarea></label>
+    <label class="checkbox"><input id="gearFavorite" type="checkbox"><span>Favorit</span></label>
+    <div class="button-row">
+      <button type="submit" class="primary">Speichern</button>
+      <button type="button" class="secondary" data-close="gearDialog">Abbrechen</button>
+    </div>
+  </form>
 </dialog>
 
 </body></html>
