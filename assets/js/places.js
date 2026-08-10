@@ -133,8 +133,8 @@ export function buildOverpassQuery(bounds,category){
       'nwr["shop"="sports"]',
       'nwr["shop"="outdoor"]',
       'nwr["shop"="sports"]["sport"="running"]',
-      'nwr["brand"~"Topo Athletic|Altra|Decathlon",i]',
-      'nwr["name"~"Topo Athletic|Altra|Decathlon",i]'
+      'nwr["brand"~"Topo Athletic|Altra|Salomon|Decathlon",i]',
+      'nwr["name"~"Topo Athletic|Altra|Salomon|Decathlon",i]'
     ]
   };
 
