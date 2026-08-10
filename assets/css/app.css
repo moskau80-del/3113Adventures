@@ -571,3 +571,26 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
 .cloud-sync-dot.syncing,.cloud-sync-dot.pending{background:#d9952c}
 .cloud-sync-dot.offline{background:#7d8794}
 .cloud-sync-dot.error,.cloud-sync-dot.conflict{background:#c64c4c}
+
+/* ===== Sprint 10.2 Mobile navigation + sync ===== */
+@media(max-width:900px){
+  .mobile-bottom-nav{
+    display:flex;
+    overflow-x:auto;
+    overflow-y:hidden;
+    justify-content:flex-start;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .mobile-bottom-nav::-webkit-scrollbar{display:none}
+  .mobile-bottom-nav button{
+    flex:0 0 76px;
+    min-width:76px;
+  }
+}
+@media(max-width:430px){
+  .mobile-bottom-nav button{
+    flex-basis:72px;
+    min-width:72px;
+  }
+}
