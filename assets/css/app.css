@@ -544,3 +544,19 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
 .stock-status span{font-size:.68rem;color:#718095;margin-top:2px}
 .gear-actions button:disabled{opacity:.35;cursor:not-allowed;background:#f3f5f7!important}
 #gearList tr:hover .gear-name strong{color:#0b4d87}
+
+/* ===== Sprint 10.0 Cloud ===== */
+.cloud-card{margin-top:16px}
+.cloud-auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.cloud-sync-panel{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  margin:14px 0;padding:14px;border:1px solid #dce7f2;border-radius:12px;background:#f7fbff
+}
+.cloud-sync-panel>div:first-child{display:flex;flex-direction:column;gap:3px}
+.cloud-card details{border:1px solid #e2e9f0;border-radius:10px;padding:10px 12px}
+.cloud-card details summary{cursor:pointer;font-weight:800;color:#174e80}
+.info-strip.error{background:#fff0f0;color:#8a3434;border-color:#efcaca}
+@media(max-width:700px){
+  .cloud-auth-grid{grid-template-columns:1fr}
+  .cloud-sync-panel{align-items:flex-start;flex-direction:column}
+}

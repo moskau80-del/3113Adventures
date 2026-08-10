@@ -9,14 +9,16 @@ import {
   seedDefaultTour,
   saveTrack,
   getTrack,
-  deleteTrack
-} from "./database.js?v=40912";
+  deleteTrack,
+  getAllSettings,
+  clearAppDatabase
+} from "./database.js?v=4100";
 
-import { loadLanguage, translate } from "./i18n.js?v=40912";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40912";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40912";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40912";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40912";
+import { loadLanguage, translate } from "./i18n.js?v=4100";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4100";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4100";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4100";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4100";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -3277,6 +3279,342 @@ async function renderSidebarSummary(){
   }
 }
 
+
+const CLOUD_CONFIG_KEY="3113-cloud-config-v1";
+const CLOUD_AUTOLOAD_KEY="3113-cloud-autoload-v1";
+let cloudClient=null;
+
+function getCloudConfig(){
+  try{
+    return JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY)||"{}");
+  }catch{
+    return {};
+  }
+}
+
+function saveCloudConfig(url,key){
+  localStorage.setItem(CLOUD_CONFIG_KEY,JSON.stringify({
+    url:String(url||"").trim(),
+    key:String(key||"").trim()
+  }));
+}
+
+function createCloudClient(){
+  const config=getCloudConfig();
+  if(!config.url||!config.key||!window.supabase?.createClient){
+    cloudClient=null;
+    return null;
+  }
+
+  cloudClient=window.supabase.createClient(config.url,config.key,{
+    auth:{
+      persistSession:true,
+      autoRefreshToken:true,
+      detectSessionInUrl:true
+    }
+  });
+  return cloudClient;
+}
+
+function cloudSetStatus(message,error=false){
+  const el=document.getElementById("cloudStatus");
+  if(el){
+    el.textContent=message;
+    el.classList.toggle("error",Boolean(error));
+  }
+}
+
+function cloudSetBusy(busy){
+  ["cloudUploadBtn","cloudDownloadBtn","cloudSignInBtn","cloudSignUpBtn","cloudSignOutBtn"]
+    .forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.disabled=Boolean(busy);
+    });
+}
+
+async function cloudCurrentUser(){
+  if(!cloudClient) return null;
+  const {data,error}=await cloudClient.auth.getUser();
+  if(error) return null;
+  return data?.user||null;
+}
+
+async function renderCloudState(){
+  const config=getCloudConfig();
+  const urlInput=document.getElementById("cloudSupabaseUrl");
+  const keyInput=document.getElementById("cloudSupabaseKey");
+  if(urlInput&&!urlInput.value) urlInput.value=config.url||"";
+  if(keyInput&&!keyInput.value) keyInput.value=config.key||"";
+
+  const auto=document.getElementById("cloudAutoLoad");
+  if(auto) auto.checked=localStorage.getItem(CLOUD_AUTOLOAD_KEY)==="1";
+
+  const badge=document.getElementById("cloudStateBadge");
+  const label=document.getElementById("cloudUserLabel");
+
+  if(!cloudClient){
+    if(badge) badge.textContent=config.url?"Verbindung prüfen":"Nicht verbunden";
+    if(label) label.textContent="Nicht angemeldet";
+    return;
+  }
+
+  const user=await cloudCurrentUser();
+  if(user){
+    if(badge) badge.textContent="Cloud aktiv";
+    if(label) label.textContent=user.email||"Angemeldet";
+  }else{
+    if(badge) badge.textContent="Bereit";
+    if(label) label.textContent="Nicht angemeldet";
+  }
+}
+
+function collect3113LocalStorage(){
+  const values={};
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(!key) continue;
+    if(key.startsWith("3113-") && key!==CLOUD_CONFIG_KEY && key!==CLOUD_AUTOLOAD_KEY){
+      values[key]=localStorage.getItem(key);
+    }
+  }
+  return values;
+}
+
+async function buildCloudSnapshot(){
+  const tours=await getAllTours();
+  const tracks=[];
+
+  for(const tour of tours){
+    const track=await getTrack(tour.id);
+    if(track) tracks.push(track);
+  }
+
+  const settings=await getAllSettings();
+
+  return {
+    schema:"3113-adventures-cloud-snapshot",
+    schemaVersion:1,
+    appVersion:"v4.0.0 · Sprint 10.0",
+    exportedAt:new Date().toISOString(),
+    indexedDb:{
+      tours,
+      tracks,
+      settings
+    },
+    localStorage:collect3113LocalStorage()
+  };
+}
+
+async function restoreCloudSnapshot(snapshot){
+  if(!snapshot||snapshot.schema!=="3113-adventures-cloud-snapshot"){
+    throw new Error("Cloud-Datensatz hat ein unbekanntes Format.");
+  }
+
+  const indexed=snapshot.indexedDb||{};
+  await clearAppDatabase();
+
+  for(const setting of indexed.settings||[]){
+    await setSetting(setting.key,setting.value);
+  }
+
+  for(const tour of indexed.tours||[]){
+    await saveTour(tour);
+  }
+
+  for(const track of indexed.tracks||[]){
+    await saveTrack(track);
+  }
+
+  // Only clear app-owned local keys, never Supabase auth/session or unrelated site data.
+  const toDelete=[];
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key&&key.startsWith("3113-")&&key!==CLOUD_CONFIG_KEY&&key!==CLOUD_AUTOLOAD_KEY){
+      toDelete.push(key);
+    }
+  }
+  toDelete.forEach(key=>localStorage.removeItem(key));
+
+  Object.entries(snapshot.localStorage||{}).forEach(([key,value])=>{
+    if(key.startsWith("3113-")&&key!==CLOUD_CONFIG_KEY&&key!==CLOUD_AUTOLOAD_KEY){
+      localStorage.setItem(key,String(value));
+    }
+  });
+}
+
+async function uploadCloudSnapshot(){
+  if(!cloudClient) throw new Error("Supabase-Verbindung ist nicht eingerichtet.");
+  const user=await cloudCurrentUser();
+  if(!user) throw new Error("Bitte zuerst anmelden.");
+
+  const payload=await buildCloudSnapshot();
+  const now=new Date().toISOString();
+
+  const {error}=await cloudClient
+    .from("user_snapshots")
+    .upsert({
+      user_id:user.id,
+      payload,
+      updated_at:now
+    },{onConflict:"user_id"});
+
+  if(error) throw error;
+
+  localStorage.setItem("3113-cloud-last-sync",now);
+  const last=document.getElementById("cloudLastSync");
+  if(last) last.textContent=`Zuletzt gespeichert: ${new Date(now).toLocaleString("de-CH")}`;
+  return payload;
+}
+
+async function downloadCloudSnapshot(){
+  if(!cloudClient) throw new Error("Supabase-Verbindung ist nicht eingerichtet.");
+  const user=await cloudCurrentUser();
+  if(!user) throw new Error("Bitte zuerst anmelden.");
+
+  const {data,error}=await cloudClient
+    .from("user_snapshots")
+    .select("payload,updated_at")
+    .eq("user_id",user.id)
+    .maybeSingle();
+
+  if(error) throw error;
+  if(!data?.payload) throw new Error("In der Cloud ist noch kein App-Stand gespeichert.");
+
+  await restoreCloudSnapshot(data.payload);
+
+  const last=document.getElementById("cloudLastSync");
+  if(last) last.textContent=`Cloud-Stand geladen: ${new Date(data.updated_at).toLocaleString("de-CH")}`;
+
+  return data;
+}
+
+document.getElementById("saveCloudConfigBtn")?.addEventListener("click",async()=>{
+  const url=document.getElementById("cloudSupabaseUrl")?.value||"";
+  const key=document.getElementById("cloudSupabaseKey")?.value||"";
+
+  if(!url.trim()||!key.trim()){
+    cloudSetStatus("Bitte Supabase Project URL und Browser-Schlüssel eingeben.",true);
+    return;
+  }
+
+  saveCloudConfig(url,key);
+  createCloudClient();
+  await renderCloudState();
+  cloudSetStatus("Supabase-Verbindung auf diesem Gerät gespeichert.");
+});
+
+document.getElementById("cloudSignUpBtn")?.addEventListener("click",async()=>{
+  try{
+    cloudSetBusy(true);
+    if(!cloudClient) createCloudClient();
+    if(!cloudClient) throw new Error("Bitte zuerst die Supabase-Verbindung einrichten.");
+
+    const email=document.getElementById("cloudEmail")?.value.trim();
+    const password=document.getElementById("cloudPassword")?.value||"";
+    if(!email||!password) throw new Error("E-Mail und Passwort eingeben.");
+
+    const {data,error}=await cloudClient.auth.signUp({email,password});
+    if(error) throw error;
+
+    await renderCloudState();
+    cloudSetStatus(data?.session
+      ?"Konto erstellt und angemeldet."
+      :"Konto erstellt. Falls E-Mail-Bestätigung aktiviert ist, bitte zuerst die E-Mail bestätigen.");
+  }catch(error){
+    cloudSetStatus(`Konto konnte nicht erstellt werden: ${error.message}`,true);
+  }finally{
+    cloudSetBusy(false);
+  }
+});
+
+document.getElementById("cloudSignInBtn")?.addEventListener("click",async()=>{
+  try{
+    cloudSetBusy(true);
+    if(!cloudClient) createCloudClient();
+    if(!cloudClient) throw new Error("Bitte zuerst die Supabase-Verbindung einrichten.");
+
+    const email=document.getElementById("cloudEmail")?.value.trim();
+    const password=document.getElementById("cloudPassword")?.value||"";
+    if(!email||!password) throw new Error("E-Mail und Passwort eingeben.");
+
+    const {error}=await cloudClient.auth.signInWithPassword({email,password});
+    if(error) throw error;
+
+    await renderCloudState();
+    cloudSetStatus("Angemeldet.");
+
+    if(localStorage.getItem(CLOUD_AUTOLOAD_KEY)==="1"){
+      await downloadCloudSnapshot();
+      window.location.reload();
+    }
+  }catch(error){
+    cloudSetStatus(`Anmeldung fehlgeschlagen: ${error.message}`,true);
+  }finally{
+    cloudSetBusy(false);
+  }
+});
+
+document.getElementById("cloudSignOutBtn")?.addEventListener("click",async()=>{
+  try{
+    cloudSetBusy(true);
+    if(cloudClient) await cloudClient.auth.signOut();
+    await renderCloudState();
+    cloudSetStatus("Abgemeldet. Lokale Daten bleiben auf diesem Gerät erhalten.");
+  }catch(error){
+    cloudSetStatus(`Abmelden fehlgeschlagen: ${error.message}`,true);
+  }finally{
+    cloudSetBusy(false);
+  }
+});
+
+document.getElementById("cloudUploadBtn")?.addEventListener("click",async()=>{
+  try{
+    cloudSetBusy(true);
+    await uploadCloudSnapshot();
+    cloudSetStatus("Vollständiger App-Stand in der Cloud gespeichert.");
+  }catch(error){
+    cloudSetStatus(`Cloud-Speichern fehlgeschlagen: ${error.message}`,true);
+  }finally{
+    cloudSetBusy(false);
+  }
+});
+
+document.getElementById("cloudDownloadBtn")?.addEventListener("click",async()=>{
+  if(!confirm("Cloud-Stand laden? Die lokalen 3113ADVENTURE-Daten auf diesem Gerät werden dadurch ersetzt.")) return;
+
+  try{
+    cloudSetBusy(true);
+    await downloadCloudSnapshot();
+    cloudSetStatus("Cloud-Stand geladen. App wird neu gestartet.");
+    setTimeout(()=>window.location.reload(),500);
+  }catch(error){
+    cloudSetStatus(`Cloud-Laden fehlgeschlagen: ${error.message}`,true);
+  }finally{
+    cloudSetBusy(false);
+  }
+});
+
+document.getElementById("cloudAutoLoad")?.addEventListener("change",event=>{
+  localStorage.setItem(CLOUD_AUTOLOAD_KEY,event.target.checked?"1":"0");
+});
+
+async function initializeCloud(){
+  createCloudClient();
+  await renderCloudState();
+
+  const lastSync=localStorage.getItem("3113-cloud-last-sync");
+  const last=document.getElementById("cloudLastSync");
+  if(last&&lastSync){
+    last.textContent=`Letzte lokale Cloud-Aktion: ${new Date(lastSync).toLocaleString("de-CH")}`;
+  }
+
+  if(cloudClient){
+    cloudClient.auth.onAuthStateChange(()=>{
+      setTimeout(()=>renderCloudState(),0);
+    });
+  }
+}
+
 async function initialize() {
   let language = "de";
   let theme = "system";
@@ -3349,6 +3687,12 @@ async function initialize() {
       ? `App geladen · ${startupErrors.length} Teilfehler (siehe Konsole).`
       : translate("database.ready", "IndexedDB ist bereit.");
   }
+
+  try{
+    await initializeCloud();
+  }catch(error){
+    console.warn("Cloud konnte nicht initialisiert werden:",error);
+  }
 }
 
 document.getElementById("saveSettings")?.addEventListener("click", async () => {
@@ -3393,12 +3737,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40912";
+  window.location.href = "./?v=4100";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40912");
+    navigator.serviceWorker.register("sw.js?v=4100");
   });
 }
 

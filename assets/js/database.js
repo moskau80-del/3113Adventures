@@ -154,3 +154,30 @@ export async function getTrack(tourId) {
 export async function deleteTrack(tourId) {
   return withStore(TRACKS_STORE, "readwrite", (store) => store.delete(tourId));
 }
+
+
+export async function getAllSettings(){
+  const database=await openDatabase();
+  return new Promise((resolve,reject)=>{
+    const transaction=database.transaction(SETTINGS_STORE,"readonly");
+    const request=transaction.objectStore(SETTINGS_STORE).getAll();
+    request.onsuccess=()=>resolve(request.result||[]);
+    request.onerror=()=>reject(request.error);
+  });
+}
+
+export async function clearAppDatabase(){
+  const database=await openDatabase();
+  return new Promise((resolve,reject)=>{
+    const transaction=database.transaction(
+      [SETTINGS_STORE,TOURS_STORE,TRACKS_STORE],
+      "readwrite"
+    );
+    transaction.objectStore(SETTINGS_STORE).clear();
+    transaction.objectStore(TOURS_STORE).clear();
+    transaction.objectStore(TRACKS_STORE).clear();
+    transaction.oncomplete=()=>resolve(true);
+    transaction.onerror=()=>reject(transaction.error);
+    transaction.onabort=()=>reject(transaction.error);
+  });
+}
