@@ -1,29 +1,11 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 10.1
+# 3113 Adventures – Sprint 10.1.1
 
-## Automatische Synchronisation
-Unter `Einstellungen -> Cloud & mehrere Geräte` kann jetzt
-`Änderungen automatisch synchronisieren` aktiviert werden.
+## Anmeldung dauerhaft speichern
+- Supabase Auth verwendet explizit `localStorage`.
+- eigene persistente Session unter `3113-adventures-auth`.
+- `persistSession` bleibt aktiviert.
+- Access Tokens werden automatisch erneuert (`autoRefreshToken`).
+- beim App-Start wird eine vorhandene Session wiederhergestellt und geprüft.
+- Abmelden löscht die Session weiterhin bewusst.
 
-### Verhalten
-- lokale Änderungen werden nach kurzer Verzögerung automatisch hochgeladen
-- alle 30 Sekunden wird geprüft, ob auf einem anderen Gerät ein neuer Cloud-Stand vorliegt
-- beim App-Start wird ebenfalls geprüft
-- nach Rückkehr aus dem Offline-Modus wird synchronisiert
-- Statusanzeige:
-  - ✓ Synchronisiert
-  - Synchronisiere …
-  - Offline – Änderungen ausstehend
-  - Konflikt – bitte Cloud laden oder speichern
-
-### Konfliktschutz
-Wenn sowohl dieses Gerät als auch die Cloud seit der letzten bekannten
-Synchronisation geändert wurden, überschreibt Sprint 10.1 keinen Stand
-automatisch. Der Benutzer entscheidet dann über die bestehenden manuellen
-Buttons `Cloud speichern` oder `Cloud laden`.
-
-### Manuelle Cloud-Buttons
-Bleiben als Backup-/Notfallfunktion erhalten.
-
-### Supabase
-Keine neue SQL-Datei erforderlich. Sprint 10.1 verwendet weiterhin
-`user_sync_chunks` aus Sprint 10.0.2.
+Damit muss sich der Benutzer auf einem Gerät normalerweise nur einmal anmelden.

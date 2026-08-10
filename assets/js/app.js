@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=4101";
+} from "./database.js?v=41011";
 
-import { loadLanguage, translate } from "./i18n.js?v=4101";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4101";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4101";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4101";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4101";
+import { loadLanguage, translate } from "./i18n.js?v=41011";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41011";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41011";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41011";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41011";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -3310,7 +3310,9 @@ function createCloudClient(){
     auth:{
       persistSession:true,
       autoRefreshToken:true,
-      detectSessionInUrl:true
+      detectSessionInUrl:true,
+      storage:window.localStorage,
+      storageKey:"3113-adventures-auth"
     }
   });
   return cloudClient;
@@ -3365,7 +3367,7 @@ async function renderCloudState(){
   if(user){
     if(badge) badge.textContent="Cloud aktiv";
     if(label) label.textContent=user.email||"Angemeldet";
-    cloudSetStatus(`Cloud verbunden · angemeldet als ${user.email||"Benutzer"}.`);
+    cloudSetStatus(`Cloud verbunden · angemeldet als ${user.email||"Benutzer"}. Die Anmeldung bleibt auf diesem Gerät gespeichert.`);
   }else{
     if(badge) badge.textContent="Bereit";
     if(label) label.textContent="Nicht angemeldet";
@@ -3950,6 +3952,19 @@ async function initializeCloud(){
   createCloudClient();
   installLocalChangeWatcher();
 
+  if(cloudClient){
+    try{
+      const {data}=await cloudClient.auth.getSession();
+      if(data?.session){
+        // Supabase refreshes the access token automatically; the persisted
+        // refresh token keeps the user signed in across app/browser restarts.
+        await cloudClient.auth.getUser();
+      }
+    }catch(error){
+      console.warn("Gespeicherte Anmeldung konnte nicht geprüft werden:",error);
+    }
+  }
+
   const autoSync=document.getElementById("cloudAutoSync");
   if(autoSync) autoSync.checked=autoSyncEnabled();
 
@@ -4105,12 +4120,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4101";
+  window.location.href = "./?v=41011";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4101");
+    navigator.serviceWorker.register("sw.js?v=41011");
   });
 }
 
