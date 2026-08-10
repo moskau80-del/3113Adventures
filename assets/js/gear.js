@@ -120,3 +120,25 @@ export function updatePersonPackItemLocal(tourId,personKey,gearId,changes){
   pack[index]={...pack[index],...changes};
   return saveTourPersonPackLocal(tourId,personKey,pack);
 }
+
+
+export function packedQuantityAcrossPersons(tourId,gearId){
+  const p1=loadTourPersonPackLocal(tourId,"person1")
+    .find(item=>item.gearId===gearId);
+  const p2=loadTourPersonPackLocal(tourId,"person2")
+    .find(item=>item.gearId===gearId);
+
+  return Number(p1?.quantity||0)+Number(p2?.quantity||0);
+}
+
+export function availableQuantityForPerson(tourId,personKey,gearId,stock){
+  const own=loadTourPersonPackLocal(tourId,personKey)
+    .find(item=>item.gearId===gearId);
+  const otherKey=personKey==="person1"?"person2":"person1";
+  const other=loadTourPersonPackLocal(tourId,otherKey)
+    .find(item=>item.gearId===gearId);
+
+  const maxStock=Math.max(0,Number(stock||0));
+  const usedByOther=Number(other?.quantity||0);
+  return Math.max(0,maxStock-usedByOther);
+}

@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4089";
+} from "./database.js?v=4090";
 
-import { loadLanguage, translate } from "./i18n.js?v=4089";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4089";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4089";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4089";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4089";
+import { loadLanguage, translate } from "./i18n.js?v=4090";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4090";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4090";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson } from "./gear.js?v=4090";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4090";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2082,7 +2082,8 @@ async function renderTourPack(){
 
         <label>
           <span>Menge</span>
-          <input type="number" data-pack-quantity="${item.id}" min="1" step="1" value="${quantity}">
+          <input type="number" data-pack-quantity="${item.id}" min="1" max="${availableQuantityForPerson(activeTour.id,activePackPerson,item.id,Number(item.stock??item.quantity??1))}" step="1" value="${quantity}">
+          <small class="muted">Bestand ${Number(item.stock??item.quantity??1)}</small>
         </label>
 
         <label>
@@ -2130,8 +2131,43 @@ document.getElementById("tourPackList")?.addEventListener("change",async(event)=
   const qtyId=event.target.dataset.packQuantity;
   const wornId=event.target.dataset.packWorn;
 
-  if(toggleId) toggleGearInPersonPackLocal(activeTour.id,activePackPerson,toggleId);
-  if(qtyId) updatePersonPackItemLocal(activeTour.id,activePackPerson,qtyId,{quantity:Math.max(1,Number(event.target.value||1))});
+  if(toggleId){
+    const gearItem=loadGearLocal().find(item=>item.id===toggleId);
+    if(gearItem){
+      const used=packedQuantityAcrossPersons(activeTour.id,toggleId);
+      const stock=Number(gearItem.stock??gearItem.quantity??1);
+      if(used>=stock){
+        alert(`Nicht möglich. Bestand: ${stock}. Bereits eingepackt: ${used}.`);
+      }else{
+        toggleGearInPersonPackLocal(activeTour.id,activePackPerson,toggleId);
+      }
+    }
+  }
+
+  if(qtyId){
+    const gearItem=loadGearLocal().find(item=>item.id===qtyId);
+    if(gearItem){
+      const maxForPerson=availableQuantityForPerson(
+        activeTour.id,
+        activePackPerson,
+        qtyId,
+        Number(gearItem.stock??gearItem.quantity??1)
+      );
+      const requested=Math.max(1,Number(event.target.value||1));
+      const quantity=Math.min(requested,maxForPerson);
+
+      if(requested>maxForPerson){
+        alert(`Maximal ${maxForPerson} Stück möglich. Gesamtbestand: ${Number(gearItem.stock??gearItem.quantity??1)}.`);
+      }
+
+      if(maxForPerson<=0){
+        event.target.value=1;
+      }else{
+        updatePersonPackItemLocal(activeTour.id,activePackPerson,qtyId,{quantity});
+      }
+    }
+  }
+
   if(wornId) updatePersonPackItemLocal(activeTour.id,activePackPerson,wornId,{worn:event.target.checked});
 
   await renderTourPack();
@@ -2468,9 +2504,17 @@ document.getElementById("gearList")?.addEventListener("click",async(event)=>{
     const personKey=person1Id?"person1":"person2";
     const gearId=person1Id||person2Id;
     const currentPack=loadTourPersonPackLocal(activeTour.id,personKey);
+    const gearItem=loadGearLocal().find(item=>item.id===gearId);
 
-    if(!currentPack.some(item=>item.gearId===gearId)){
-      toggleGearInPersonPackLocal(activeTour.id,personKey,gearId);
+    if(gearItem&&!currentPack.some(item=>item.gearId===gearId)){
+      const used=packedQuantityAcrossPersons(activeTour.id,gearId);
+      const stock=Number(gearItem.stock??gearItem.quantity??1);
+
+      if(used>=stock){
+        alert(`Artikel kann nicht hinzugefügt werden. Bestand: ${stock}. Bereits eingepackt: ${used}.`);
+      }else{
+        toggleGearInPersonPackLocal(activeTour.id,personKey,gearId);
+      }
     }
 
     activePackPerson=personKey;
@@ -2565,9 +2609,17 @@ document.querySelectorAll("[data-pack-drop-person]").forEach(zone=>{
 
     const currentPack=loadTourPersonPackLocal(activeTour.id,personKey);
     const exists=currentPack.some(item=>item.gearId===gearId);
+    const gearItem=loadGearLocal().find(item=>item.id===gearId);
 
-    if(!exists){
-      toggleGearInPersonPackLocal(activeTour.id,personKey,gearId);
+    if(!exists&&gearItem){
+      const used=packedQuantityAcrossPersons(activeTour.id,gearId);
+      const stock=Number(gearItem.stock??gearItem.quantity??1);
+
+      if(used>=stock){
+        alert(`Artikel kann nicht hinzugefügt werden. Bestand: ${stock}. Bereits eingepackt: ${used}.`);
+      }else{
+        toggleGearInPersonPackLocal(activeTour.id,personKey,gearId);
+      }
     }
 
     activePackPerson=personKey;
@@ -2736,12 +2788,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4089";
+  window.location.href = "./?v=4090";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4089");
+    navigator.serviceWorker.register("sw.js?v=4090");
   });
 }
 
