@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4096";
+} from "./database.js?v=40961";
 
-import { loadLanguage, translate } from "./i18n.js?v=4096";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4096";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4096";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4096";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4096";
+import { loadLanguage, translate } from "./i18n.js?v=40961";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40961";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40961";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40961";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40961";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -1338,33 +1338,28 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
 
   if(shoeSupplyStageId){
     const stage=stages.find(item=>item.id===shoeSupplyStageId);
-    if(stage){
+    if(stage&&!stage.restDay){
       currentSupplyStageId=stage.id;
-      const activeTour=await getActiveTour();
-      if(activeTour){
-        // switch to places page and preselect footwear search
-        document.querySelectorAll(".main-nav button").forEach(btn=>btn.classList.remove("active"));
-        document.querySelectorAll(".page").forEach(page=>page.classList.remove("active"));
-        document.querySelector('[data-page="places"]')?.classList.add("active");
-        document.getElementById("places")?.classList.add("active");
+      currentSupplyCategory="footwear";
+      currentSupplyResults=[];
 
-        const categorySelect=document.getElementById("supplyCategory");
-        if(categorySelect) categorySelect.value="footwear";
+      document.querySelectorAll("[data-supply-category]").forEach(button=>{
+        button.classList.toggle("active",button.dataset.supplyCategory==="footwear");
+      });
 
-        const stageSelect=document.getElementById("supplyStageSelect");
-        if(stageSelect) stageSelect.value=stage.id;
+      const personName=shoePersonKey==="person2"
+        ?loadPackNamesLocal(activeTour.id).person2
+        :loadPackNamesLocal(activeTour.id).person1;
 
-        await renderPlaces();
+      document.getElementById("supplyStageInfo").innerHTML=
+        `<strong>${escapeHtml(stage.name)}</strong><br>`+
+        `${escapeHtml(stage.from)} → ${escapeHtml(stage.to)} · ${Number(stage.distanceKm||0).toFixed(1)} km<br>`+
+        `<span class="muted">Schuhwechsel ${escapeHtml(personName)}</span>`;
 
-        const personName=shoePersonKey==="person2"
-          ?loadPackNamesLocal(activeTour.id).person2
-          :loadPackNamesLocal(activeTour.id).person1;
-
-        const info=document.getElementById("placesStatus")||document.getElementById("supplyStatus");
-        if(info){
-          info.textContent=`Schuhwechsel ${personName}: Versorgung rund um Etappe ${stage.order||stage.number||""} vorbereiten.`;
-        }
-      }
+      document.getElementById("supplyStatus").textContent=
+        "Schuhe / Outdoor ist ausgewählt. Jetzt «Suchen» drücken.";
+      document.getElementById("supplyResults").innerHTML="";
+      document.getElementById("supplyDialog").showModal();
     }
     return;
   }
@@ -1421,20 +1416,31 @@ document.getElementById("stageTimeline")?.addEventListener("click",(event)=>{
 
 
 function stageTrackSegment(trackPoints,stage){
-  if(!trackPoints?.length) return [];
+  if(!trackPoints?.length||!stage) return [];
 
-  let startIndex=0,endIndex=trackPoints.length-1;
-  let startBest=Infinity,endBest=Infinity;
+  // Preferred: determine the exact stage segment from coordinates.
+  if(stage.startCoord&&stage.endCoord){
+    let startIndex=0,endIndex=trackPoints.length-1;
+    let startBest=Infinity,endBest=Infinity;
 
-  trackPoints.forEach((point,index)=>{
-    const ds=(point.lat-stage.startCoord.lat)**2+(point.lng-stage.startCoord.lng)**2;
-    const de=(point.lat-stage.endCoord.lat)**2+(point.lng-stage.endCoord.lng)**2;
-    if(ds<startBest){startBest=ds;startIndex=index}
-    if(de<endBest){endBest=de;endIndex=index}
-  });
+    trackPoints.forEach((point,index)=>{
+      const ds=(point.lat-stage.startCoord.lat)**2+(point.lng-stage.startCoord.lng)**2;
+      const de=(point.lat-stage.endCoord.lat)**2+(point.lng-stage.endCoord.lng)**2;
+      if(ds<startBest){startBest=ds;startIndex=index}
+      if(de<endBest){endBest=de;endIndex=index}
+    });
 
-  if(startIndex>endIndex)[startIndex,endIndex]=[endIndex,startIndex];
-  return trackPoints.slice(startIndex,endIndex+1);
+    if(startIndex>endIndex)[startIndex,endIndex]=[endIndex,startIndex];
+    return trackPoints.slice(startIndex,endIndex+1);
+  }
+
+  // Fallback for older/recreated stages: use stored track indexes when available.
+  const startIndex=Math.max(0,Number(stage.startIndex??stage.trackStartIndex??0));
+  const endIndex=Math.min(
+    trackPoints.length-1,
+    Number(stage.endIndex??stage.trackEndIndex??trackPoints.length-1)
+  );
+  return trackPoints.slice(Math.min(startIndex,endIndex),Math.max(startIndex,endIndex)+1);
 }
 
 function renderSupplyResults(results){
@@ -1465,13 +1471,27 @@ document.querySelectorAll("[data-supply-category]").forEach(button=>{
 
 document.getElementById("runSupplySearchBtn")?.addEventListener("click",async()=>{
   const activeTour=await getActiveTour();
-  if(!activeTour||!currentSupplyStageId) return;
+  if(!activeTour){
+    alert("Keine aktive Tour vorhanden.");
+    return;
+  }
+  if(!currentSupplyStageId){
+    alert("Bitte zuerst bei einer Etappe «Versorgung» öffnen.");
+    return;
+  }
 
   const stages=loadStagesLocal(activeTour.id);
   const stage=stages.find(item=>item.id===currentSupplyStageId);
   const track=await getTrack(activeTour.id);
 
-  if(!stage||!track?.points?.length) return;
+  if(!stage){
+    alert("Die ausgewählte Etappe wurde nicht gefunden.");
+    return;
+  }
+  if(!track?.points?.length){
+    alert("Für diese Tour ist kein GPX-Track verfügbar.");
+    return;
+  }
 
   const segment=stageTrackSegment(track.points,stage);
   if(segment.length<2){
@@ -3152,12 +3172,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4096";
+  window.location.href = "./?v=40961";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4096");
+    navigator.serviceWorker.register("sw.js?v=40961");
   });
 }
 

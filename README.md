@@ -1,20 +1,16 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 9.6
+# 3113 Adventures – Sprint 9.6.1 Hotfix
 
-## Neu – Roadbook
-- eigenes Register `Roadbook`
-- Etappe auswählen
-- kompakte Tagesansicht mit:
-  - Datum
-  - Distanz
-  - Aufstieg
-  - Abstieg
-  - Gehzeit
-  - Start und Ziel
-  - bevorzugter Start und bevorzugtes Ziel
-  - Versorgung
-  - Schuhwechsel-Hinweise je Person
-  - Notizen
-- eigener Roadbook-Druck
+## Orte / Versorgung
+- manuelle Versorgungssuche pro Etappe wieder funktionsfähig
+- fehlende Etappe, aktive Tour oder GPX werden nicht mehr still ignoriert, sondern verständlich gemeldet
+- ältere bzw. neu erzeugte Etappen ohne vollständige Koordinaten erhalten einen Track-Fallback
+
+## Schuhversorgung
+- `Schuhversorgung suchen` öffnet jetzt direkt den bereits vorhandenen Versorgungsdialog
+- Kategorie `Schuhe / Outdoor` ist automatisch ausgewählt
+- die betreffende Etappe und Person werden angezeigt
+- danach kann direkt mit `Suchen` gesucht werden
+- keine Abhängigkeit mehr von nicht vorhandenen Elementen wie `supplyCategory` oder `supplyStageSelect`
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 9.6` stehen.
+Oben rechts muss `v4.0.0 · Sprint 9.6.1` stehen.
