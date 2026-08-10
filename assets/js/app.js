@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40961";
+} from "./database.js?v=40962";
 
-import { loadLanguage, translate } from "./i18n.js?v=40961";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40961";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40961";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40961";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40961";
+import { loadLanguage, translate } from "./i18n.js?v=40962";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40962";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40962";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=40962";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40962";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -694,8 +694,8 @@ async function renderStages(){
     : '<div class="empty">Noch keine Etappen vorhanden.</div>';
 
   await renderDashboardStats();
-  renderGear();
   await renderTourPack();
+  renderGear();
   await renderTourShoes();
   await renderPlaces();
   if(typeof renderRoadbook==='function') await renderRoadbook();
@@ -2273,6 +2273,7 @@ async function renderTourPack(){
   }
 
   const names=loadPackNamesLocal(activeTour.id);
+  currentPersonNames={...names};
   document.getElementById("packPerson1Name").value=names.person1;
   document.getElementById("packPerson2Name").value=names.person2;
   document.getElementById("packPerson1Btn").textContent=names.person1;
@@ -2396,7 +2397,9 @@ async function savePackNamesFromInputs(){
     person2:document.getElementById("packPerson2Name").value.trim()||"Person 2"
   };
   savePackNamesLocal(activeTour.id,names);
+  currentPersonNames={...names};
   await renderTourPack();
+  renderGear();
 }
 document.getElementById("packPerson1Name")?.addEventListener("change",savePackNamesFromInputs);
 document.getElementById("packPerson2Name")?.addEventListener("change",savePackNamesFromInputs);
@@ -2669,6 +2672,7 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
 const gearDialog=document.getElementById("gearDialog");
 const gearForm=document.getElementById("gearForm");
 let selectedGearIds=new Set();
+let currentPersonNames={person1:"Person 1",person2:"Person 2"};
 
 function openGearDialog(item=null){
   document.getElementById("gearId").value=item?.id||"";
@@ -2734,8 +2738,8 @@ function renderGear(){
         <td>${escapeHtml(item.location||"–")}</td>
         <td>
           <div class="gear-actions">
-            <button data-add-gear-person1="${item.id}">→ Person 1</button>
-            <button data-add-gear-person2="${item.id}">→ Person 2</button>
+            <button data-add-gear-person1="${item.id}">→ ${escapeHtml(currentPersonNames.person1)}</button>
+            <button data-add-gear-person2="${item.id}">→ ${escapeHtml(currentPersonNames.person2)}</button>
             <button data-edit-gear="${item.id}">Bearbeiten</button>
             <button class="danger" data-delete-gear="${item.id}">Löschen</button>
           </div>
@@ -2801,7 +2805,7 @@ document.getElementById("gearList")?.addEventListener("click",async(event)=>{
         alert(`Artikel kann nicht hinzugefügt werden. Bestand: ${stock}. Bereits eingepackt: ${used}.`);
       }else{
         const answer=prompt(
-          `Wie viele Stück von „${gearItem.name}“ sollen ${personKey==="person1"?"Person 1":"Person 2"} zugewiesen werden?\nNoch verfügbar: ${available}`,
+          `Wie viele Stück von „${gearItem.name}“ sollen ${personKey==="person1"?currentPersonNames.person1:currentPersonNames.person2} zugewiesen werden?\nNoch verfügbar: ${available}`,
           "1"
         );
 
@@ -3172,12 +3176,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40961";
+  window.location.href = "./?v=40962";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40961");
+    navigator.serviceWorker.register("sw.js?v=40962");
   });
 }
 

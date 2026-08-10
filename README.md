@@ -1,16 +1,11 @@
-# 3113 Adventures – Sprint 9.6.1 Hotfix
+# 3113 Adventures – Sprint 9.6.2 Hotfix
 
-## Orte / Versorgung
-- manuelle Versorgungssuche pro Etappe wieder funktionsfähig
-- fehlende Etappe, aktive Tour oder GPX werden nicht mehr still ignoriert, sondern verständlich gemeldet
-- ältere bzw. neu erzeugte Etappen ohne vollständige Koordinaten erhalten einen Track-Fallback
-
-## Schuhversorgung
-- `Schuhversorgung suchen` öffnet jetzt direkt den bereits vorhandenen Versorgungsdialog
-- Kategorie `Schuhe / Outdoor` ist automatisch ausgewählt
-- die betreffende Etappe und Person werden angezeigt
-- danach kann direkt mit `Suchen` gesucht werden
-- keine Abhängigkeit mehr von nicht vorhandenen Elementen wie `supplyCategory` oder `supplyStageSelect`
+## Personennamen bei Artikeln
+- frei gewählte Namen von Person 1 und Person 2 werden jetzt in `Mein Transa` übernommen
+- Artikelbuttons zeigen z. B. `→ Jörg` und `→ Monika`
+- Mengenabfrage verwendet ebenfalls die tatsächlichen Namen
+- Änderungen an den Personennamen aktualisieren die Artikelliste sofort
+- Packlisten, Schuhe und Roadbook bleiben unverändert
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 9.6.1` stehen.
+Oben rechts muss `v4.0.0 · Sprint 9.6.2` stehen.
