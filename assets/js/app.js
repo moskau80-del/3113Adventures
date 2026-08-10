@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40753";
+} from "./database.js?v=4076";
 
-import { loadLanguage, translate } from "./i18n.js?v=40753";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40753";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40753";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40753";
+import { loadLanguage, translate } from "./i18n.js?v=4076";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4076";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4076";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4076";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -868,6 +868,12 @@ function redrawTrackEditor(){
       trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
       if(trackEditorHistory.length>30) trackEditorHistory.shift();
     });
+    marker.on("contextmenu",()=>{
+      if(pointIndex===0||pointIndex===trackEditorWorkingPoints.length-1) return;
+      trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+      trackEditorWorkingPoints.splice(pointIndex,1);
+      redrawTrackEditor();
+    });
     marker.on("drag",event=>{
       const ll=event.target.getLatLng();
       trackEditorWorkingPoints[pointIndex]={...trackEditorWorkingPoints[pointIndex],lat:ll.lat,lng:ll.lng};
@@ -912,6 +918,22 @@ async function openTrackEditor(stage){
       }).addTo(trackEditorMap);
     }
     trackEditorMap.invalidateSize();
+    if(!trackEditorMap._3113EditorClickBound){
+      trackEditorMap.on("click",event=>{
+        if(!trackEditorStageId||trackEditorWorkingPoints.length<2) return;
+        let bestIndex=1,best=Infinity;
+        for(let i=1;i<trackEditorWorkingPoints.length;i++){
+          const a=trackEditorWorkingPoints[i-1],b=trackEditorWorkingPoints[i];
+          const midLat=(a.lat+b.lat)/2,midLng=(a.lng+b.lng)/2;
+          const d=(event.latlng.lat-midLat)**2+(event.latlng.lng-midLng)**2;
+          if(d<best){best=d;bestIndex=i}
+        }
+        trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+        trackEditorWorkingPoints.splice(bestIndex,0,{lat:event.latlng.lat,lng:event.latlng.lng});
+        redrawTrackEditor();
+      });
+      trackEditorMap._3113EditorClickBound=true;
+    }
     redrawTrackEditor();
   },100);
 }
@@ -1764,12 +1786,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40753";
+  window.location.href = "./?v=4076";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40753");
+    navigator.serviceWorker.register("sw.js?v=4076");
   });
 }
 
