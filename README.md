@@ -1,15 +1,9 @@
-# 3113 Adventures – Sprint 8.7.1 Hotfix
+# 3113 Adventures – Version 4.0.0 / Sprint 8.8
 
-## CSV Import korrigiert
-- Trennzeichen wird automatisch erkannt
-- unterstützt:
-  - Komma
-  - Semikolon
-  - Tabulator
-- damit wird auch `Grundliste_Moni.csv` mit Kopfzeile
-  `Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable`
-  korrekt erkannt
-- bestehende Zuordnung zu Artikelname, Kategorie, Gewicht, Bestand, Notizen etc. bleibt erhalten
+## Änderung
+- Gesamtgewicht in `Mein Transa` wird in Kilogramm mit drei Dezimalstellen angezeigt.
+- Beispiel: `1.500 kg`
+- interne Artikelgewichte bleiben weiterhin grammgenau.
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 8.7.1` stehen.
+Oben rechts muss `v4.0.0 · Sprint 8.8` stehen.
