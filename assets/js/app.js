@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4074";
+} from "./database.js?v=4075";
 
-import { loadLanguage, translate } from "./i18n.js?v=4074";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4074";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm , saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4074";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4074";
+import { loadLanguage, translate } from "./i18n.js?v=4075";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4075";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm , saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4075";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4075";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -666,7 +666,7 @@ async function renderStages(){
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
-            : `<button data-map-stage="${stage.id}">Auf Karte</button><button data-supply-stage="${stage.id}">Versorgung suchen</button>${getPreferredStartForStage(activeTour.id,stage.id)?`<button data-use-preferred-start="${stage.id}">Start übernehmen</button>`:""}${getPreferredEndForStage(activeTour.id,stage.id)?`<button data-use-preferred-destination="${stage.id}">Ziel übernehmen</button>`:""}
+            : `<button data-map-stage="${stage.id}">Auf Karte</button><button data-track-edit-stage="${stage.id}">Track bearbeiten</button><button data-supply-stage="${stage.id}">Versorgung suchen</button>${getPreferredStartForStage(activeTour.id,stage.id)?`<button data-use-preferred-start="${stage.id}">Start übernehmen</button>`:""}${getPreferredEndForStage(activeTour.id,stage.id)?`<button data-use-preferred-destination="${stage.id}">Ziel übernehmen</button>`:""}
                <button data-edit-stage="${stage.id}">Bearbeiten</button>
                <button data-rest-before="${stage.id}">Ruhetag davor</button>
                <button data-rest-after="${stage.id}">Ruhetag danach</button>
@@ -814,6 +814,173 @@ async function showStageOnMap(stage){
   },150);
 }
 
+
+let trackEditorMap=null;
+let trackEditorLayer=null;
+let trackEditorStageId=null;
+let trackEditorOriginalPoints=[];
+let trackEditorWorkingPoints=[];
+let trackEditorHistory=[];
+
+function cloneTrackPoints(points){
+  return points.map(point=>({...point}));
+}
+
+function trackDistanceKm(points){
+  let total=0;
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i];
+    const R=6371;
+    const dLat=(b.lat-a.lat)*Math.PI/180;
+    const dLng=(b.lng-a.lng)*Math.PI/180;
+    const lat1=a.lat*Math.PI/180,lat2=b.lat*Math.PI/180;
+    const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+    total+=2*R*Math.asin(Math.sqrt(h));
+  }
+  return total;
+}
+
+function trackEditorControlIndices(length){
+  if(length<=12) return Array.from({length},(_,i)=>i);
+  const count=Math.min(10,Math.max(5,Math.round(length/100)));
+  const indices=[0];
+  for(let i=1;i<count-1;i++) indices.push(Math.round(i*(length-1)/(count-1)));
+  indices.push(length-1);
+  return [...new Set(indices)];
+}
+
+function redrawTrackEditor(){
+  if(!trackEditorMap) return;
+  if(trackEditorLayer) trackEditorLayer.remove();
+  trackEditorLayer=L.layerGroup().addTo(trackEditorMap);
+
+  const coords=trackEditorWorkingPoints.map(p=>[p.lat,p.lng]);
+  const line=L.polyline(coords,{weight:5}).addTo(trackEditorLayer);
+  const indices=trackEditorControlIndices(trackEditorWorkingPoints.length);
+
+  indices.forEach((pointIndex,controlIndex)=>{
+    const point=trackEditorWorkingPoints[pointIndex];
+    const marker=L.marker([point.lat,point.lng],{draggable:true}).addTo(trackEditorLayer);
+    marker.bindTooltip(
+      pointIndex===0?"Start":pointIndex===trackEditorWorkingPoints.length-1?"Ziel":`Punkt ${controlIndex}`,
+      {permanent:false}
+    );
+    marker.on("dragstart",()=>{
+      trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+      if(trackEditorHistory.length>30) trackEditorHistory.shift();
+    });
+    marker.on("drag",event=>{
+      const ll=event.target.getLatLng();
+      trackEditorWorkingPoints[pointIndex]={...trackEditorWorkingPoints[pointIndex],lat:ll.lat,lng:ll.lng};
+      const polylines=trackEditorLayer.getLayers().filter(layer=>layer instanceof L.Polyline);
+      if(polylines[0]) polylines[0].setLatLngs(trackEditorWorkingPoints.map(p=>[p.lat,p.lng]));
+      const info=document.getElementById("trackEditorInfo");
+      if(info) info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · noch nicht gespeichert`;
+    });
+  });
+
+  const info=document.getElementById("trackEditorInfo");
+  if(info) info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · noch nicht gespeichert`;
+  if(line.getBounds().isValid()) trackEditorMap.fitBounds(line.getBounds(),{padding:[20,20]});
+}
+
+async function openTrackEditor(stage){
+  const activeTour=await getActiveTour();
+  const track=activeTour?await getTrack(activeTour.id):null;
+  if(!track?.points?.length){
+    alert("Für diese Tour ist kein GPX-Track vorhanden.");
+    return;
+  }
+  const segment=stageTrackSegment(track.points,stage);
+  if(segment.length<2){
+    alert("Der Etappentrack konnte nicht bestimmt werden.");
+    return;
+  }
+
+  trackEditorStageId=stage.id;
+  trackEditorOriginalPoints=cloneTrackPoints(segment);
+  trackEditorWorkingPoints=cloneTrackPoints(segment);
+  trackEditorHistory=[];
+
+  const dialog=document.getElementById("trackEditorDialog");
+  dialog.showModal();
+
+  setTimeout(()=>{
+    if(!trackEditorMap){
+      trackEditorMap=L.map("trackEditorMap",{zoomControl:true});
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+        maxZoom:19,attribution:"&copy; OpenStreetMap-Mitwirkende"
+      }).addTo(trackEditorMap);
+    }
+    trackEditorMap.invalidateSize();
+    redrawTrackEditor();
+  },100);
+}
+
+document.getElementById("trackEditorUndoBtn")?.addEventListener("click",()=>{
+  const previous=trackEditorHistory.pop();
+  if(!previous) return;
+  trackEditorWorkingPoints=previous;
+  redrawTrackEditor();
+});
+
+document.getElementById("trackEditorResetBtn")?.addEventListener("click",()=>{
+  if(!trackEditorOriginalPoints.length) return;
+  trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+  trackEditorWorkingPoints=cloneTrackPoints(trackEditorOriginalPoints);
+  redrawTrackEditor();
+});
+
+document.getElementById("trackEditorSaveBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour||!trackEditorStageId||trackEditorWorkingPoints.length<2) return;
+
+  const stages=loadStagesLocal(activeTour.id);
+  const stage=stages.find(item=>item.id===trackEditorStageId);
+  const track=await getTrack(activeTour.id);
+  if(!stage||!track?.points?.length) return;
+
+  let startIndex=0,endIndex=track.points.length-1,startBest=Infinity,endBest=Infinity;
+  track.points.forEach((point,index)=>{
+    const ds=(point.lat-stage.startCoord.lat)**2+(point.lng-stage.startCoord.lng)**2;
+    const de=(point.lat-stage.endCoord.lat)**2+(point.lng-stage.endCoord.lng)**2;
+    if(ds<startBest){startBest=ds;startIndex=index}
+    if(de<endBest){endBest=de;endIndex=index}
+  });
+  if(startIndex>endIndex)[startIndex,endIndex]=[endIndex,startIndex];
+
+  const updatedPoints=[
+    ...track.points.slice(0,startIndex),
+    ...cloneTrackPoints(trackEditorWorkingPoints),
+    ...track.points.slice(endIndex+1)
+  ];
+
+  if(!track.originalPoints){
+    track.originalPoints=cloneTrackPoints(track.points);
+  }
+
+  await saveTrack({...track,points:updatedPoints,edited:true,updatedAt:new Date().toISOString()});
+
+  updateStageLocal(activeTour.id,{
+    ...stage,
+    startCoord:{lat:trackEditorWorkingPoints[0].lat,lng:trackEditorWorkingPoints[0].lng},
+    endCoord:{lat:trackEditorWorkingPoints.at(-1).lat,lng:trackEditorWorkingPoints.at(-1).lng},
+    distanceKm:trackDistanceKm(trackEditorWorkingPoints),
+    notes:[stage.notes,"Track manuell bearbeitet"].filter(Boolean).join(" · ")
+  });
+
+  document.getElementById("trackEditorDialog").close();
+  trackEditorStageId=null;
+  await renderGpx();
+  await renderStages();
+  if(document.getElementById("map").classList.contains("active")) await renderMapTrack();
+});
+
+document.getElementById("trackEditorDialog")?.addEventListener("close",()=>{
+  trackEditorStageId=null;
+  trackEditorHistory=[];
+});
+
 document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   const activeTour=await getActiveTour();
   if(!activeTour) return;
@@ -822,6 +989,7 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   const editId=event.target.dataset.editStage;
   const deleteId=event.target.dataset.deleteStage;
   const mapId=event.target.dataset.mapStage;
+  const trackEditId=event.target.dataset.trackEditStage;
   const restBefore=event.target.dataset.restBefore;
   const restAfter=event.target.dataset.restAfter;
   const deleteRest=event.target.dataset.deleteRest;
@@ -934,6 +1102,12 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   if(deleteId&&confirm("Etappe wirklich löschen?")){
     deleteStageLocal(activeTour.id,deleteId);
     await renderStages();
+  }
+
+  if(trackEditId){
+    const stage=stages.find(item=>item.id===trackEditId);
+    if(stage) await openTrackEditor(stage);
+    return;
   }
 
   if(mapId){
@@ -1591,12 +1765,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4074";
+  window.location.href = "./?v=4075";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4074");
+    navigator.serviceWorker.register("sw.js?v=4075");
   });
 }
 

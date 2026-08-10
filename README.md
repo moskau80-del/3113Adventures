@@ -1,15 +1,18 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 7.4
+# 3113 Adventures – Version 4.0.0 / Sprint 7.5
 
-## Neu
-- frei wählbares Schuhwechsel-Intervall in Kilometern
-- Einstellung wird pro Tour lokal gespeichert
-- Standardwert 700 km
-- Etappenübersicht markiert automatisch die Etappe, in der ein Schuhwechsel ungefähr fällig wird
-- Hinweis zeigt den ungefähren Gesamtkilometerstand
-- Monats-/Zeitachsenübersicht zeigt Schuhwechsel-Hinweise ebenfalls an
-- nächster Schuhwechsel-Richtwert wird oberhalb der Etappen angezeigt
-- Ruhetage zählen nicht zur Schuhkilometer-Berechnung
-- alle Funktionen aus Sprint 7.3 bleiben enthalten
+## Neu – Track-Editor
+- `Track bearbeiten` direkt bei jeder Wanderetappe
+- Start, Ziel und mehrere Bearbeitungspunkte auf der Karte per Drag & Drop verschieben
+- Live-Vorschau der geänderten Etappendistanz
+- `Rückgängig`
+- `Original wiederherstellen` solange der Editor geöffnet ist
+- Änderungen werden erst mit `Track speichern` übernommen
+- `Abbrechen` verwirft die Bearbeitung
+- beim ersten Speichern bleibt eine Kopie der ursprünglichen Trackpunkte im Track-Datensatz erhalten
+- Etappen-Start-/Zielkoordinaten und Distanz werden beim Speichern aktualisiert
+
+## Wichtig
+Sprint 7.5 ist zunächst ein manueller Track-Editor. Zwischen verschobenen Punkten wird eine direkte Linie verwendet. Automatisches Routing entlang von Wanderwegen ist für einen folgenden Sprint vorgesehen.
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 7.4` stehen.
+Oben rechts muss `v4.0.0 · Sprint 7.5` stehen.

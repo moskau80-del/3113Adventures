@@ -137,3 +137,7 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .shoe-change-alert strong,.shoe-change-alert span{display:block}
 .shoe-change-alert span{font-size:.82rem;margin-top:3px}
 .timeline-shoe{display:block;margin-top:3px;font-size:.78rem;font-weight:800}
+
+.wide-dialog{width:min(1000px,96vw)}
+.track-editor-map{height:62vh;min-height:420px;border-radius:12px;overflow:hidden;margin:12px 0}
+.track-editor-handle{font-size:.78rem}
