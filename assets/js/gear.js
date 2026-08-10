@@ -67,3 +67,56 @@ export function updateTourPackItemLocal(tourId,gearId,changes){
   pack[index]={...pack[index],...changes};
   return saveTourPackLocal(tourId,pack);
 }
+
+
+const PACK_NAMES_PREFIX="3113-v4-pack-names:";
+
+export function loadPackNamesLocal(tourId){
+  try{
+    const raw=localStorage.getItem(`${PACK_NAMES_PREFIX}${tourId}`);
+    if(!raw) return {person1:"Person 1",person2:"Person 2"};
+    return {...{person1:"Person 1",person2:"Person 2"},...JSON.parse(raw)};
+  }catch{
+    return {person1:"Person 1",person2:"Person 2"};
+  }
+}
+
+export function savePackNamesLocal(tourId,names){
+  localStorage.setItem(`${PACK_NAMES_PREFIX}${tourId}`,JSON.stringify(names));
+  return names;
+}
+
+export function loadTourPersonPackLocal(tourId,personKey){
+  try{
+    const raw=localStorage.getItem(`${PACK_PREFIX}${tourId}:${personKey}`);
+    if(raw) return JSON.parse(raw);
+    if(personKey==="person1"){
+      const legacy=localStorage.getItem(`${PACK_PREFIX}${tourId}`);
+      if(legacy) return JSON.parse(legacy);
+    }
+    return [];
+  }catch{
+    return [];
+  }
+}
+
+export function saveTourPersonPackLocal(tourId,personKey,items){
+  localStorage.setItem(`${PACK_PREFIX}${tourId}:${personKey}`,JSON.stringify(items));
+  return items;
+}
+
+export function toggleGearInPersonPackLocal(tourId,personKey,gearId){
+  const pack=loadTourPersonPackLocal(tourId,personKey);
+  const index=pack.findIndex(item=>item.gearId===gearId);
+  if(index>=0) pack.splice(index,1);
+  else pack.push({gearId,quantity:1,worn:false});
+  return saveTourPersonPackLocal(tourId,personKey,pack);
+}
+
+export function updatePersonPackItemLocal(tourId,personKey,gearId,changes){
+  const pack=loadTourPersonPackLocal(tourId,personKey);
+  const index=pack.findIndex(item=>item.gearId===gearId);
+  if(index<0) return pack;
+  pack[index]={...pack[index],...changes};
+  return saveTourPersonPackLocal(tourId,personKey,pack);
+}

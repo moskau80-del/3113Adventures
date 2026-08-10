@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4081";
+} from "./database.js?v=4082";
 
-import { loadLanguage, translate } from "./i18n.js?v=4081";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4081";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4081";
-import { loadGearLocal, upsertGearLocal, deleteGearLocal, loadTourPackLocal, toggleGearInTourPackLocal, updateTourPackItemLocal } from "./gear.js?v=4081";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4081";
+import { loadLanguage, translate } from "./i18n.js?v=4082";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4082";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4082";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4082";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4082";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2014,6 +2014,9 @@ document.getElementById("importFullTourInput")?.addEventListener("change",async(
 
 
 
+
+let activePackPerson="person1";
+
 async function renderTourPack(){
   const activeTour=await getActiveTour();
   const container=document.getElementById("tourPackList");
@@ -2021,20 +2024,23 @@ async function renderTourPack(){
 
   if(!activeTour){
     container.innerHTML='<div class="empty">Keine aktive Tour.</div>';
-    document.getElementById("packTotalWeight").textContent="0 g";
-    document.getElementById("packWornWeight").textContent="0 g";
-    document.getElementById("packNetWeight").textContent="0 g";
-    document.getElementById("packItemCount").textContent="0";
     return;
   }
 
+  const names=loadPackNamesLocal(activeTour.id);
+  document.getElementById("packPerson1Name").value=names.person1;
+  document.getElementById("packPerson2Name").value=names.person2;
+  document.getElementById("packPerson1Btn").textContent=names.person1;
+  document.getElementById("packPerson2Btn").textContent=names.person2;
+
+  document.getElementById("packPerson1Btn").classList.toggle("active",activePackPerson==="person1");
+  document.getElementById("packPerson2Btn").classList.toggle("active",activePackPerson==="person2");
+
   const gear=loadGearLocal();
-  const pack=loadTourPackLocal(activeTour.id);
+  const pack=loadTourPersonPackLocal(activeTour.id,activePackPerson);
   const byId=new Map(gear.map(item=>[item.id,item]));
 
-  let total=0;
-  let worn=0;
-
+  let total=0,worn=0;
   pack.forEach(item=>{
     const gearItem=byId.get(item.gearId);
     if(!gearItem) return;
@@ -2061,19 +2067,35 @@ async function renderTourPack(){
           In Packliste
         </label>
         ${packItem?`
-          <label>
-            Menge
-            <input type="number" data-pack-quantity="${item.id}" min="1" step="1" value="${Number(packItem.quantity||1)}" style="width:70px">
-          </label>
-          <label>
-            <input type="checkbox" data-pack-worn="${item.id}" ${packItem.worn?"checked":""}>
-            am Körper
-          </label>
+          <label>Menge <input type="number" data-pack-quantity="${item.id}" min="1" step="1" value="${Number(packItem.quantity||1)}" style="width:70px"></label>
+          <label><input type="checkbox" data-pack-worn="${item.id}" ${packItem.worn?"checked":""}> am Körper</label>
         `:""}
       </div>`;
     }).join("")
     :'<div class="empty">Noch keine Ausrüstung in „Mein Transa“ vorhanden.</div>';
 }
+
+document.getElementById("packPerson1Btn")?.addEventListener("click",async()=>{
+  activePackPerson="person1";
+  await renderTourPack();
+});
+document.getElementById("packPerson2Btn")?.addEventListener("click",async()=>{
+  activePackPerson="person2";
+  await renderTourPack();
+});
+
+async function savePackNamesFromInputs(){
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+  const names={
+    person1:document.getElementById("packPerson1Name").value.trim()||"Person 1",
+    person2:document.getElementById("packPerson2Name").value.trim()||"Person 2"
+  };
+  savePackNamesLocal(activeTour.id,names);
+  await renderTourPack();
+}
+document.getElementById("packPerson1Name")?.addEventListener("change",savePackNamesFromInputs);
+document.getElementById("packPerson2Name")?.addEventListener("change",savePackNamesFromInputs);
 
 document.getElementById("tourPackList")?.addEventListener("change",async(event)=>{
   const activeTour=await getActiveTour();
@@ -2083,23 +2105,53 @@ document.getElementById("tourPackList")?.addEventListener("change",async(event)=
   const qtyId=event.target.dataset.packQuantity;
   const wornId=event.target.dataset.packWorn;
 
-  if(toggleId){
-    toggleGearInTourPackLocal(activeTour.id,toggleId);
-  }
-
-  if(qtyId){
-    updateTourPackItemLocal(activeTour.id,qtyId,{
-      quantity:Math.max(1,Number(event.target.value||1))
-    });
-  }
-
-  if(wornId){
-    updateTourPackItemLocal(activeTour.id,wornId,{
-      worn:event.target.checked
-    });
-  }
+  if(toggleId) toggleGearInPersonPackLocal(activeTour.id,activePackPerson,toggleId);
+  if(qtyId) updatePersonPackItemLocal(activeTour.id,activePackPerson,qtyId,{quantity:Math.max(1,Number(event.target.value||1))});
+  if(wornId) updatePersonPackItemLocal(activeTour.id,activePackPerson,wornId,{worn:event.target.checked});
 
   await renderTourPack();
+});
+
+function exportGearItems(){
+  const payload={
+    schema:"3113-adventures-gear",
+    schemaVersion:1,
+    exportedAt:new Date().toISOString(),
+    items:loadGearLocal()
+  };
+  downloadJsonFile("3113-adventures-artikel.json",payload);
+  document.getElementById("gearTransferStatus").textContent=`${payload.items.length} Artikel exportiert.`;
+}
+
+document.getElementById("exportGearBtn")?.addEventListener("click",exportGearItems);
+
+document.getElementById("importGearInput")?.addEventListener("change",async(event)=>{
+  const file=event.target.files?.[0];
+  if(!file) return;
+  const status=document.getElementById("gearTransferStatus");
+
+  try{
+    const data=JSON.parse(await file.text());
+    const items=Array.isArray(data)?data:data?.items;
+    if(!Array.isArray(items)) throw new Error("Keine gültige Artikelliste gefunden.");
+
+    const existing=loadGearLocal();
+    const byId=new Map(existing.map(item=>[item.id,item]));
+
+    items.forEach(item=>{
+      const id=item.id||`gear-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+      byId.set(id,{...item,id});
+    });
+
+    saveGearLocal([...byId.values()]);
+    renderGear();
+    await renderTourPack();
+    status.textContent=`Import erfolgreich: ${items.length} Artikel übernommen.`;
+  }catch(error){
+    status.textContent=`Import fehlgeschlagen: ${error.message}`;
+  }finally{
+    event.target.value="";
+  }
 });
 
 const gearDialog=document.getElementById("gearDialog");
@@ -2293,12 +2345,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4081";
+  window.location.href = "./?v=4082";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4081");
+    navigator.serviceWorker.register("sw.js?v=4082");
   });
 }
 

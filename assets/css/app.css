@@ -163,3 +163,7 @@ html[data-theme="dark"] select{background:#20271f;color:var(--ink);border-color:
 .pack-row .pack-name{font-weight:800}
 .pack-row label{display:flex;align-items:center;gap:6px;font-size:.82rem}
 @media(max-width:700px){.pack-row{grid-template-columns:1fr}.pack-row label{justify-content:flex-start}}
+
+.pack-person-tabs{display:flex;gap:8px;margin:12px 0}
+.pack-person-tabs button{border:0;border-radius:10px;padding:9px 12px}
+.pack-person-tabs button.active{background:var(--forest);color:#fff}

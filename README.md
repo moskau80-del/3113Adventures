@@ -1,16 +1,14 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 8.1
+# 3113 Adventures – Version 4.0.0 / Sprint 8.2
 
-## Neu – Tour-Packliste
-- Ausrüstung aus `Mein Transa` einer aktiven Tour zuordnen
-- Menge je Artikel festlegen
-- Artikel als `am Körper` markieren
-- Gewichtsberechnung:
-  - Total
-  - am Körper
-  - Netto im Rucksack
-- Packliste wird pro Tour gespeichert
-- Änderungen an `Mein Transa` aktualisieren die Packliste
+## Neu
+- zwei getrennte Packlisten pro Tour
+- Namen für Person 1 und Person 2 frei wählbar
+- Umschalten zwischen beiden Personen
+- je Person: Menge, am Körper, Total, am Körper, Netto
+- alte Ein-Person-Packliste wird für Person 1 übernommen
+- Artikel-Export als JSON
+- Artikel-Import aus JSON
+- Import führt Artikel mit bestehenden Artikeln zusammen
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 8.1` stehen.
-Im Register `Mein Transa` erscheint zusätzlich `Packliste der aktiven Tour`.
+Oben rechts muss `v4.0.0 · Sprint 8.2` stehen.
