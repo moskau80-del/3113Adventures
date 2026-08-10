@@ -1,10 +1,13 @@
-# 3113 Adventures – Sprint 7.5.2 Hotfix
+# 3113 Adventures – Sprint 7.5.3 Hotfix
 
 ## Behoben
-- Fehler `shoeMarkers is not defined` beim Speichern/Rendern der Etappen behoben.
-- Monats-/Zeitachsenübersicht erhält die Schuhwechsel-Markierungen jetzt explizit.
-- Zusätzliche Absicherung, falls keine Schuhwechsel-Markierungen vorhanden sind.
-- bestehende Tour-, GPX- und Etappendaten bleiben unverändert.
+- veraltete Funktion `getPreferredPlaceForStage` vollständig entfernt/ersetzt.
+- Etappen können wieder neu erzeugt und gespeichert werden.
+- Dashboard `Nächste Etappe` nimmt nun die erste nicht abgeschlossene Wanderetappe nach Etappenreihenfolge.
+- Ruhetage werden ignoriert.
+- `completed` wird nur dann als abgeschlossen behandelt, wenn der Wert wirklich `true` ist.
+
+Gefundene alte Referenzen vor der Korrektur: 1
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 7.5.2` stehen.
+Oben rechts muss `v4.0.0 · Sprint 7.5.3` stehen.

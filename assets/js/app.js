@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=40752";
+} from "./database.js?v=40753";
 
-import { loadLanguage, translate } from "./i18n.js?v=40752";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=40752";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40752";
-import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40752";
+import { loadLanguage, translate } from "./i18n.js?v=40753";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40753";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40753";
+import { loadPlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40753";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -146,13 +146,12 @@ async function renderDashboardStats(){
   const walkingStages=stages
     .filter(stage=>!stage.restDay)
     .sort((a,b)=>{
-      const dateA=a.date||"9999-12-31";
-      const dateB=b.date||"9999-12-31";
-      if(dateA!==dateB) return dateA.localeCompare(dateB);
-      return Number(a.order||0)-Number(b.order||0);
+      const orderA=Number(a.order||0);
+      const orderB=Number(b.order||0);
+      return orderA-orderB;
     });
 
-  const next=walkingStages.find(stage=>!stage.completed);
+  const next=walkingStages.find(stage=>stage.completed!==true);
 
   if(!next){
     nextStage.innerHTML=walkingStages.length
@@ -162,7 +161,7 @@ async function renderDashboardStats(){
     return;
   }
 
-  const preferredPlace=getPreferredPlaceForStage(activeTour.id,next.id);
+  const preferredPlace=getPreferredEndForStage(activeTour.id,next.id);
   if(nextPreferredPlace){
     nextPreferredPlace.innerHTML=preferredPlace
       ? `<div class="next-stage-card"><strong>${escapeHtml(preferredPlace.name)}</strong><span>${escapeHtml(preferredPlace.category)}</span><span>${Number(preferredPlace.distanceKm||0).toFixed(2)} km von der Etappe</span></div>`
@@ -1765,12 +1764,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=40752";
+  window.location.href = "./?v=40753";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=40752");
+    navigator.serviceWorker.register("sw.js?v=40753");
   });
 }
 
