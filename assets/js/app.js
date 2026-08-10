@@ -10,13 +10,13 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4087";
+} from "./database.js?v=40871";
 
-import { loadLanguage, translate } from "./i18n.js?v=4087";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4087";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4087";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=4087";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4087";
+import { loadLanguage, translate } from "./i18n.js?v=40871";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40871";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40871";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal } from "./gear.js?v=40871";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40871";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2162,7 +2162,32 @@ function exportGearItems(){
     `${items.length} Artikel als CSV exportiert.`;
 }
 
-function parseCsvSemicolon(text){
+function detectCsvDelimiter(text){
+  const firstLine=(text.split(/\r?\n/)[0]||"");
+  const candidates=[";",",","\t"];
+  let best=";",bestCount=-1;
+
+  for(const delimiter of candidates){
+    let count=0,quoted=false;
+    for(let i=0;i<firstLine.length;i++){
+      const ch=firstLine[i];
+      if(ch==='"'){
+        if(quoted&&firstLine[i+1]==='"'){i++;continue;}
+        quoted=!quoted;
+      }else if(!quoted&&ch===delimiter){
+        count++;
+      }
+    }
+    if(count>bestCount){
+      bestCount=count;
+      best=delimiter;
+    }
+  }
+  return best;
+}
+
+function parseCsv(text){
+  const delimiter=detectCsvDelimiter(text);
   const rows=[];
   let row=[],field="",quoted=false;
 
@@ -2180,7 +2205,7 @@ function parseCsvSemicolon(text){
     }else{
       if(ch==='"'){
         quoted=true;
-      }else if(ch===";"){
+      }else if(ch===delimiter){
         row.push(field); field="";
       }else if(ch==="\n"){
         row.push(field); rows.push(row); row=[]; field="";
@@ -2194,7 +2219,7 @@ function parseCsvSemicolon(text){
     row.push(field); rows.push(row);
   }
 
-  return rows;
+  return {rows,delimiter};
 }
 
 document.getElementById("exportGearBtn")?.addEventListener("click",exportGearItems);
@@ -2207,7 +2232,8 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
 
   try{
     const text=(await file.text()).replace(/^\ufeff/,"");
-    const rows=parseCsvSemicolon(text);
+    const parsed=parseCsv(text);
+    const rows=parsed.rows;
 
     if(rows.length<2) throw new Error("Die CSV-Datei enthält keine Artikel.");
 
@@ -2274,7 +2300,7 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
     saveGearLocal([...byId.values()]);
     renderGear();
     await renderTourPack();
-    status.textContent=`CSV-Import erfolgreich: ${imported} Artikel übernommen.`;
+    status.textContent=`CSV-Import erfolgreich: ${imported} Artikel übernommen · Trennzeichen ${parsed.delimiter==="\t"?"Tabulator":parsed.delimiter}`;
   }catch(error){
     status.textContent=`CSV-Import fehlgeschlagen: ${error.message}`;
   }finally{
@@ -2672,12 +2698,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4087";
+  window.location.href = "./?v=40871";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4087");
+    navigator.serviceWorker.register("sw.js?v=40871");
   });
 }
 
