@@ -1,13 +1,17 @@
-# 3113 Adventures – Version 4.0.0 / Sprint 7.9
+# 3113 Adventures – Sprint 7.9.1 Hotfix
 
-## Neu
-- bevorzugten Start direkt aus dem Popup eines gespeicherten Ortes auf der Etappenkarte setzen
-- bevorzugtes Ziel direkt aus dem Popup setzen
-- Start oder Ziel direkt auf der Karte wieder entfernen
-- aktuelle Bevorzugung wird im Popup sichtbar markiert
-- Karte aktualisiert sich nach Änderungen
-- Etappe und GPX werden dadurch nicht automatisch geändert
-- tatsächliche Übernahme als Start/Ziel bleibt eine getrennte bestätigte Aktion
+## Korrektur Kartenwahl
+- auf der Etappenkarte werden neben bereits gespeicherten Orten nun auch die zuletzt gefundenen Versorgungstreffer der geöffneten Etappe angezeigt
+- ein noch nicht gespeicherter Treffer wird beim Festlegen als bevorzugter Start/Ziel zuerst gespeichert
+- danach wird er als bevorzugter Start oder Ziel gesetzt
+- bereits gespeicherte Orte funktionieren weiterhin
+- keine automatische Übernahme in den GPX-Track
+
+## Verwendung
+1. Bei einer Etappe `Versorgung suchen` und gewünschte Kategorie suchen.
+2. Etappe `Auf Karte` öffnen.
+3. Marker anklicken.
+4. `Als bevorzugten Start` oder `Als bevorzugtes Ziel` wählen.
 
 ## Kontrolle
-Oben rechts muss `v4.0.0 · Sprint 7.9` stehen.
+Oben rechts muss `v4.0.0 · Sprint 7.9.1` stehen.

@@ -10,12 +10,12 @@ import {
   saveTrack,
   getTrack,
   deleteTrack
-} from "./database.js?v=4079";
+} from "./database.js?v=40791";
 
-import { loadLanguage, translate } from "./i18n.js?v=4079";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4079";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4079";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4079";
+import { loadLanguage, translate } from "./i18n.js?v=40791";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=40791";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=40791";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=40791";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -802,7 +802,13 @@ async function showStageOnMap(stage){
       .addTo(trackLayer)
       .bindPopup(`<strong>${escapeHtml(stage.to)}</strong>`);
 
-    const places=getPlacesForStage(activeTour.id,stage.id);
+    const savedPlaces=getPlacesForStage(activeTour.id,stage.id);
+    const searchPlaces=currentSupplyStageId===stage.id ? currentSupplyResults : [];
+    const places=dedupePlaces([...savedPlaces,...searchPlaces]).map(place=>({
+      ...place,
+      stageId:stage.id,
+      _saved:savedPlaces.some(saved=>saved.id===place.id)
+    }));
     const preferredStart=getPreferredStartForStage(activeTour.id,stage.id);
     const preferredEnd=getPreferredEndForStage(activeTour.id,stage.id);
 
@@ -820,8 +826,8 @@ async function showStageOnMap(stage){
           ${isStart?'<br><span class="map-popup-badge start">★ Bevorzugter Start</span>':""}
           ${isEnd?'<br><span class="map-popup-badge end">★ Bevorzugtes Ziel</span>':""}
           <div class="map-popup-actions">
-            <button data-map-preferred-start="${place.id}" data-stage-id="${stage.id}">${isStart?"Bevorzugter Start ✓":"Als bevorzugten Start"}</button>
-            <button data-map-preferred-end="${place.id}" data-stage-id="${stage.id}">${isEnd?"Bevorzugtes Ziel ✓":"Als bevorzugtes Ziel"}</button>
+            <button data-map-preferred-start="${place.id}" data-stage-id="${stage.id}" data-place-saved="${place._saved?"1":"0"}">${isStart?"Bevorzugter Start ✓":"Als bevorzugten Start"}</button>
+            <button data-map-preferred-end="${place.id}" data-stage-id="${stage.id}" data-place-saved="${place._saved?"1":"0"}">${isEnd?"Bevorzugtes Ziel ✓":"Als bevorzugtes Ziel"}</button>
             ${isStart?`<button data-map-clear-preferred-start="${stage.id}">Start entfernen</button>`:""}
             ${isEnd?`<button data-map-clear-preferred-end="${stage.id}">Ziel entfernen</button>`:""}
           </div>
@@ -1157,6 +1163,14 @@ document.addEventListener("click",async(event)=>{
 
   const activeTour=await getActiveTour();
   if(!activeTour) return;
+
+  if((startPlaceId||endPlaceId)&&event.target.dataset.placeSaved==="0"){
+    const placeId=startPlaceId||endPlaceId;
+    const candidate=currentSupplyResults.find(place=>place.id===placeId);
+    if(candidate){
+      addPlaceLocal(activeTour.id,{...candidate,stageId:stageId||currentMapStageId});
+    }
+  }
 
   if(startPlaceId) setPreferredStartLocal(activeTour.id,startPlaceId);
   if(endPlaceId) setPreferredEndLocal(activeTour.id,endPlaceId);
@@ -2084,12 +2098,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4079";
+  window.location.href = "./?v=40791";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4079");
+    navigator.serviceWorker.register("sw.js?v=40791");
   });
 }
 
