@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=4104";
+} from "./database.js?v=41041";
 
-import { loadLanguage, translate } from "./i18n.js?v=4104";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4104";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4104";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4104";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4104";
+import { loadLanguage, translate } from "./i18n.js?v=41041";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41041";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41041";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41041";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41041";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -2795,6 +2795,9 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
         wishlist:["1","true","ja","yes"].includes(String(val(idx.wishlist)).toLowerCase()),
         notes:String(val(idx.notes)).trim(),
         price:Number(String(val(idx.price)).replace(",","."))||0,
+        shop:String(val(idx.shop)).trim(),
+        url:String(val(idx.url)).trim(),
+        priority:String(val(idx.priority)).trim().toLowerCase()||"normal",
         wornDefault:["1","true","ja","yes"].includes(String(val(idx.worn)).toLowerCase()),
         consumable:["1","true","ja","yes"].includes(String(val(idx.consumable)).toLowerCase()),
         updatedAt:new Date().toISOString()
@@ -2828,6 +2831,10 @@ function openGearDialog(item=null){
   document.getElementById("gearLocation").value=item?.location||"";
   document.getElementById("gearStock").value=item?.stock??item?.quantity??1;
   document.getElementById("gearWishlist").checked=Boolean(item?.wishlist);
+  document.getElementById("gearPrice").value=item?.price??"";
+  document.getElementById("gearShop").value=item?.shop||"";
+  document.getElementById("gearUrl").value=item?.url||"";
+  document.getElementById("gearPriority").value=item?.priority||"normal";
   document.getElementById("gearNotes").value=item?.notes||"";
   document.getElementById("gearFavorite").checked=Boolean(item?.favorite);
   gearDialog.showModal();
@@ -2886,6 +2893,7 @@ async function renderGear(){
     String(items.filter(item=>item.favorite).length));
   const wishlistItems=items.filter(item=>item.wishlist);
   setTextSafe("gearWishlistCount",String(wishlistItems.length));
+  setTextSafe("gearWishlistValue",`CHF ${wishlistItems.reduce((sum,item)=>sum+Number(item.price||0),0).toFixed(2)}`);
 
   const wishlistList=document.getElementById("gearWishlistList");
   if(wishlistList){
@@ -2897,9 +2905,15 @@ async function renderGear(){
             <div>
               <strong>${escapeHtml(item.name)}</strong>
               <span>${escapeHtml(item.brand||"")}${item.weightG?` · ${Number(item.weightG)} g`:""}</span>
+              <div class="wishlist-meta">
+                ${Number(item.price||0)>0?`<span class="pill">CHF ${Number(item.price).toFixed(2)}</span>`:""}
+                ${item.shop?`<span class="pill">${escapeHtml(item.shop)}</span>`:""}
+                <span class="pill">Priorität: ${item.priority==="high"?"Hoch":item.priority==="low"?"Niedrig":"Normal"}</span>
+              </div>
               ${item.notes?`<small>${escapeHtml(item.notes)}</small>`:""}
             </div>
             <div class="button-row">
+              ${item.url?`<a class="button secondary" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">Artikel öffnen ↗</a>`:""}
               <button class="primary" data-buy-wishlist="${item.id}">✓ Gekauft / in Bestand</button>
               <button class="secondary" data-edit-gear="${item.id}">Bearbeiten</button>
             </div>
@@ -2956,6 +2970,10 @@ gearForm?.addEventListener("submit",(event)=>{
     location:document.getElementById("gearLocation").value.trim(),
     stock:Number(document.getElementById("gearStock").value||0),
     wishlist:document.getElementById("gearWishlist").checked,
+    price:Number(document.getElementById("gearPrice").value||0),
+    shop:document.getElementById("gearShop").value.trim(),
+    url:document.getElementById("gearUrl").value.trim(),
+    priority:document.getElementById("gearPriority").value||"normal",
     notes:document.getElementById("gearNotes").value.trim(),
     favorite:document.getElementById("gearFavorite").checked,
     updatedAt:new Date().toISOString()
@@ -4334,12 +4352,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4104";
+  window.location.href = "./?v=41041";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4104");
+    navigator.serviceWorker.register("sw.js?v=41041");
   });
 }
 

@@ -617,3 +617,10 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
 @media(max-width:700px){
   .wishlist-item{align-items:flex-start;flex-direction:column}
 }
+
+/* Sprint 10.4.1 Wunschlisten-Details */
+.wishlist-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0}
+.wishlist-details .form-label:nth-child(3){grid-column:1/-1}
+.wishlist-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.wishlist-item a.button{text-decoration:none;display:inline-flex;align-items:center}
+@media(max-width:700px){.wishlist-details{grid-template-columns:1fr}.wishlist-details .form-label:nth-child(3){grid-column:auto}}
