@@ -1,19 +1,23 @@
-# 3113 Adventures – Sprint 10.5
+# 3113 Adventures – Sprint 10.6
 
-## Kartenumschalter
-Leaflet bleibt bestehen. Neu kann direkt auf der Karte zwischen drei Darstellungen gewechselt werden:
+## Durchgängige Etappenplanung
 
-- Standard: OpenStreetMap Standard
-- Wandern: OpenStreetMap + Waymarked Trails Wanderrouten
-- Topografisch: OpenTopoMap
+Wenn sich das Ziel einer Etappe ändert, wird automatisch der Start der nächsten Wanderetappe angepasst.
 
-## Verhalten
-- GPX-Track bleibt beim Kartenwechsel sichtbar.
-- Etappen, Marker, bevorzugte Orte und Trackbearbeitung bleiben unverändert.
-- Gewählter Kartenstil wird lokal gespeichert und beim nächsten Öffnen wieder verwendet.
-- Umschalter ist für Desktop und Mobile optimiert.
+### Gilt für
+- Ziel manuell im Etappen-Dialog ändern
+- bevorzugten Stopp ausdrücklich als Etappenziel übernehmen
+- geometrisches Etappenende über den Track-Editor verändern
 
-## Hinweise
-- OpenTopoMap hat maximal Zoomstufe 17.
-- Waymarked Trails wird als transparente Wanderroutenebene über der Standardkarte eingeblendet.
-- Keine neue Supabase-SQL-Anpassung erforderlich.
+### Verhalten
+Beispiel:
+- Etappe 4: Ziel wird von `Ort A` auf `Ort B` geändert
+- Etappe 5: Start wird automatisch zu `Ort B`
+
+Liegt zwischen Etappe 4 und Etappe 5 ein Ruhetag, wird dieser übersprungen und die nächste Wanderetappe angepasst.
+
+### Bevorzugte Stopps
+Ein bevorzugter Stopp wird weiterhin **niemals automatisch** zum Etappenziel.
+Die Weitergabe an die nächste Etappe erfolgt erst, nachdem der Benutzer den bevorzugten Stopp ausdrücklich als Etappenziel bestätigt hat.
+
+Keine Supabase-SQL-Anpassung erforderlich.
