@@ -1,23 +1,25 @@
-# 3113 Adventures – Sprint 10.6
+# 3113 Adventures – Sprint 10.7
 
-## Durchgängige Etappenplanung
+## Drag-&-Drop Trackplanung
 
-Wenn sich das Ziel einer Etappe ändert, wird automatisch der Start der nächsten Wanderetappe angepasst.
+Der vorhandene Trackeditor wurde auf eine Komoot-ähnlichere Bedienung umgestellt.
 
-### Gilt für
-- Ziel manuell im Etappen-Dialog ändern
-- bevorzugten Stopp ausdrücklich als Etappenziel übernehmen
-- geometrisches Etappenende über den Track-Editor verändern
+### Bedienung
+- Etappe -> `Track bearbeiten`
+- blauen Kontrollpunkt auf der Karte greifen und verschieben
+- umliegende GPX-Punkte bewegen sich weich mit
+- beim Loslassen wird standardmäßig automatisch über Fuss-/Wanderwege neu geroutet
+- Klick auf die Karte fügt einen neuen Kontrollpunkt hinzu und routet danach neu
+- Rechtsklick auf einen Zwischenpunkt entfernt ihn
+- `Rückgängig` und `Original wiederherstellen` bleiben erhalten
+- gespeichert wird weiterhin erst mit `Track speichern`
 
-### Verhalten
-Beispiel:
-- Etappe 4: Ziel wird von `Ort A` auf `Ort B` geändert
-- Etappe 5: Start wird automatisch zu `Ort B`
+### Routing
+Für das Fußrouting wird Valhalla im Pedestrian-Modus verwendet.
+Falls der externe Routingdienst nicht erreichbar ist, bleibt die manuell verschobene
+Trackvorschau bestehen und kann trotzdem gespeichert oder erneut bearbeitet werden.
 
-Liegt zwischen Etappe 4 und Etappe 5 ein Ruhetag, wird dieser übersprungen und die nächste Wanderetappe angepasst.
-
-### Bevorzugte Stopps
-Ein bevorzugter Stopp wird weiterhin **niemals automatisch** zum Etappenziel.
-Die Weitergabe an die nächste Etappe erfolgt erst, nachdem der Benutzer den bevorzugten Stopp ausdrücklich als Etappenziel bestätigt hat.
+### Kartenstil
+Der Trackeditor übernimmt Standard-/Wander-/Topokarte soweit möglich.
 
 Keine Supabase-SQL-Anpassung erforderlich.

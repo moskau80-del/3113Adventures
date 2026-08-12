@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=4106";
+} from "./database.js?v=4107";
 
-import { loadLanguage, translate } from "./i18n.js?v=4106";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4106";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4106";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4106";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4106";
+import { loadLanguage, translate } from "./i18n.js?v=4107";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4107";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4107";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4107";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4107";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -1081,6 +1081,8 @@ let trackEditorStageId=null;
 let trackEditorOriginalPoints=[];
 let trackEditorWorkingPoints=[];
 let trackEditorHistory=[];
+let trackEditorRoutingBusy=false;
+let trackEditorDragSnapshot=null;
 
 function cloneTrackPoints(points){
   return points.map(point=>({...point}));
@@ -1109,45 +1111,147 @@ function trackEditorControlIndices(length){
   return [...new Set(indices)];
 }
 
-function redrawTrackEditor(){
+
+async function rerouteTrackEditorAfterDrag(){
+  if(trackEditorRoutingBusy) return;
+
+  const mode=document.getElementById("trackRoutingMode")?.value||"direct";
+  const autoRoute=document.getElementById("trackEditorAutoRoute")?.checked!==false;
+  const status=document.getElementById("trackRoutingStatus");
+
+  if(mode!=="foot"||!autoRoute){
+    if(status) status.textContent="Punkt verschoben · direkte Trackform aktiv · noch nicht gespeichert";
+    return;
+  }
+
+  const indices=trackEditorWaypointIndices();
+  const waypoints=indices.map(index=>trackEditorWorkingPoints[index]);
+
+  if(waypoints.length<2) return;
+
+  trackEditorRoutingBusy=true;
+  if(status) status.textContent="Neuplanung über Wander-/Fusswege …";
+
+  try{
+    const routed=await routeBetweenWaypoints(waypoints);
+    if(!routed?.length||routed.length<2) throw new Error("Keine verwertbare Route erhalten.");
+
+    trackEditorWorkingPoints=routed;
+    redrawTrackEditor({fit:false});
+    if(status){
+      status.textContent=`✓ Route neu berechnet · ${trackDistanceKm(routed).toFixed(1)} km · noch nicht gespeichert`;
+    }
+  }catch(error){
+    console.warn("Automatisches Drag-&-Drop-Routing fehlgeschlagen:",error);
+    if(status){
+      status.textContent=`Automatisches Routing nicht möglich: ${error.message}. Die verschobene Vorschau bleibt erhalten.`;
+    }
+  }finally{
+    trackEditorRoutingBusy=false;
+  }
+}
+
+function redrawTrackEditor(options={}){
   if(!trackEditorMap) return;
+  const shouldFit=options.fit!==false;
+
   if(trackEditorLayer) trackEditorLayer.remove();
   trackEditorLayer=L.layerGroup().addTo(trackEditorMap);
 
   const coords=trackEditorWorkingPoints.map(p=>[p.lat,p.lng]);
-  const line=L.polyline(coords,{weight:5}).addTo(trackEditorLayer);
+  const line=L.polyline(coords,{weight:5,opacity:.9}).addTo(trackEditorLayer);
   const indices=trackEditorControlIndices(trackEditorWorkingPoints.length);
 
   indices.forEach((pointIndex,controlIndex)=>{
     const point=trackEditorWorkingPoints[pointIndex];
-    const marker=L.marker([point.lat,point.lng],{draggable:true}).addTo(trackEditorLayer);
+    const isStart=pointIndex===0;
+    const isEnd=pointIndex===trackEditorWorkingPoints.length-1;
+
+    const marker=L.marker([point.lat,point.lng],{
+      draggable:true,
+      keyboard:false,
+      title:isStart?"Start":isEnd?"Ziel":`Kontrollpunkt ${controlIndex}`
+    }).addTo(trackEditorLayer);
+
     marker.bindTooltip(
-      pointIndex===0?"Start":pointIndex===trackEditorWorkingPoints.length-1?"Ziel":`Punkt ${controlIndex}`,
+      isStart?"Start":isEnd?"Ziel":`Ziehpunkt ${controlIndex}`,
       {permanent:false}
     );
+
     marker.on("dragstart",()=>{
+      if(trackEditorRoutingBusy) return;
+      trackEditorDragSnapshot=cloneTrackPoints(trackEditorWorkingPoints);
       trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
       if(trackEditorHistory.length>30) trackEditorHistory.shift();
+
+      const status=document.getElementById("trackRoutingStatus");
+      if(status) status.textContent="Punkt verschieben …";
     });
+
     marker.on("contextmenu",()=>{
-      if(pointIndex===0||pointIndex===trackEditorWorkingPoints.length-1) return;
+      if(isStart||isEnd||trackEditorRoutingBusy) return;
       trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
       trackEditorWorkingPoints.splice(pointIndex,1);
-      redrawTrackEditor();
+      redrawTrackEditor({fit:false});
     });
+
     marker.on("drag",event=>{
+      if(trackEditorRoutingBusy) return;
+
       const ll=event.target.getLatLng();
-      trackEditorWorkingPoints[pointIndex]={...trackEditorWorkingPoints[pointIndex],lat:ll.lat,lng:ll.lng};
+      const old=trackEditorWorkingPoints[pointIndex];
+      const dLat=ll.lat-old.lat;
+      const dLng=ll.lng-old.lng;
+
+      // Move the selected point plus nearby track points with a smooth falloff.
+      // This makes dragging feel like moving the route rather than breaking
+      // a single vertex out of a dense GPX line.
+      const radius=Math.max(4,Math.min(40,Math.round(trackEditorWorkingPoints.length/20)));
+
+      for(let i=Math.max(0,pointIndex-radius);i<=Math.min(trackEditorWorkingPoints.length-1,pointIndex+radius);i++){
+        if((i===0&&!isStart)||(i===trackEditorWorkingPoints.length-1&&!isEnd)) continue;
+
+        const distance=Math.abs(i-pointIndex);
+        const influence=Math.cos((distance/(radius+1))*Math.PI/2);
+        if(influence<=0) continue;
+
+        trackEditorWorkingPoints[i]={
+          ...trackEditorWorkingPoints[i],
+          lat:Number(trackEditorWorkingPoints[i].lat)+dLat*influence,
+          lng:Number(trackEditorWorkingPoints[i].lng)+dLng*influence
+        };
+      }
+
+      marker.setLatLng([
+        trackEditorWorkingPoints[pointIndex].lat,
+        trackEditorWorkingPoints[pointIndex].lng
+      ]);
+
       const polylines=trackEditorLayer.getLayers().filter(layer=>layer instanceof L.Polyline);
-      if(polylines[0]) polylines[0].setLatLngs(trackEditorWorkingPoints.map(p=>[p.lat,p.lng]));
+      if(polylines[0]){
+        polylines[0].setLatLngs(trackEditorWorkingPoints.map(p=>[p.lat,p.lng]));
+      }
+
       const info=document.getElementById("trackEditorInfo");
-      if(info) info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · noch nicht gespeichert`;
+      if(info){
+        info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · Punkt verschoben · noch nicht gespeichert`;
+      }
+    });
+
+    marker.on("dragend",async()=>{
+      if(trackEditorRoutingBusy) return;
+      await rerouteTrackEditorAfterDrag();
     });
   });
 
   const info=document.getElementById("trackEditorInfo");
-  if(info) info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · noch nicht gespeichert`;
-  if(line.getBounds().isValid()) trackEditorMap.fitBounds(line.getBounds(),{padding:[20,20]});
+  if(info){
+    info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · ${indices.length} Drag-Punkte · noch nicht gespeichert`;
+  }
+
+  if(shouldFit&&line.getBounds().isValid()){
+    trackEditorMap.fitBounds(line.getBounds(),{padding:[20,20]});
+  }
 }
 
 async function openTrackEditor(stage){
@@ -1176,9 +1280,21 @@ async function openTrackEditor(stage){
   setTimeout(()=>{
     if(!trackEditorMap){
       trackEditorMap=L.map("trackEditorMap",{zoomControl:true});
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-        maxZoom:19,attribution:"&copy; OpenStreetMap-Mitwirkende"
-      }).addTo(trackEditorMap);
+      const editorStyle=currentMapStyle();
+      if(editorStyle==="topo"){
+        L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{
+          maxZoom:17,attribution:"&copy; OpenTopoMap / OpenStreetMap"
+        }).addTo(trackEditorMap);
+      }else{
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+          maxZoom:19,attribution:"&copy; OpenStreetMap-Mitwirkende"
+        }).addTo(trackEditorMap);
+        if(editorStyle==="hiking"){
+          L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png",{
+            maxZoom:18,opacity:.85,attribution:"&copy; Waymarked Trails"
+          }).addTo(trackEditorMap);
+        }
+      }
     }
     trackEditorMap.invalidateSize();
     if(!trackEditorMap._3113EditorClickBound){
@@ -1193,7 +1309,8 @@ async function openTrackEditor(stage){
         }
         trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
         trackEditorWorkingPoints.splice(bestIndex,0,{lat:event.latlng.lat,lng:event.latlng.lng});
-        redrawTrackEditor();
+        redrawTrackEditor({fit:false});
+        setTimeout(()=>rerouteTrackEditorAfterDrag(),50);
       });
       trackEditorMap._3113EditorClickBound=true;
     }
@@ -1281,41 +1398,35 @@ async function routeBetweenWaypoints(points){
 }
 
 document.getElementById("trackEditorRouteBtn")?.addEventListener("click",async()=>{
-  if(!trackEditorWorkingPoints.length) return;
+  if(!trackEditorWorkingPoints.length||trackEditorRoutingBusy) return;
 
   const mode=document.getElementById("trackRoutingMode")?.value||"direct";
   const status=document.getElementById("trackRoutingStatus");
 
   if(mode==="direct"){
-    status.textContent="Direkte Verbindung aktiv. Keine Neuberechnung notwendig.";
+    if(status) status.textContent="Direkte Verbindung aktiv. Für Wanderweg-Routing bitte «Wander-/Fussweg» wählen.";
     return;
   }
 
   const indices=trackEditorWaypointIndices();
   const waypoints=indices.map(index=>trackEditorWorkingPoints[index]);
+  if(waypoints.length<2) return;
 
-  if(waypoints.length<2){
-    status.textContent="Zu wenige Punkte zum Routen.";
-    return;
-  }
-
-  status.textContent="Route wird über Fuss-/Wanderwege berechnet …";
+  trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+  trackEditorRoutingBusy=true;
+  if(status) status.textContent="Route wird über Wander-/Fusswege neu berechnet …";
 
   try{
     const routed=await routeBetweenWaypoints(waypoints);
-
-    if(routed.length<2){
-      throw new Error("Keine verwertbare Route erhalten.");
-    }
-
-    trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+    if(!routed?.length||routed.length<2) throw new Error("Keine verwertbare Route erhalten.");
     trackEditorWorkingPoints=routed;
-    redrawTrackEditor();
-
-    status.textContent=`Routing erfolgreich · ${trackDistanceKm(routed).toFixed(1)} km`;
+    redrawTrackEditor({fit:false});
+    if(status) status.textContent=`✓ Routing erfolgreich · ${trackDistanceKm(routed).toFixed(1)} km`;
   }catch(error){
     console.error("Routing fehlgeschlagen:",error);
-    status.textContent=`Routing fehlgeschlagen: ${error.message}. Direkte Bearbeitung bleibt erhalten.`;
+    if(status) status.textContent=`Routing fehlgeschlagen: ${error.message}. Die manuelle Trackform bleibt erhalten.`;
+  }finally{
+    trackEditorRoutingBusy=false;
   }
 });
 
@@ -4486,12 +4597,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4106";
+  window.location.href = "./?v=4107";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4106");
+    navigator.serviceWorker.register("sw.js?v=4107");
   });
 }
 

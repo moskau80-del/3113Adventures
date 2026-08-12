@@ -642,3 +642,33 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
   .map-style-switcher{width:100%;box-sizing:border-box}
   .map-style-switcher button{flex:1;padding:8px 5px;font-size:.7rem}
 }
+
+/* ===== Sprint 10.7 Drag-&-Drop Trackplanung ===== */
+#trackEditorDialog .inline-check{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin:0;
+  padding:8px 10px;
+  border:1px solid #dce5ed;
+  border-radius:9px;
+  background:#f7fafc;
+}
+#trackEditorMap{
+  cursor:crosshair;
+}
+#trackEditorDialog .leaflet-marker-icon{
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.25));
+}
+#trackEditorDialog .leaflet-marker-icon:hover{
+  transform-origin:center bottom;
+}
+@media(max-width:700px){
+  #trackEditorDialog .button-row{
+    align-items:stretch;
+  }
+  #trackEditorDialog .inline-check{
+    width:100%;
+    box-sizing:border-box;
+  }
+}
