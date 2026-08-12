@@ -1,26 +1,14 @@
-# 3113 Adventures – Sprint 10.4
+# 3113 Adventures – Sprint 10.4.1
 
-## Mein Transa – Wunschliste
-- vorhandenes Wunschlisten-Feld wird jetzt als eigene sichtbare Wunschliste genutzt
-- Wunschlisten-Zähler in der Übersicht von Mein Transa
-- Filter `Wunschliste`
-- eigener Bereich direkt unter der Artikelsuche
-- `Gekauft / in Bestand` übernimmt den Artikel mit gewünschter Stückzahl in den Bestand
-- Wunschlistenartikel können vor dem Kauf nicht einer Packliste zugewiesen werden
-- Wunschlistenartikel zählen nicht zu Bestand/Gesamtgewicht
-- Wunschliste wird über den bestehenden Cloud-Snapshot automatisch synchronisiert
+Wunschliste erweitert:
+- Preis in CHF
+- Shop / Anbieter
+- Produktlink
+- Priorität (niedrig / normal / hoch)
+- Gesamtwert der Wunschliste
+- direkter Button `Artikel öffnen`
+- Felder werden mit der bestehenden Cloud-Synchronisation gespeichert
+- CSV-Import unterstützt Shop, URL/Link und Priorität zusätzlich
 
-## Versorgung – Übernachten
-Die bisherige Camping-Suche heißt jetzt `Übernachten` und sucht:
-- Campingplätze
-- Caravan Sites
-- Hotels
-- Hostels
-- Gästehäuser/Pensionen
-- Motels
-- Chalets
-- Apartments
-- Wilderness Huts
-- Alpine Huts
-
+Die Übernachtungssuche aus Sprint 10.4 bleibt erhalten.
 Keine neue Supabase-SQL-Anpassung erforderlich.
