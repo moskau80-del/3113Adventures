@@ -1,25 +1,12 @@
-# 3113 Adventures – Sprint 10.7
+# 3113 Adventures – Sprint 10.8.1
 
-## Drag-&-Drop Trackplanung
-
-Der vorhandene Trackeditor wurde auf eine Komoot-ähnlichere Bedienung umgestellt.
-
-### Bedienung
-- Etappe -> `Track bearbeiten`
-- blauen Kontrollpunkt auf der Karte greifen und verschieben
-- umliegende GPX-Punkte bewegen sich weich mit
-- beim Loslassen wird standardmäßig automatisch über Fuss-/Wanderwege neu geroutet
-- Klick auf die Karte fügt einen neuen Kontrollpunkt hinzu und routet danach neu
-- Rechtsklick auf einen Zwischenpunkt entfernt ihn
-- `Rückgängig` und `Original wiederherstellen` bleiben erhalten
-- gespeichert wird weiterhin erst mit `Track speichern`
-
-### Routing
-Für das Fußrouting wird Valhalla im Pedestrian-Modus verwendet.
-Falls der externe Routingdienst nicht erreichbar ist, bleibt die manuell verschobene
-Trackvorschau bestehen und kann trotzdem gespeichert oder erneut bearbeitet werden.
-
-### Kartenstil
-Der Trackeditor übernimmt Standard-/Wander-/Topokarte soweit möglich.
+## Punkte-setzen Hotfix
+- Klick direkt auf den bestehenden Track funktioniert jetzt explizit.
+- Ein Track-Klick setzt einen neuen Wegpunkt auf den nächstgelegenen vorhandenen Trackpunkt.
+- Klick neben den Track setzt einen freien Wegpunkt.
+- Ein Klick auf einen neu gesetzten nummerierten Punkt entfernt ihn wieder.
+- Normale Kartenklicks außerhalb des Modus `Punkte setzen` verändern den Track nicht mehr.
+- Dadurch bleiben keine versehentlich gesetzten Punkte im Track hängen.
+- Nach `Punkte verbinden` werden die temporären Punkte sauber entfernt.
 
 Keine Supabase-SQL-Anpassung erforderlich.

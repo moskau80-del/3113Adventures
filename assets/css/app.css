@@ -672,3 +672,37 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
     box-sizing:border-box;
   }
 }
+
+/* ===== Sprint 10.8 Punktplanung ===== */
+.track-click-toolbar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:10px 0;
+  padding:10px;
+  border:1px solid #dce5ed;
+  border-radius:10px;
+  background:#f8fbfd;
+}
+.track-click-toolbar button.active{
+  background:#0b4d87;
+  color:#fff;
+}
+#trackEditorMap.point-mode{
+  cursor:crosshair;
+}
+@media(max-width:700px){
+  .track-click-toolbar button{
+    flex:1 1 140px;
+  }
+}
+
+/* ===== Sprint 10.8.1 Punktmodus Hotfix ===== */
+#trackEditorMap.point-mode .leaflet-interactive{
+  cursor:crosshair;
+}
+#trackEditorMap.point-mode{
+  outline:2px solid rgba(11,77,135,.18);
+  outline-offset:-2px;
+}

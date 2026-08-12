@@ -1,5 +1,5 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#41513d"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="assets/css/app.css?v=4107"><title>3113 Adventures</title>  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="assets/css/app.css?v=41081"><title>3113 Adventures</title>  <link rel="icon" type="image/png" href="./icons/icon-192.png">
 </head><body><header class="topbar">
 <div class="app-brand">
   <img src="./icons/icon-192.png" alt="3113ADVENTURE">
@@ -8,7 +8,7 @@
     <span>Touren · Etappen · Ausrüstung</span>
   </div>
 </div>
-<div class="topbar-center"><span class="version-badge">v4.0.0 · Sprint 10.7</span></div>
+<div class="topbar-center"><span class="version-badge">v4.0.0 · Sprint 10.8.1</span></div>
 <div class="topbar-actions">
   <button class="icon-button" type="button" data-page-jump="print" title="Drucken">🖨</button>
   <button class="icon-button" type="button" data-page-jump="settings" title="Einstellungen">⚙</button>
@@ -532,7 +532,7 @@
   </article>
 </section></main><script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script type="module" src="assets/js/app.js?v=4107"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
+<script type="module" src="assets/js/app.js?v=41081"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
 <dialog id="stageDialog">
   <form id="stageForm">
     <div class="dialog-header">
@@ -722,9 +722,17 @@
       <span>Nach Drag & Drop automatisch über Wanderwege routen</span>
     </label>
   </div>
-  <div id="trackRoutingStatus" class="info-strip muted">Ziehe einen blauen Punkt. Nach dem Loslassen wird der Track automatisch neu berechnet.</div>
+
+  <div class="track-click-toolbar">
+    <button id="trackClickModeBtn" type="button" class="secondary">＋ Punkte setzen</button>
+    <button id="trackConnectClickedBtn" type="button" class="primary" disabled>↗ Punkte verbinden</button>
+    <button id="trackClearClickedBtn" type="button" class="secondary" disabled>× Punkte löschen</button>
+    <span id="trackClickedCount" class="pill">0 Punkte</span>
+  </div>
+
+  <div id="trackRoutingStatus" class="info-strip muted">Ziehe einen blauen Punkt oder aktiviere „Punkte setzen“.</div>
   <div id="trackEditorMap" class="track-editor-map"></div>
-  <p class="muted"><strong>Drag & Drop:</strong> Ziehe einen blauen Kontrollpunkt einfach auf den gewünschten Weg. Beim Loslassen berechnet die App die Wanderroute durch die Kontrollpunkte neu. Klick auf die Karte fügt einen weiteren Kontrollpunkt hinzu; Rechtsklick entfernt einen Zwischenpunkt. Gespeichert wird erst mit „Track speichern“.</p>
+  <p class="muted"><strong>Drag & Drop:</strong> Ziehe vorhandene Kontrollpunkte. <strong>Neue Route:</strong> Aktiviere „Punkte setzen“. Ein Klick direkt auf den bestehenden Track rastet auf dem Track ein; ein Klick daneben setzt einen freien Wegpunkt. Ein Klick auf einen nummerierten neuen Punkt entfernt ihn wieder. Danach „Punkte verbinden“.</p>
   <div class="button-row">
     <button id="trackEditorUndoBtn" type="button">Rückgängig</button>
     <button id="trackEditorResetBtn" type="button">Original wiederherstellen</button>

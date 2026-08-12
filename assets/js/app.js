@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=4107";
+} from "./database.js?v=41081";
 
-import { loadLanguage, translate } from "./i18n.js?v=4107";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4107";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4107";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4107";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4107";
+import { loadLanguage, translate } from "./i18n.js?v=41081";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41081";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41081";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41081";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41081";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -1083,6 +1083,10 @@ let trackEditorWorkingPoints=[];
 let trackEditorHistory=[];
 let trackEditorRoutingBusy=false;
 let trackEditorDragSnapshot=null;
+let trackEditorClickMode=false;
+let trackEditorClickedPoints=[];
+let trackEditorClickedLayer=null;
+
 
 function cloneTrackPoints(points){
   return points.map(point=>({...point}));
@@ -1111,6 +1115,98 @@ function trackEditorControlIndices(length){
   return [...new Set(indices)];
 }
 
+
+
+function updateClickedPointUi(){
+  const count=document.getElementById("trackClickedCount");
+  const connect=document.getElementById("trackConnectClickedBtn");
+  const clear=document.getElementById("trackClearClickedBtn");
+  const modeBtn=document.getElementById("trackClickModeBtn");
+
+  if(count) count.textContent=`${trackEditorClickedPoints.length} Punkt${trackEditorClickedPoints.length===1?"":"e"}`;
+  if(connect) connect.disabled=trackEditorClickedPoints.length<2;
+  if(clear) clear.disabled=trackEditorClickedPoints.length===0;
+  if(modeBtn){
+    modeBtn.classList.toggle("active",trackEditorClickMode);
+    modeBtn.textContent=trackEditorClickMode?"✓ Punkte setzen aktiv":"＋ Punkte setzen";
+  }
+}
+
+
+function nearestTrackPointToLatLng(latlng){
+  if(!trackEditorWorkingPoints.length) return {lat:latlng.lat,lng:latlng.lng};
+
+  let best=trackEditorWorkingPoints[0];
+  let bestDistance=Infinity;
+
+  for(const point of trackEditorWorkingPoints){
+    const dLat=Number(point.lat)-Number(latlng.lat);
+    const dLng=Number(point.lng)-Number(latlng.lng);
+    const d=dLat*dLat+dLng*dLng;
+    if(d<bestDistance){
+      bestDistance=d;
+      best=point;
+    }
+  }
+
+  return {lat:Number(best.lat),lng:Number(best.lng)};
+}
+
+function addClickedTrackPoint(latlng,{snapToTrack=false}={}){
+  if(!trackEditorClickMode) return;
+
+  const point=snapToTrack
+    ?nearestTrackPointToLatLng(latlng)
+    :{lat:Number(latlng.lat),lng:Number(latlng.lng)};
+
+  trackEditorClickedPoints.push(point);
+  redrawClickedPoints();
+
+  const status=document.getElementById("trackRoutingStatus");
+  if(status){
+    status.textContent=
+      `${trackEditorClickedPoints.length} Punkt${trackEditorClickedPoints.length===1?"":"e"} gesetzt${snapToTrack?" · auf Track eingerastet":""}. `+
+      `Mindestens 2 Punkte setzen und danach „Punkte verbinden“.`;
+  }
+}
+
+function redrawClickedPoints(){
+  if(!trackEditorMap) return;
+
+  if(trackEditorClickedLayer){
+    trackEditorClickedLayer.remove();
+    trackEditorClickedLayer=null;
+  }
+
+  trackEditorClickedLayer=L.layerGroup().addTo(trackEditorMap);
+
+  trackEditorClickedPoints.forEach((point,index)=>{
+    const clickedMarker=L.circleMarker([point.lat,point.lng],{
+      radius:7,
+      weight:2,
+      fillOpacity:1,
+      bubblingMouseEvents:false
+    })
+      .addTo(trackEditorClickedLayer)
+      .bindTooltip(String(index+1),{permanent:true,direction:"top"});
+
+    clickedMarker.on("click",()=>{
+      trackEditorClickedPoints.splice(index,1);
+      redrawClickedPoints();
+      const status=document.getElementById("trackRoutingStatus");
+      if(status) status.textContent="Punkt entfernt. Weitere Punkte setzen oder verbinden.";
+    });
+  });
+
+  if(trackEditorClickedPoints.length>1){
+    L.polyline(
+      trackEditorClickedPoints.map(point=>[point.lat,point.lng]),
+      {weight:3,dashArray:"7 7",opacity:.7}
+    ).addTo(trackEditorClickedLayer);
+  }
+
+  updateClickedPointUi();
+}
 
 async function rerouteTrackEditorAfterDrag(){
   if(trackEditorRoutingBusy) return;
@@ -1159,7 +1255,17 @@ function redrawTrackEditor(options={}){
   trackEditorLayer=L.layerGroup().addTo(trackEditorMap);
 
   const coords=trackEditorWorkingPoints.map(p=>[p.lat,p.lng]);
-  const line=L.polyline(coords,{weight:5,opacity:.9}).addTo(trackEditorLayer);
+  const line=L.polyline(coords,{
+    weight:7,
+    opacity:.9,
+    bubblingMouseEvents:false
+  }).addTo(trackEditorLayer);
+
+  line.on("click",event=>{
+    if(!trackEditorClickMode) return;
+    addClickedTrackPoint(event.latlng,{snapToTrack:true});
+  });
+
   const indices=trackEditorControlIndices(trackEditorWorkingPoints.length);
 
   indices.forEach((pointIndex,controlIndex)=>{
@@ -1271,6 +1377,9 @@ async function openTrackEditor(stage){
   trackEditorOriginalPoints=cloneTrackPoints(segment);
   trackEditorWorkingPoints=cloneTrackPoints(segment);
   trackEditorHistory=[];
+  trackEditorClickMode=false;
+  trackEditorClickedPoints=[];
+  updateClickedPointUi();
 
   const routingStatus=document.getElementById("trackRoutingStatus");
   if(routingStatus) routingStatus.textContent="";
@@ -1299,18 +1408,8 @@ async function openTrackEditor(stage){
     trackEditorMap.invalidateSize();
     if(!trackEditorMap._3113EditorClickBound){
       trackEditorMap.on("click",event=>{
-        if(!trackEditorStageId||trackEditorWorkingPoints.length<2) return;
-        let bestIndex=1,best=Infinity;
-        for(let i=1;i<trackEditorWorkingPoints.length;i++){
-          const a=trackEditorWorkingPoints[i-1],b=trackEditorWorkingPoints[i];
-          const midLat=(a.lat+b.lat)/2,midLng=(a.lng+b.lng)/2;
-          const d=(event.latlng.lat-midLat)**2+(event.latlng.lng-midLng)**2;
-          if(d<best){best=d;bestIndex=i}
-        }
-        trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
-        trackEditorWorkingPoints.splice(bestIndex,0,{lat:event.latlng.lat,lng:event.latlng.lng});
-        redrawTrackEditor({fit:false});
-        setTimeout(()=>rerouteTrackEditorAfterDrag(),50);
+        if(!trackEditorStageId||!trackEditorClickMode) return;
+        addClickedTrackPoint(event.latlng,{snapToTrack:false});
       });
       trackEditorMap._3113EditorClickBound=true;
     }
@@ -1430,6 +1529,70 @@ document.getElementById("trackEditorRouteBtn")?.addEventListener("click",async()
   }
 });
 
+
+document.getElementById("trackClickModeBtn")?.addEventListener("click",()=>{
+  trackEditorClickMode=!trackEditorClickMode;
+  updateClickedPointUi();
+
+  const mapElement=document.getElementById("trackEditorMap");
+  if(mapElement) mapElement.classList.toggle("point-mode",trackEditorClickMode);
+
+  const status=document.getElementById("trackRoutingStatus");
+  if(status){
+    status.textContent=trackEditorClickMode
+      ?"Punkte setzen aktiv: auf den vorhandenen Track klicken = Punkt rastet auf dem Track ein; daneben klicken = freier Wegpunkt."
+      :"Punkte setzen beendet. Normale Kartenklicks verändern den Track nicht.";
+  }
+});
+
+document.getElementById("trackClearClickedBtn")?.addEventListener("click",()=>{
+  trackEditorClickedPoints=[];
+  redrawClickedPoints();
+
+  const status=document.getElementById("trackRoutingStatus");
+  if(status) status.textContent="Gesetzte Punkte gelöscht.";
+});
+
+document.getElementById("trackConnectClickedBtn")?.addEventListener("click",async()=>{
+  if(trackEditorClickedPoints.length<2||trackEditorRoutingBusy) return;
+
+  const status=document.getElementById("trackRoutingStatus");
+  trackEditorRoutingBusy=true;
+
+  try{
+    if(status) status.textContent="Gesetzte Punkte werden über Wander-/Fusswege verbunden …";
+
+    trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+
+    const mode=document.getElementById("trackRoutingMode")?.value||"foot";
+
+    if(mode==="direct"){
+      trackEditorWorkingPoints=cloneTrackPoints(trackEditorClickedPoints);
+    }else{
+      const routed=await routeBetweenWaypoints(trackEditorClickedPoints);
+      if(!routed?.length||routed.length<2){
+        throw new Error("Keine verwertbare Route erhalten.");
+      }
+      trackEditorWorkingPoints=routed;
+    }
+
+    trackEditorClickMode=false;
+    trackEditorClickedPoints=[];
+    document.getElementById("trackEditorMap")?.classList.remove("point-mode");
+    redrawClickedPoints();
+    redrawTrackEditor({fit:true});
+
+    if(status){
+      status.textContent=`✓ Neue Route verbunden · ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · noch nicht gespeichert`;
+    }
+  }catch(error){
+    console.error("Punkte verbinden fehlgeschlagen:",error);
+    if(status) status.textContent=`Punkte konnten nicht verbunden werden: ${error.message}`;
+  }finally{
+    trackEditorRoutingBusy=false;
+  }
+});
+
 document.getElementById("trackEditorUndoBtn")?.addEventListener("click",()=>{
   const previous=trackEditorHistory.pop();
   if(!previous) return;
@@ -1506,6 +1669,14 @@ document.getElementById("trackEditorSaveBtn")?.addEventListener("click",async()=
 document.getElementById("trackEditorDialog")?.addEventListener("close",()=>{
   trackEditorStageId=null;
   trackEditorHistory=[];
+  trackEditorClickMode=false;
+  trackEditorClickedPoints=[];
+  document.getElementById("trackEditorMap")?.classList.remove("point-mode");
+  if(trackEditorClickedLayer){
+    trackEditorClickedLayer.remove();
+    trackEditorClickedLayer=null;
+  }
+  updateClickedPointUi();
 });
 
 
@@ -4597,12 +4768,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4107";
+  window.location.href = "./?v=41081";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4107");
+    navigator.serviceWorker.register("sw.js?v=41081");
   });
 }
 
