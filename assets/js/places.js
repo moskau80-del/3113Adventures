@@ -100,6 +100,18 @@ export function buildOverpassQuery(bounds,category){
   const bbox=`${south},${west},${north},${east}`;
 
   const filters={
+    accommodation:[
+      'nwr["tourism"="camp_site"]',
+      'nwr["tourism"="caravan_site"]',
+      'nwr["tourism"="hotel"]',
+      'nwr["tourism"="hostel"]',
+      'nwr["tourism"="guest_house"]',
+      'nwr["tourism"="motel"]',
+      'nwr["tourism"="chalet"]',
+      'nwr["tourism"="apartment"]',
+      'nwr["tourism"="wilderness_hut"]',
+      'nwr["tourism"="alpine_hut"]'
+    ],
     camping:[
       'nwr["tourism"="camp_site"]',
       'nwr["tourism"="caravan_site"]',

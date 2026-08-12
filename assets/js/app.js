@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=4103";
+} from "./database.js?v=4104";
 
-import { loadLanguage, translate } from "./i18n.js?v=4103";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=4103";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4103";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4103";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4103";
+import { loadLanguage, translate } from "./i18n.js?v=4104";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4104";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4104";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4104";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4104";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -37,7 +37,7 @@ const splitStageDialog = document.getElementById("splitStageDialog");
 const splitStageForm = document.getElementById("splitStageForm");
 let currentMapStageId = null;
 let currentSupplyStageId=null;
-let currentSupplyCategory="camping";
+let currentSupplyCategory="accommodation";
 let currentSupplyResults=[];
 let pendingPreferredDestinationStageId=null;
 let pendingPreferredStartStageId=null;
@@ -1409,10 +1409,10 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
     const stage=stages.find(item=>item.id===supplyId);
     if(stage&&!stage.restDay){
       currentSupplyStageId=stage.id;
-      currentSupplyCategory="camping";
+      currentSupplyCategory="accommodation";
       currentSupplyResults=[];
       document.querySelectorAll("[data-supply-category]").forEach(button=>{
-        button.classList.toggle("active",button.dataset.supplyCategory==="camping");
+        button.classList.toggle("active",button.dataset.supplyCategory==="accommodation");
       });
       document.getElementById("supplyStageInfo").innerHTML=
         `<strong>${escapeHtml(stage.name)}</strong><br>${escapeHtml(stage.from)} → ${escapeHtml(stage.to)} · ${Number(stage.distanceKm||0).toFixed(1)} km`;
@@ -2863,7 +2863,7 @@ async function renderGear(){
   const sort=document.getElementById("gearSort")?.value||"name";
 
   let filtered=items.filter(item=>{
-    const matchesCategory=category==="all"||item.category===category;
+    const matchesCategory=category==="all"||(category==="wishlist"?Boolean(item.wishlist):item.category===category);
     const text=[item.name,item.brand,item.category,item.location,item.notes].filter(Boolean).join(" ").toLowerCase();
     return matchesCategory&&(!query||text.includes(query));
   });
@@ -2875,15 +2875,37 @@ async function renderGear(){
     return String(a.name||"").localeCompare(String(b.name||""));
   });
 
-  setTextSafe("gearCount",String(items.length));
+  setTextSafe("gearCount",String(items.filter(item=>!item.wishlist).length));
   setTextSafe("gearWeightTotal",
     formatKg3FromGrams(
-      items.reduce((sum,item)=>sum+Number(item.weightG||0)*Number(item.stock??item.quantity??1),0)
+      items.filter(item=>!item.wishlist).reduce((sum,item)=>sum+Number(item.weightG||0)*Number(item.stock??item.quantity??1),0)
     ));
   setTextSafe("gearShoeCount",
     String(items.filter(item=>item.category==="shoes").length));
   setTextSafe("gearFavoriteCount",
     String(items.filter(item=>item.favorite).length));
+  const wishlistItems=items.filter(item=>item.wishlist);
+  setTextSafe("gearWishlistCount",String(wishlistItems.length));
+
+  const wishlistList=document.getElementById("gearWishlistList");
+  if(wishlistList){
+    wishlistList.innerHTML=wishlistItems.length
+      ?wishlistItems
+        .sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")))
+        .map(item=>`
+          <div class="wishlist-item">
+            <div>
+              <strong>${escapeHtml(item.name)}</strong>
+              <span>${escapeHtml(item.brand||"")}${item.weightG?` · ${Number(item.weightG)} g`:""}</span>
+              ${item.notes?`<small>${escapeHtml(item.notes)}</small>`:""}
+            </div>
+            <div class="button-row">
+              <button class="primary" data-buy-wishlist="${item.id}">✓ Gekauft / in Bestand</button>
+              <button class="secondary" data-edit-gear="${item.id}">Bearbeiten</button>
+            </div>
+          </div>`).join("")
+      :'<div class="empty">Noch keine Artikel auf der Wunschliste.</div>';
+  }
 
   list.innerHTML=filtered.length
     ?filtered.map(item=>`
@@ -2907,8 +2929,8 @@ async function renderGear(){
         <td>${escapeHtml(item.location||"–")}</td>
         <td>
           <div class="gear-actions">
-            <button data-add-gear-person1="${item.id}" ${activeTour&&gearAvailabilityInfo(activeTour.id,item).available<=0?"disabled":""}>→ ${escapeHtml(currentPersonNames.person1)}</button>
-            <button data-add-gear-person2="${item.id}" ${activeTour&&gearAvailabilityInfo(activeTour.id,item).available<=0?"disabled":""}>→ ${escapeHtml(currentPersonNames.person2)}</button>
+            <button data-add-gear-person1="${item.id}" ${item.wishlist||activeTour&&gearAvailabilityInfo(activeTour.id,item).available<=0?"disabled":""}>→ ${escapeHtml(currentPersonNames.person1)}</button>
+            <button data-add-gear-person2="${item.id}" ${item.wishlist||activeTour&&gearAvailabilityInfo(activeTour.id,item).available<=0?"disabled":""}>→ ${escapeHtml(currentPersonNames.person2)}</button>
             <button data-edit-gear="${item.id}">Bearbeiten</button>
             <button class="danger" data-delete-gear="${item.id}">Löschen</button>
           </div>
@@ -2942,6 +2964,36 @@ gearForm?.addEventListener("submit",(event)=>{
   gearDialog.close();
   renderGear();
   renderTourPack();
+});
+
+
+document.getElementById("gearWishlistList")?.addEventListener("click",(event)=>{
+  const buyId=event.target.dataset.buyWishlist;
+  const editId=event.target.dataset.editGear;
+  const items=loadGearLocal();
+
+  if(buyId){
+    const item=items.find(entry=>entry.id===buyId);
+    if(!item) return;
+    const answer=prompt(`Wie viele Stück von „${item.name}“ hast du gekauft?`,"1");
+    if(answer===null) return;
+    const stock=Math.max(1,Math.floor(Number(answer)||1));
+    upsertGearLocal({
+      ...item,
+      wishlist:false,
+      stock,
+      quantity:stock,
+      updatedAt:new Date().toISOString()
+    });
+    renderGear();
+    renderTourPack();
+    return;
+  }
+
+  if(editId){
+    const item=items.find(entry=>entry.id===editId);
+    if(item) openGearDialog(item);
+  }
 });
 
 document.getElementById("gearList")?.addEventListener("change",(event)=>{
@@ -4282,12 +4334,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=4103";
+  window.location.href = "./?v=4104";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=4103");
+    navigator.serviceWorker.register("sw.js?v=4104");
   });
 }
 

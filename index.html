@@ -1,5 +1,5 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#41513d"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="assets/css/app.css?v=4103"><title>3113 Adventures</title>  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="assets/css/app.css?v=4104"><title>3113 Adventures</title>  <link rel="icon" type="image/png" href="./icons/icon-192.png">
 </head><body><header class="topbar">
 <div class="app-brand">
   <img src="./icons/icon-192.png" alt="3113ADVENTURE">
@@ -8,7 +8,7 @@
     <span>Touren · Etappen · Ausrüstung</span>
   </div>
 </div>
-<div class="topbar-center"><span class="version-badge">v4.0.0 · Sprint 10.3</span></div>
+<div class="topbar-center"><span class="version-badge">v4.0.0 · Sprint 10.4</span></div>
 <div class="topbar-actions">
   <button class="icon-button" type="button" data-page-jump="print" title="Drucken">🖨</button>
   <button class="icon-button" type="button" data-page-jump="settings" title="Einstellungen">⚙</button>
@@ -189,7 +189,7 @@
   <article class="card">
     <div class="summary-grid">
       <div><strong id="placeCount">0</strong><span>gespeicherte Orte</span></div>
-      <div><strong id="campingCount">0</strong><span>Camping</span></div>
+      <div><strong id="campingCount">0</strong><span>Übernachten</span></div>
       <div><strong id="waterCount">0</strong><span>Wasser</span></div>
       <div><strong id="shopCount">0</strong><span>Einkauf</span></div><div><strong id="favoriteCount">0</strong><span>Favoriten</span></div>
     </div>
@@ -220,6 +220,7 @@
       <div><strong id="gearWeightTotal">0 g</strong><span>Gesamtgewicht</span></div>
       <div><strong id="gearShoeCount">0</strong><span>Schuhe</span></div>
       <div><strong id="gearFavoriteCount">0</strong><span>Favoriten</span></div>
+      <div><strong id="gearWishlistCount">0</strong><span>Wunschliste</span></div>
     </div>
   </article>
 
@@ -233,6 +234,7 @@
         <span>Kategorie</span>
         <select id="gearCategoryFilter">
           <option value="all">Alle</option>
+          <option value="wishlist">♡ Wunschliste</option>
           <option value="shoes">Schuhe</option>
           <option value="backpack">Rucksack</option>
           <option value="sleep">Schlafen</option>
@@ -260,6 +262,16 @@
       <button id="clearGearSelectionBtn" class="secondary" type="button">Auswahl aufheben</button>
       <button id="deleteSelectedGearBtn" class="danger" type="button">Ausgewählte löschen</button>
     </div>
+  </article>
+
+  <article class="card wishlist-card">
+    <div class="section-header compact">
+      <div>
+        <h3>♡ Meine Wunschliste</h3>
+        <p class="muted">Artikel, die du noch kaufen oder später in deinen Bestand übernehmen möchtest.</p>
+      </div>
+    </div>
+    <div id="gearWishlistList" class="wishlist-list"></div>
   </article>
 
   <div class="gear-table-wrap">
@@ -514,7 +526,7 @@
   </article>
 </section></main><script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script type="module" src="assets/js/app.js?v=4103"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
+<script type="module" src="assets/js/app.js?v=4104"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
 <dialog id="stageDialog">
   <form id="stageForm">
     <div class="dialog-header">
@@ -593,7 +605,7 @@
   <div id="supplyStageInfo" class="info-strip"></div>
 
   <div class="supply-grid">
-    <button data-supply-category="camping">⛺ Camping</button>
+    <button data-supply-category="accommodation">🛏 Übernachten</button>
     <button data-supply-category="water">💧 Wasser</button>
     <button data-supply-category="shop">🛒 Einkauf</button>
     <button data-supply-category="transport">🚆 ÖV</button>
@@ -628,6 +640,7 @@
       <label class="form-label">
         <span>Kategorie</span>
         <select id="manualPlaceCategory">
+          <option value="accommodation">Übernachten</option>
           <option value="camping">Camping</option>
           <option value="water">Wasser</option>
           <option value="shop">Einkauf</option>
