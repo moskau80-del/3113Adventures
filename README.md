@@ -1,14 +1,19 @@
-# 3113 Adventures – Sprint 10.4.1
+# 3113 Adventures – Sprint 10.5
 
-Wunschliste erweitert:
-- Preis in CHF
-- Shop / Anbieter
-- Produktlink
-- Priorität (niedrig / normal / hoch)
-- Gesamtwert der Wunschliste
-- direkter Button `Artikel öffnen`
-- Felder werden mit der bestehenden Cloud-Synchronisation gespeichert
-- CSV-Import unterstützt Shop, URL/Link und Priorität zusätzlich
+## Kartenumschalter
+Leaflet bleibt bestehen. Neu kann direkt auf der Karte zwischen drei Darstellungen gewechselt werden:
 
-Die Übernachtungssuche aus Sprint 10.4 bleibt erhalten.
-Keine neue Supabase-SQL-Anpassung erforderlich.
+- Standard: OpenStreetMap Standard
+- Wandern: OpenStreetMap + Waymarked Trails Wanderrouten
+- Topografisch: OpenTopoMap
+
+## Verhalten
+- GPX-Track bleibt beim Kartenwechsel sichtbar.
+- Etappen, Marker, bevorzugte Orte und Trackbearbeitung bleiben unverändert.
+- Gewählter Kartenstil wird lokal gespeichert und beim nächsten Öffnen wieder verwendet.
+- Umschalter ist für Desktop und Mobile optimiert.
+
+## Hinweise
+- OpenTopoMap hat maximal Zoomstufe 17.
+- Waymarked Trails wird als transparente Wanderroutenebene über der Standardkarte eingeblendet.
+- Keine neue Supabase-SQL-Anpassung erforderlich.

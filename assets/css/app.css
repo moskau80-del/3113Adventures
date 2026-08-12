@@ -624,3 +624,21 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
 .wishlist-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
 .wishlist-item a.button{text-decoration:none;display:inline-flex;align-items:center}
 @media(max-width:700px){.wishlist-details{grid-template-columns:1fr}.wishlist-details .form-label:nth-child(3){grid-column:auto}}
+
+/* ===== Sprint 10.5 Kartenstile ===== */
+.map-style-switcher{
+  display:inline-flex;gap:4px;padding:4px;margin:0 0 10px;
+  background:#eef3f8;border:1px solid #dbe4ed;border-radius:11px;
+}
+.map-style-switcher button{
+  border:0;background:transparent;color:#496077;padding:8px 11px;
+  border-radius:8px;font-size:.78rem;font-weight:800;cursor:pointer;
+}
+.map-style-switcher button:hover{background:#fff}
+.map-style-switcher button.active{
+  background:#fff;color:#0b4d87;box-shadow:0 2px 7px rgba(18,63,101,.12);
+}
+@media(max-width:520px){
+  .map-style-switcher{width:100%;box-sizing:border-box}
+  .map-style-switcher button{flex:1;padding:8px 5px;font-size:.7rem}
+}

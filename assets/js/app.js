@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41041";
+} from "./database.js?v=4105";
 
-import { loadLanguage, translate } from "./i18n.js?v=41041";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41041";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41041";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41041";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41041";
+import { loadLanguage, translate } from "./i18n.js?v=4105";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=4105";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=4105";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=4105";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=4105";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -30,6 +30,9 @@ const tourDialog = document.getElementById("tourDialog");
 const tourForm = document.getElementById("tourForm");
 let map = null;
 let trackLayer = null;
+let activeBaseLayer = null;
+let activeHikingOverlay = null;
+const MAP_STYLE_KEY="3113-map-style-v1";
 let userMarker = null;
 const stageDialog = document.getElementById("stageDialog");
 const stageForm = document.getElementById("stageForm");
@@ -321,6 +324,66 @@ document.getElementById("tourList")?.addEventListener("click", async (event) => 
 });
 
 
+function createMapLayers(){
+  const standard=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19,
+    attribution:'&copy; OpenStreetMap-Mitwirkende'
+  });
+
+  const topo=L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{
+    maxZoom:17,
+    attribution:'Kartendaten &copy; OpenStreetMap-Mitwirkende · SRTM | Kartenstil &copy; OpenTopoMap (CC-BY-SA)'
+  });
+
+  const hikingBase=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19,
+    attribution:'&copy; OpenStreetMap-Mitwirkende'
+  });
+
+  const hikingOverlay=L.tileLayer("https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png",{
+    maxZoom:18,
+    opacity:.9,
+    attribution:'Wanderrouten &copy; Waymarked Trails'
+  });
+
+  return {standard,topo,hikingBase,hikingOverlay};
+}
+
+function currentMapStyle(){
+  return localStorage.getItem(MAP_STYLE_KEY)||"standard";
+}
+
+function applyMapStyle(style){
+  if(!map||!window.L) return;
+
+  if(activeBaseLayer){
+    map.removeLayer(activeBaseLayer);
+    activeBaseLayer=null;
+  }
+  if(activeHikingOverlay){
+    map.removeLayer(activeHikingOverlay);
+    activeHikingOverlay=null;
+  }
+
+  const layers=createMapLayers();
+
+  if(style==="topo"){
+    activeBaseLayer=layers.topo.addTo(map);
+  }else if(style==="hiking"){
+    activeBaseLayer=layers.hikingBase.addTo(map);
+    activeHikingOverlay=layers.hikingOverlay.addTo(map);
+  }else{
+    activeBaseLayer=layers.standard.addTo(map);
+    style="standard";
+  }
+
+  localStorage.setItem(MAP_STYLE_KEY,style);
+
+  document.querySelectorAll("[data-map-style]").forEach(button=>{
+    button.classList.toggle("active",button.dataset.mapStyle===style);
+  });
+}
+
 function initMap() {
   if (map) return true;
 
@@ -338,10 +401,7 @@ function initMap() {
     zoomControl: true
   }).setView([51.2, 10.4], 6);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap-Mitwirkende"
-  }).addTo(map);
+  applyMapStyle(currentMapStyle());
 
   trackLayer = L.layerGroup().addTo(map);
   return true;
@@ -545,6 +605,17 @@ document.getElementById("deleteGpxBtn")?.addEventListener("click", async () => {
   }
 });
 
+
+
+document.querySelectorAll("[data-map-style]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    if(!initMap()) return;
+    applyMapStyle(button.dataset.mapStyle);
+    setTimeout(()=>{
+      if(map) map.invalidateSize();
+    },50);
+  });
+});
 
 document.getElementById("showWholeTrackBtn")?.addEventListener("click", async () => {
   currentMapStageId=null;
@@ -4352,12 +4423,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41041";
+  window.location.href = "./?v=4105";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41041");
+    navigator.serviceWorker.register("sw.js?v=4105");
   });
 }
 
