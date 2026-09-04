@@ -1,305 +1,812 @@
-<!doctype html>
-<html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#43513d">
-  <meta name="description" content="3113 Adventures – Fernwanderplanung für den Nord-Süd-Trail.">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=310">
-  <title>3113 Adventures</title>
-</head>
-<body>
-<header class="topbar">
-  <div><span class="brand-number">3113</span><h1>Adventures</h1></div>
-  <span class="version">v3.1</span>
-</header>
-
-<nav id="mainNav" class="main-nav" aria-label="Hauptnavigation">
-  <button data-page="dashboard" class="active">Übersicht</button>
-  <button data-page="sections">NST-Abschnitte</button>
-  <button data-page="stages">Etappen</button>
-  <button data-page="map">Karte</button>
-  <button data-page="places">Orte</button>
-  <button data-page="settings">Einstellungen</button>
-</nav>
-
-<main>
-<section id="dashboard" class="page active">
-  <article class="hero">
-    <span class="badge">OFFIZIELLER NST</span>
-    <h2 id="tourTitle">Nord-Süd-Trail 2027</h2>
-    <p>Ellenbogen, Sylt → Haldenwanger Eck</p>
-    <div class="hero-grid">
-      <div><strong>3’700 km</strong><span>offizielle Länge</span></div>
-      <div><strong id="calendarDays">0</strong><span>Kalendertage</span></div>
-      <div><strong id="requiredAverage">0 km</strong><span>notwendiger Schnitt</span></div>
-      <div><strong id="plannedRestDays">0</strong><span>Ruhetage</span></div>
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#41513d"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="assets/css/app.css?v=41082"><title>3113 Adventures</title>  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+</head><body><header class="topbar">
+<div class="app-brand">
+  <img src="./icons/icon-192.png" alt="3113ADVENTURE">
+  <div class="app-brand-text">
+    <strong>3113ADVENTURE</strong>
+    <span>Touren · Etappen · Ausrüstung</span>
+  </div>
+</div>
+<div class="topbar-center"><span class="version-badge">v4.0.0 · Sprint 10.8.2</span></div>
+<div class="topbar-actions">
+  <button class="icon-button" type="button" data-page-jump="print" title="Drucken">🖨</button>
+  <button class="icon-button" type="button" data-page-jump="settings" title="Einstellungen">⚙</button>
+</div>
+</header><nav class="main-nav sidebar-nav"><button class="active" data-page="dashboard" data-i18n="nav.dashboard">Übersicht</button><button data-page="tours" data-i18n="nav.tours">Touren</button><button data-page="stages" data-i18n="nav.stages">Etappen</button><button data-page="map" data-i18n="nav.map">Karte</button><button data-page="places" data-i18n="nav.places">Orte</button><button data-page="gear">Mein Transa</button><button data-page="packlists">Packlisten</button><button data-page="data">Daten</button><button data-page="roadbook">Roadbook</button><button data-page="print">Drucken</button><button data-page="settings" data-i18n="nav.settings">Einstellungen</button></nav>
+<div class="sidebar-tour-card">
+  <strong id="sidebarTourName">Keine aktive Tour</strong>
+  <span id="sidebarTourDates">–</span>
+  <span id="sidebarTourStages">0 Etappen</span>
+</div>
+<div class="sidebar-people-card">
+  <div class="sidebar-section-title">MEIN TRANSA</div>
+  <div><strong id="sidebarPerson1">Person 1</strong><span id="sidebarPerson1Weight">0.000 kg</span></div>
+  <div><strong id="sidebarPerson2">Person 2</strong><span id="sidebarPerson2Weight">0.000 kg</span></div>
+</div><main><section id="dashboard" class="page active"><article class="hero"><span class="badge">VERSION 4</span><h2>3113 Adventures</h2><p><span data-i18n="dashboard.subtitle">Die neue modulare PWA-Grundlage ist aktiv.</span></p></article><article class="card"><h3 data-i18n="dashboard.currentTour">Aktuelle Tour</h3><div id="currentTourCard" class="muted" data-i18n="dashboard.noTour">Noch keine Tour ausgewählt.</div></article>
+<article class="card">
+  <h3>Tour-Fortschritt</h3>
+  <div class="summary-grid">
+    <div><strong id="dashStageCount">0</strong><span>Wandertage</span></div>
+    <div><strong id="dashRestCount">0</strong><span>Ruhetage</span></div>
+    <div><strong id="dashPlannedKm">0 km</strong><span>geplant</span></div>
+    <div><strong id="dashRemainingKm">0 km</strong><span>verbleibend</span></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-head">
+      <span>Fortschritt</span>
+      <strong id="dashProgressLabel">0 %</strong>
     </div>
-  </article>
-
-  <div class="dashboard-grid">
-    <article class="card">
-      <h3>Fortschritt</h3>
-      <div class="progress"><span id="progressBar"></span></div>
-      <div class="metric-row"><span>Abgeschlossen</span><strong id="completedDistance">0 km</strong></div>
-      <div class="metric-row"><span>Geplant</span><strong id="plannedDistance">0 km</strong></div>
-      <div class="metric-row"><span>Noch nicht verplant</span><strong id="unplannedDistance">3’700 km</strong></div>
-    </article>
-
-    <article class="card">
-      <h3>Nächste Etappe</h3>
-      <div id="nextStage" class="muted">Noch keine Etappe angelegt.</div>
-    </article>
-
-    <article class="card">
-      <h3>Nächste gespeicherte Orte</h3>
-      <div id="nearestPlaces" class="muted">Noch keine Orte gespeichert.</div>
-    </article>
-
-    <article class="card">
-      <h3>Datenbestand</h3>
-      <div class="metric-row"><span>Etappen</span><strong id="stageCount">0</strong></div>
-      <div class="metric-row"><span>Orte</span><strong id="placeCount">0</strong></div>
-      <div class="metric-row"><span>GPX-Track</span><strong id="gpxStatus">nicht importiert</strong></div>
-    </article>
+    <div class="progress-bar"><span id="dashProgressBar" style="width:0%"></span></div>
   </div>
+</article>
 
-  <article class="card warning">
-    <h3>Planungshinweis</h3>
-    <p>Die App verwendet die offizielle NST-Grundlage. Etappen, Campingplätze, Wasserstellen und Einkaufsmöglichkeiten werden von dir ergänzt und sind nur dann als geprüft gekennzeichnet, wenn du dies ausdrücklich auswählst.</p>
-  </article>
-</section>
+<article class="card">
+  <h3>Nächste Etappe</h3>
+  <div id="dashNextStage" class="muted">Noch keine geplante Etappe vorhanden.</div>
+</article>
 
+<article class="card">
+  <h3>Nächster geplanter Stopp</h3>
+  <div id="dashNextPreferredPlace" class="muted">Noch kein bevorzugter Ort festgelegt.</div>
+</article>
 
-<section id="sections" class="page">
-  <div class="section-header">
-    <div>
-      <h2>NST-Abschnitte</h2>
-      <p class="muted">Die offizielle Abschnittsstruktur des Nord-Süd-Trails. Der Heidschnuckenweg ist besonders markiert.</p>
-    </div>
-  </div>
-  <div class="toolbar sections-toolbar">
-    <input id="sectionSearch" placeholder="Abschnitt suchen">
-    <select id="sectionFilter">
-      <option value="all">Alle Abschnitte</option>
-      <option value="heid">Nur Heidschnuckenweg</option>
-    </select>
-  </div>
-  <div class="card"><h3>Abschnittsfortschritt</h3><p class="muted">Die Zuordnung basiert auf dem Abschnitt, den du bei jeder Etappe auswählst.</p><div id="sectionProgress"></div></div>
-  <div id="sectionList"></div>
-</section>
-
+</section><section id="tours" class="page"><div class="section-header"><div><h2 data-i18n="pages.toursTitle">Touren</h2><p class="muted" data-i18n="pages.toursText">Verwalte deine Fernwanderungen.</p></div><button id="addTourBtn" class="primary" data-i18n="tours.add">+ Tour</button></div><div id="tourList"></div></section>
 <section id="stages" class="page">
   <div class="section-header">
-    <div><h2>Etappen</h2><p class="muted">Tagesetappen planen, bearbeiten und abschliessen.</p></div>
-    <button id="addStageBtn" class="primary">+ Etappe</button>
-  </div>
-  <div class="toolbar">
-    <input id="stageSearch" placeholder="Start, Ziel oder Abschnitt suchen">
-    <select id="stageFilter">
-      <option value="all">Alle Etappen</option>
-      <option value="open">Offen</option>
-      <option value="completed">Abgeschlossen</option>
-      <option value="heid">Heidschnuckenweg</option>
-    </select>
-  </div>
-  
-  
-  <article class="card timeline-card">
-    <div class="section-header compact">
-      <div>
-        <h3>Tour-Zeitachse</h3>
-        <p class="muted">Ruhetage und Datumsverschiebungen werden automatisch berücksichtigt.</p>
-      </div>
-      <button id="recalculateDatesBtn" class="secondary">Daten neu berechnen</button>
+    <div>
+      <h2>Etappen</h2>
+      <p class="muted">Erzeuge Etappen aus dem importierten GPX-Track und speichere sie lokal.</p>
     </div>
-    <div id="timelineSummary"></div>
+  </div>
+
+  <article class="card">
+    <h3>Etappen erzeugen</h3>
+    <div class="generator-grid">
+      <label class="form-label">
+        <span>Zielkilometer pro Etappe</span>
+        <input id="stageTargetKm" type="number" min="5" max="60" step="1" value="28">
+      </label>
+      <label class="form-label">
+        <span>Startdatum</span>
+        <input id="stageStartDate" type="date">
+      </label>
+      <label class="form-label">
+        <span>Ruhetag alle X Wandertage</span>
+        <select id="restEveryDays">
+          <option value="0">Keine automatischen Ruhetage</option>
+          <option value="4">Alle 4 Wandertage</option>
+          <option value="5">Alle 5 Wandertage</option>
+          <option value="6">Alle 6 Wandertage</option>
+          <option value="7" selected>Alle 7 Wandertage</option>
+          <option value="8">Alle 8 Wandertage</option>
+          <option value="10">Alle 10 Wandertage</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="button-row">
+      <button id="generateStagesBtn" class="primary">Etappen erzeugen</button>
+      <button id="exportStagesBtn" class="secondary">Etappen exportieren</button>
+      <button id="deleteStagesBtn" class="danger">Etappen löschen</button>
+    </div>
+
+    <div id="stageStatus" class="info-strip muted">Noch keine Etappen vorhanden.</div><div class="muted small-note">Automatische Ruhetage werden nach jeweils X Wandertagen eingefügt und können danach weiterhin ergänzt oder gelöscht werden.</div>
+    <div id="stageDiagnostic" class="info-strip muted"></div>
   </article>
 
-  <article class="card planner-card">
-    <h3>Etappen automatisch aus GPX erstellen</h3>
-    <p class="muted">Der importierte Track wird nach der gewünschten Tagesdistanz aufgeteilt. Start- und Zielnamen können danach manuell ergänzt werden.</p>
-    <div class="planner-grid">
-      <label>Zielkilometer pro Wandertag
-        <input id="plannerKm" type="number" min="5" max="60" step="1" value="28">
+  <article class="card">
+    <h3>Zusammenfassung</h3>
+    <div class="summary-grid">
+      <div><strong id="stageCount">0</strong><span>Etappen</span></div>
+      <div><strong id="stageAverage">0 km</strong><span>Durchschnitt</span></div>
+      <div><strong id="stageLongest">0 km</strong><span>Längste Etappe</span></div>
+      <div><strong id="stageShortest">0 km</strong><span>Kürzeste Etappe</span></div>
+    </div>
+  </article>
+
+  
+
+<article class="card">
+  <h3>Schuhplanung</h3>
+  <p class="muted">Lege fest, nach wie vielen Kilometern du ungefähr die Schuhe wechseln möchtest.</p>
+  <div class="generator-grid">
+    <label class="form-label">
+      <span>Schuhwechsel alle</span>
+      <div class="input-with-unit">
+        <input id="shoeChangeIntervalKm" type="number" min="100" max="3000" step="50" value="700">
+        <span>km</span>
+      </div>
+    </label>
+  </div>
+  <div class="button-row">
+    <button id="saveShoeIntervalBtn" class="secondary">Schuhintervall speichern</button>
+  </div>
+  <div id="shoePlanningStatus" class="info-strip muted"></div>
+</article>
+
+<article class="card">
+  <div class="section-header compact">
+    <div>
+      <h3>Tour-Zeitachse</h3>
+      <p class="muted">Ruhetage und Datumsverschiebungen werden automatisch berücksichtigt.</p>
+    </div>
+    <button id="recalculateStageDatesBtn" class="secondary">Daten neu berechnen</button>
+  </div>
+  
+</article>
+
+<div id="stageList"></div>
+</section>
+
+
+<section id="map" class="page">
+  <div class="section-header">
+    <div>
+      <h2 data-i18n="pages.mapTitle">Karte / GPX</h2>
+      <p class="muted" data-i18n="map.subtitle">Zeigt den importierten GPX-Track der aktiven Tour.</p>
+    </div>
+  </div>
+
+  <article class="card">
+    <div class="button-row">
+      <label class="button-file primary">
+        <span data-i18n="gpx.choose">GPX-Datei auswählen</span>
+        <input id="gpxInput" type="file" accept=".gpx,application/gpx+xml">
       </label>
-      <label>Ruhetag nach jeweils
-        <select id="plannerRestEvery">
-          <option value="0">Keine automatischen Ruhetage</option>
-          <option value="6">6 Wandertagen</option>
-          <option value="7" selected>7 Wandertagen</option>
-          <option value="8">8 Wandertagen</option>
-          <option value="10">10 Wandertagen</option>
+      <button id="showWholeTrackBtn" class="secondary" data-i18n="map.wholeTrack">Gesamtroute anzeigen</button>
+      <button id="locateBtn" class="secondary" data-i18n="map.locate">Meine Position</button>
+      <button id="exportGpxBtn" class="secondary" data-i18n="gpx.export">GPX exportieren</button>
+      <button id="deleteGpxBtn" class="danger" data-i18n="gpx.delete">GPX löschen</button>
+    </div>
+
+    <div id="gpxStatus" class="info-strip muted" data-i18n="gpx.noTrack">Noch kein GPX-Track importiert.</div>
+  </article>
+
+  <div class="map-style-switcher" aria-label="Kartenstil">
+  <button type="button" data-map-style="standard" class="active">🗺 Standard</button>
+  <button type="button" data-map-style="hiking">🥾 Wandern</button>
+  <button type="button" data-map-style="topo">⛰ Topografisch</button>
+</div>
+<div id="mapLegend" class="map-legend"><span><i class="legend-dot tour"></i>Tour</span><span><i class="legend-dot stage"></i>Etappen</span><span><i class="legend-dot preferred"></i>Bevorzugte Orte</span></div>
+<div id="mapCanvas"></div>
+
+  <article class="card">
+    <h3 data-i18n="gpx.summary">Track-Zusammenfassung</h3>
+    <div class="summary-grid">
+      <div><strong id="gpxPointCount">0</strong><span data-i18n="gpx.points">Trackpunkte</span></div>
+      <div><strong id="gpxDistance">0 km</strong><span data-i18n="gpx.distance">berechnete Distanz</span></div>
+      <div><strong id="gpxStart">–</strong><span data-i18n="gpx.start">Start</span></div>
+      <div><strong id="gpxEnd">–</strong><span data-i18n="gpx.end">Ziel</span></div>
+    </div>
+  </article>
+</section>
+
+
+<section id="places" class="page">
+  <div class="section-header">
+    <div>
+      <h2>Orte & Versorgung</h2>
+      <p class="muted">Gespeicherte Orte der aktiven Tour. Neue Orte suchst du direkt bei einer Etappe.</p>
+    </div>
+  </div>
+
+  <article class="card">
+    <div class="summary-grid">
+      <div><strong id="placeCount">0</strong><span>gespeicherte Orte</span></div>
+      <div><strong id="campingCount">0</strong><span>Übernachten</span></div>
+      <div><strong id="waterCount">0</strong><span>Wasser</span></div>
+      <div><strong id="shopCount">0</strong><span>Einkauf</span></div><div><strong id="favoriteCount">0</strong><span>Favoriten</span></div>
+    </div>
+  </article>
+
+  <article class="card">
+  <div class="button-row">
+    <button id="showAllPlacesBtn" class="secondary">Alle Orte</button>
+    <button id="showFavoritePlacesBtn" class="secondary">Nur Favoriten</button>
+  </div>
+</article>
+<div id="placeList"></div>
+</section>
+
+
+<section id="gear" class="page">
+  <div class="section-header">
+    <div>
+      <h2>Mein Transa</h2>
+      <p class="muted">Deine zentrale Artikelliste.</p>
+    </div>
+    <button id="addGearBtn" class="primary">Artikel hinzufügen</button>
+  </div>
+
+  <article class="card">
+    <div class="summary-grid">
+      <div><strong id="gearCount">0</strong><span>Artikel</span></div>
+      <div><strong id="gearWeightTotal">0 g</strong><span>Gesamtgewicht</span></div>
+      <div><strong id="gearShoeCount">0</strong><span>Schuhe</span></div>
+      <div><strong id="gearFavoriteCount">0</strong><span>Favoriten</span></div>
+      <div><strong id="gearWishlistCount">0</strong><span>Wunschliste</span></div>
+      <div><strong id="gearWishlistValue">CHF 0.00</strong><span>Wunschwert</span></div>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="generator-grid">
+      <label class="form-label">
+        <span>Suche</span>
+        <input id="gearSearch" placeholder="Marke, Modell, Kategorie …">
+      </label>
+      <label class="form-label">
+        <span>Kategorie</span>
+        <select id="gearCategoryFilter">
+          <option value="all">Alle</option>
+          <option value="wishlist">♡ Wunschliste</option>
+          <option value="shoes">Schuhe</option>
+          <option value="backpack">Rucksack</option>
+          <option value="sleep">Schlafen</option>
+          <option value="clothing">Bekleidung</option>
+          <option value="cooking">Kochen</option>
+          <option value="electronics">Elektronik</option>
+          <option value="hygiene">Hygiene</option>
+          <option value="firstaid">Erste Hilfe</option>
+          <option value="food">Verpflegung</option>
+          <option value="other">Weiteres</option>
+        </select>
+      </label>
+      <label class="form-label">
+        <span>Sortierung</span>
+        <select id="gearSort">
+          <option value="name">Alphabetisch</option>
+          <option value="weightAsc">Gewicht aufsteigend</option>
+          <option value="weightDesc">Gewicht absteigend</option>
+          <option value="category">Kategorie</option>
         </select>
       </label>
     </div>
     <div class="button-row">
-      <button id="generateStagesBtn" class="primary">Etappen aus GPX generieren</button>
-      <button id="deleteGeneratedBtn" class="secondary">Nur automatisch erzeugte Etappen löschen</button>
+      <button id="selectAllGearBtn" class="secondary" type="button">Alle auswählen</button>
+      <button id="clearGearSelectionBtn" class="secondary" type="button">Auswahl aufheben</button>
+      <button id="deleteSelectedGearBtn" class="danger" type="button">Ausgewählte löschen</button>
     </div>
-    <div id="plannerInfo" class="info-strip">Für die automatische Planung zuerst einen GPX-Track importieren.</div>
   </article>
 
-  <div id="stageList"></div>
+  <article class="card wishlist-card">
+    <div class="section-header compact">
+      <div>
+        <h3>♡ Meine Wunschliste</h3>
+        <p class="muted">Artikel, die du noch kaufen oder später in deinen Bestand übernehmen möchtest.</p>
+      </div>
+    </div>
+    <div id="gearWishlistList" class="wishlist-list"></div>
+  </article>
+
+  <div class="gear-table-wrap">
+    <table class="gear-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Artikel</th>
+          <th>Kategorie</th>
+          <th>Gewicht</th>
+          <th>Bestand</th>
+          <th>Lagerort</th>
+          <th>Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="gearList"></tbody>
+    </table>
+  </div>
 </section>
 
-<section id="map" class="page">
+<section id="packlists" class="page">
   <div class="section-header">
-    <div><h2>Karte und GPX</h2><p class="muted">Offiziellen Track lokal importieren und eigene Orte anzeigen.</p></div>
-  </div>
-  <article class="card">
-    <div class="button-row">
-      <label class="button-file primary">GPX importieren<input id="gpxInput" type="file" accept=".gpx,application/gpx+xml"></label>
-      <button id="clearGpxBtn" class="secondary">GPX entfernen</button>
-      <button id="locateBtn" class="secondary">Meine Position</button>
-      <button id="showFullTrackBtn" class="secondary">Gesamtroute anzeigen</button>
+    <div>
+      <h2>Packlisten</h2>
+      <p class="muted">Packlisten der aktiven Tour für zwei Personen.</p>
     </div>
-    <div id="gpxInfo" class="info-strip">Noch kein GPX-Track importiert.</div>
-<div class="map-layer-controls">
-  <label class="checkbox"><input id="layerRoute" type="checkbox" checked> Route</label>
-  <label class="checkbox"><input id="layerCamping" type="checkbox" checked> Camping</label>
-  <label class="checkbox"><input id="layerWater" type="checkbox" checked> Wasser</label>
-  <label class="checkbox"><input id="layerShop" type="checkbox" checked> Einkauf</label>
-  <label class="checkbox"><input id="layerTransport" type="checkbox" checked> ÖV</label>
-  <label class="checkbox"><input id="layerSight" type="checkbox" checked> Sehenswürdigkeiten</label>
-  <label class="checkbox"><input id="layerOther" type="checkbox" checked> Weitere</label>
-  <label class="checkbox"><input id="layerVerifiedOnly" type="checkbox"> Nur geprüfte Orte</label>
-</div>
+  </div>
 
+  <article class="card">
+    <div class="generator-grid">
+      <label class="form-label"><span>Person 1</span><input id="packPerson1Name" value="Person 1"></label>
+      <label class="form-label"><span>Person 2</span><input id="packPerson2Name" value="Person 2"></label>
+    </div>
+
+    <div class="pack-person-tabs">
+      <button id="packPerson1Btn" class="active" type="button">Person 1</button>
+      <button id="packPerson2Btn" type="button">Person 2</button>
+    </div>
+
+    <div class="summary-grid">
+      <div><strong id="packTotalWeight">0.000 kg</strong><span>Total</span></div>
+      <div><strong id="packWornWeight">0.000 kg</strong><span>am Körper</span></div>
+      <div><strong id="packNetWeight">0.000 kg</strong><span>Netto im Rucksack</span></div>
+      <div><strong id="packItemCount">0</strong><span>Positionen</span></div>
+    </div>
+
+    <div id="tourPackList" class="pack-list"></div>
   </article>
-  <div id="mapError" class="card map-error" hidden></div>
-  <div id="mapCanvas"></div>
-  <p class="small muted">Die Hintergrundkarte benötigt Internet. Importierter Track, Etappen und Orte bleiben lokal gespeichert.</p>
 </section>
 
-<section id="places" class="page">
+
+  <article class="card">
+    <div class="section-header compact">
+      <div>
+        <h3>Schuhe der Tour</h3>
+        <p class="muted">Aktives Schuhpaar je Person, bereits gelaufene Kilometer und Wechselintervall.</p>
+      </div>
+    </div>
+
+    <div class="shoe-person-grid">
+      <div class="shoe-person-card">
+        <h4 id="shoePerson1Title">Person 1</h4>
+        <label class="form-label">
+          <span>Aktives Schuhpaar</span>
+          <select id="shoePerson1Select"></select>
+        </label>
+        <label class="form-label">
+          <span>Bereits gelaufen</span>
+          <div class="input-with-unit"><input id="shoePerson1Km" type="number" min="0" step="1" value="0"><span>km</span></div>
+        </label>
+        <label class="form-label">
+          <span>Wechselintervall</span>
+          <div class="input-with-unit"><input id="shoePerson1Interval" type="number" min="100" step="50" value="700"><span>km</span></div>
+        </label>
+        <div id="shoePerson1Status" class="info-strip muted"></div>
+      </div>
+
+      <div class="shoe-person-card">
+        <h4 id="shoePerson2Title">Person 2</h4>
+        <label class="form-label">
+          <span>Aktives Schuhpaar</span>
+          <select id="shoePerson2Select"></select>
+        </label>
+        <label class="form-label">
+          <span>Bereits gelaufen</span>
+          <div class="input-with-unit"><input id="shoePerson2Km" type="number" min="0" step="1" value="0"><span>km</span></div>
+        </label>
+        <label class="form-label">
+          <span>Wechselintervall</span>
+          <div class="input-with-unit"><input id="shoePerson2Interval" type="number" min="100" step="50" value="700"><span>km</span></div>
+        </label>
+        <div id="shoePerson2Status" class="info-strip muted"></div>
+      </div>
+    </div>
+  </article>
+<section id="data" class="page">
   <div class="section-header">
-    <div><h2>Orte und Versorgung</h2><p class="muted">Camping, Wasser, Einkauf, ÖV und weitere Punkte verwalten.</p></div>
-    <button id="addPlaceBtn" class="primary">+ Ort</button>
-  </div>
-  <article class="card poi-search-card">
-    <h3>OpenStreetMap-Orte suchen</h3>
-    <p class="muted">Die Suche verwendet das aktuelle Kartenzentrum. Treffer werden erst nach deiner Auswahl dauerhaft gespeichert.</p>
-    <div class="poi-category-grid">
-      <label class="checkbox"><input class="poi-category" type="checkbox" value="camping" checked> Camping und Hütten</label>
-      <label class="checkbox"><input class="poi-category" type="checkbox" value="water" checked> Trinkwasser und Quellen</label>
-      <label class="checkbox"><input class="poi-category" type="checkbox" value="shop" checked> Einkauf und Bäckereien</label>
-      <label class="checkbox"><input class="poi-category" type="checkbox" value="transport"> ÖV</label>
-      <label class="checkbox"><input class="poi-category" type="checkbox" value="toilet"> Toiletten</label>
-      <label class="checkbox"><input class="poi-category" type="checkbox" value="pharmacy"> Apotheken</label>
+    <div>
+      <h2>Daten</h2>
+      <p class="muted">Artikel importieren und exportieren.</p>
     </div>
-    <div class="poi-options">
-      <label>Suchradius
-        <select id="poiRadius"><option value="2000">2 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="20000">20 km</option></select>
+  </div>
+
+  <article class="card">
+    <h3>Artikel CSV</h3>
+    <div class="button-row">
+      <button id="exportGearBtn" class="secondary" type="button">Artikel als CSV exportieren</button>
+      <label class="secondary file-button">
+        Artikel aus CSV importieren
+        <input id="importGearInput" type="file" accept=".csv,text/csv" hidden>
       </label>
-      <label>Max. Entfernung zum GPX-Track
-        <select id="poiTrackDistance"><option value="0">nicht filtern</option><option value="0.5">500 m</option><option value="1" selected>1 km</option><option value="2">2 km</option><option value="5">5 km</option></select>
-      </label>
-      <label>Overpass-Server
-        <select id="overpassEndpoint"><option value="https://overpass-api.de/api/interpreter">overpass-api.de</option><option value="https://overpass.kumi.systems/api/interpreter">overpass.kumi.systems</option></select>
+    </div>
+    <div id="gearTransferStatus" class="info-strip muted"></div>
+  </article>
+</section>
+
+
+<section id="roadbook" class="page">
+  <div class="section-header">
+    <div>
+      <h2>Roadbook</h2>
+      <p class="muted">Kompakte Tagesansicht für jede geplante Etappe.</p>
+    </div>
+  </div>
+
+  <article class="card">
+    <div class="generator-grid">
+      <label class="form-label">
+        <span>Etappe</span>
+        <select id="roadbookStageSelect"></select>
       </label>
     </div>
     <div class="button-row">
-      <button id="centerNextStageBtn" class="secondary">Karte auf nächste Etappe</button>
-      <button id="searchPoisBtn" class="primary">Orte suchen</button>
-      <button id="importSelectedPoisBtn" class="secondary">Ausgewählte speichern</button>
+      <button id="roadbookRefreshBtn" class="secondary" type="button">Aktualisieren</button>
+      <button id="roadbookPrintBtn" class="primary" type="button">Roadbook drucken</button>
     </div>
-    <div id="poiSearchStatus" class="info-strip">Öffne zuerst die Karte oder zentriere sie auf eine Etappe.</div>
-    <div id="poiResults"></div>
   </article>
 
-  <div class="toolbar">
-    <input id="placeSearch" placeholder="Ort oder Notiz suchen">
-    <select id="placeFilter">
-      <option value="all">Alle Kategorien</option>
-      <option value="camping">Camping</option>
-      <option value="water">Wasser</option>
-      <option value="shop">Einkauf</option>
-      <option value="transport">ÖV</option>
-      <option value="sight">Sehenswürdigkeit</option>
-      <option value="other">Weitere</option>
-    </select>
+  <div id="roadbookPreview" class="roadbook-preview"></div>
+</section>
+
+<section id="print" class="page">
+  <div class="section-header">
+    <div>
+      <h2>Drucken</h2>
+      <p class="muted">Artikel- oder Packlisten drucken.</p>
+    </div>
   </div>
-  <div id="placeList"></div>
-</section>
-
-<section id="settings" class="page">
-  <article class="card form-card">
-    <h2>Toureneinstellungen</h2>
-    <label>Tourname<input id="tourNameInput"></label>
-    <label>Anreise<input id="arrivalInput" type="date"></label>
-    <label>Wanderstart<input id="startInput" type="date"></label>
-    <label>Zieldatum<input id="targetInput" type="date"></label>
-    <label>Geplante Ruhetage<input id="restDaysInput" type="number" min="0"></label>
-    <button id="saveSettingsBtn" class="primary">Einstellungen speichern</button>
-  </article>
 
   <article class="card">
-    <h3>Backup und Daten</h3>
+    <div class="generator-grid">
+      <label class="form-label">
+        <span>Druckinhalt</span>
+        <select id="printMode">
+          <option value="gear">Artikelliste</option>
+          <option value="person1">Packliste Person 1</option>
+          <option value="person2">Packliste Person 2</option>
+        </select>
+      </label>
+    </div>
     <div class="button-row">
-      <button id="exportBtn" class="secondary">Backup exportieren</button>
-      <label class="button-file secondary">Backup importieren<input id="importInput" type="file" accept=".json,application/json"></label>
-      <button id="resetBtn" class="danger">Alle Daten zurücksetzen</button>
+      <button id="printPreviewBtn" class="secondary" type="button">Vorschau aktualisieren</button>
+      <button id="printNowBtn" class="primary" type="button">Drucken</button>
     </div>
   </article>
 
-  <article class="card">
-    <h3>App-Aktualisierung</h3>
-    <p class="muted">Löscht alte Offline-Dateien und lädt die aktuelle Version neu.</p>
-    <button id="refreshBtn" class="secondary">App-Dateien aktualisieren</button>
-  </article>
+  <div id="printPreview" class="print-preview"></div>
 </section>
-</main>
+<section id="settings" class="page"><article class="card"><h2 data-i18n="settings.title">Einstellungen</h2><label class="form-label"><span data-i18n="settings.language">Sprache</span><select id="languageSelect"><option value="de">Deutsch</option><option value="en">English</option></select></label><label class="form-label"><span data-i18n="settings.appearance">Darstellung</span><select id="themeSelect"><option value="system" data-i18n="settings.system">System</option><option value="light" data-i18n="settings.light">Hell</option><option value="dark" data-i18n="settings.dark">Dunkel</option></select></label><div class="button-row"><button id="saveSettings" class="primary" data-i18n="settings.save">Speichern</button><button id="refreshApp" class="secondary" data-i18n="settings.refresh">App-Dateien aktualisieren</button></div><p id="settingsStatus" class="muted"></p></article><article class="card"><h3 data-i18n="database.title">Lokale Datenbank</h3><p data-i18n="database.text">IndexedDB ist vorbereitet und speichert Einstellungen lokal auf diesem Gerät.</p><p id="databaseStatus" class="muted"></p></article>
+<article class="card">
+  <h3>Tour sichern & wiederherstellen</h3>
+  <p class="muted">Exportiert die aktive Tour inklusive GPX, Etappen, Orte, Favoriten, bevorzugtem Start/Ziel und Schuhintervall.</p>
+  <div class="button-row">
+    <button id="exportFullTourBtn" class="secondary">Komplette Tour exportieren</button>
+    <label class="secondary file-button">
+      Tour importieren
+      <input id="importFullTourInput" type="file" accept=".csv,text/csv" hidden>
+    </label>
+  </div>
+  <div id="backupStatus" class="info-strip muted"></div>
+</article>
 
+  <article class="card cloud-card">
+    <div class="section-header compact">
+      <div>
+        <h3>Cloud & mehrere Geräte</h3>
+        <p class="muted">Mit demselben Konto auf PC, Smartphone und Tablet dieselben Daten verwenden.</p>
+      </div>
+      <span id="cloudStateBadge" class="pill">Nicht verbunden</span>
+    </div>
+
+    <details id="cloudSetupDetails">
+      <summary>Supabase-Verbindung einrichten</summary>
+      <div class="generator-grid">
+        <label class="form-label">
+          <span>Supabase Project URL</span>
+          <input id="cloudSupabaseUrl" type="url" placeholder="https://…supabase.co">
+        </label>
+        <label class="form-label">
+          <span>Publishable / anon key</span>
+          <input id="cloudSupabaseKey" type="password" autocomplete="off">
+        </label>
+      </div>
+      <div class="button-row">
+        <button id="saveCloudConfigBtn" class="secondary" type="button">Verbindung speichern</button>
+      </div>
+      <p class="muted small">Die Projekt-URL und der Browser-Schlüssel werden nur auf diesem Gerät gespeichert.</p>
+    </details>
+
+    <div class="cloud-auth-grid">
+      <label class="form-label">
+        <span>E-Mail</span>
+        <input id="cloudEmail" type="email" autocomplete="email">
+      </label>
+      <label class="form-label">
+        <span>Passwort</span>
+        <input id="cloudPassword" type="password" autocomplete="current-password">
+      </label>
+    </div>
+
+    <div class="button-row">
+      <button id="cloudSignInBtn" class="primary" type="button">Anmelden</button>
+      <button id="cloudSignUpBtn" class="secondary" type="button">Konto erstellen</button>
+      <button id="cloudSignOutBtn" class="secondary" type="button">Abmelden</button>
+      <button id="cloudForgotPasswordBtn" class="secondary" type="button">Passwort vergessen</button>
+    </div>
+
+    <div id="cloudAccountInfo" class="info-strip muted">Kontostatus wird geprüft …</div>
+
+    <div id="cloudRecoveryPanel" class="cloud-auth-grid" hidden>
+      <label class="form-label"><span>Neues Passwort</span><input id="cloudNewPassword" type="password" autocomplete="new-password" minlength="6"></label>
+      <div class="button-row"><button id="cloudSetNewPasswordBtn" class="primary" type="button">Neues Passwort speichern</button></div>
+    </div>
+
+    <div class="cloud-sync-panel">
+      <div>
+        <strong id="cloudUserLabel">Nicht angemeldet</strong>
+        <span id="cloudLastSync" class="muted">Noch nicht synchronisiert.</span>
+      </div>
+      <div class="button-row">
+        <button id="cloudUploadBtn" class="primary" type="button">☁ Cloud speichern</button>
+        <button id="cloudDownloadBtn" class="secondary" type="button">↓ Cloud laden</button>
+      </div>
+    </div>
+
+    <label class="checkbox">
+      <input id="cloudAutoLoad" type="checkbox">
+      <span>Cloud-Daten nach der Anmeldung automatisch laden</span>
+    </label>
+    <label class="checkbox">
+      <input id="cloudAutoSync" type="checkbox">
+      <span>Änderungen automatisch synchronisieren</span>
+    </label>
+    <div class="cloud-live-status">
+      <span id="cloudSyncDot" class="cloud-sync-dot idle"></span>
+      <strong id="cloudSyncLabel">Automatische Synchronisation aus</strong>
+    </div>
+
+    <div id="cloudStatus" class="info-strip muted">Cloud-Verbindung wird geprüft …</div>
+  </article>
+</section></main><script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="assets/js/app.js?v=41082"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
 <dialog id="stageDialog">
   <form id="stageForm">
-    <div class="dialog-header"><h2>Etappe</h2><button type="button" data-close="stageDialog" class="close-btn">×</button></div>
-    <input id="stageId" type="hidden">
-    <label>Datum<input id="stageDate" type="date" required></label>
-    <label>NST-Abschnitt<select id="stageSection"></select></label>
-    <div class="two-columns"><label>Start<input id="stageFrom" required></label><label>Ziel<input id="stageTo" required></label></div>
-    <div class="three-columns"><label>Distanz km<input id="stageKm" type="number" step="0.1" min="0"></label><label>Aufstieg m<input id="stageUp" type="number" min="0"></label><label>Abstieg m<input id="stageDown" type="number" min="0"></label></div>
-    <label>Übernachtung<input id="stageOvernight"></label>
-    <label>Notizen<textarea id="stageNotes" rows="3"></textarea></label>
-    <label class="checkbox"><input id="stageCompleted" type="checkbox"> Abgeschlossen</label>
-    <div class="button-row"><button id="saveStageBtn" type="submit" class="primary">Speichern</button><button type="button" data-close="stageDialog" class="secondary">Abbrechen</button></div>
+    <div class="dialog-header">
+      <h2>Etappe bearbeiten</h2>
+      <button type="button" class="close-btn" data-close="stageDialog">×</button>
+    </div>
+    <input id="editStageId" type="hidden">
+
+    <label class="form-label">
+      <span>Name</span>
+      <input id="editStageName" required>
+    </label>
+
+    <label class="form-label">
+      <span>Datum</span>
+      <input id="editStageDate" type="date">
+    </label>
+
+    <label class="form-label">
+      <span>Start</span>
+      <input id="editStageFrom" required>
+    </label>
+
+    <label class="form-label">
+      <span>Ziel</span>
+      <input id="editStageTo" required>
+    </label>
+
+    <label class="form-label">
+      <span>Notizen</span>
+      <textarea id="editStageNotes" rows="4"></textarea>
+    </label>
+
+    <label class="checkbox">
+      <input id="editStageCompleted" type="checkbox">
+      <span>Abgeschlossen</span>
+    </label>
+
+    <div class="button-row">
+      <button type="submit" class="primary">Speichern</button>
+      <button type="button" class="secondary" data-close="stageDialog">Abbrechen</button>
+    </div>
   </form>
 </dialog>
 
-<dialog id="placeDialog">
-  <form id="placeForm">
-    <div class="dialog-header"><h2>Ort</h2><button type="button" data-close="placeDialog" class="close-btn">×</button></div>
-    <input id="placeId" type="hidden">
-    <label>Name<input id="placeName" required></label>
-    <label>Kategorie<select id="placeCategory"><option value="camping">Camping</option><option value="water">Wasser</option><option value="shop">Einkauf</option><option value="transport">ÖV</option><option value="sight">Sehenswürdigkeit</option><option value="other">Weitere</option></select></label>
-    <div class="two-columns"><label>Breitengrad<input id="placeLat" type="number" step="any" required></label><label>Längengrad<input id="placeLng" type="number" step="any" required></label></div>
-    <label>Notizen<textarea id="placeNotes" rows="3"></textarea></label>
-    <label class="checkbox"><input id="placeVerified" type="checkbox"> Selbst geprüft</label>
-    <div class="button-row"><button type="submit" class="primary">Speichern</button><button type="button" data-close="placeDialog" class="secondary">Abbrechen</button></div>
-  </form>
-</dialog>
 
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data.js?v=310"></script>
-<script src="app.js?v=310"></script>
-
-<dialog id="splitDialog">
-  <form id="splitForm">
-    <div class="dialog-header"><h2>Etappe teilen</h2><button type="button" data-close="splitDialog" class="close-btn">×</button></div>
+<dialog id="splitStageDialog">
+  <form id="splitStageForm">
+    <div class="dialog-header">
+      <h2>Etappe teilen</h2>
+      <button type="button" class="close-btn" data-close="splitStageDialog">×</button>
+    </div>
     <input id="splitStageId" type="hidden">
-    <label>Neuer Zwischenort<input id="splitLocation" required></label>
-    <label>Distanz erster Teil in km<input id="splitKm" type="number" step="0.1" min="0.1" required></label>
-    <div class="button-row"><button type="submit" class="primary">Teilen</button><button type="button" data-close="splitDialog" class="secondary">Abbrechen</button></div>
+    <label class="form-label">
+      <span>Zwischenort</span>
+      <input id="splitStageLocation" required>
+    </label>
+    <label class="form-label">
+      <span>Distanz erster Teil in km</span>
+      <input id="splitStageKm" type="number" min="0.1" step="0.1" required>
+    </label>
+    <div class="button-row">
+      <button type="submit" class="primary">Teilen</button>
+      <button type="button" class="secondary" data-close="splitStageDialog">Abbrechen</button>
+    </div>
   </form>
 </dialog>
 
 
-<dialog id="nearbyDialog">
-  <div class="dialog-header"><h2>Orte nahe der Etappe</h2><button type="button" data-close="nearbyDialog" class="close-btn">×</button></div>
-  <div id="nearbyStageInfo" class="info-strip"></div>
-  <div id="nearbyList"></div>
+<dialog id="supplyDialog">
+  <div class="dialog-header">
+    <h2>Versorgung suchen</h2>
+    <button type="button" class="close-btn" data-close="supplyDialog">×</button>
+  </div>
+
+  <div id="supplyStageInfo" class="info-strip"></div>
+
+  <div class="supply-grid">
+    <button data-supply-category="accommodation">🛏 Übernachten</button>
+    <button data-supply-category="water">💧 Wasser</button>
+    <button data-supply-category="shop">🛒 Einkauf</button>
+    <button data-supply-category="transport">🚆 ÖV</button>
+    <button data-supply-category="food">🍴 Essen</button>
+    <button data-supply-category="toilet">🚻 Toilette</button>
+    <button data-supply-category="footwear">👟 Schuhe / Outdoor</button>
+  </div>
+
+  <label class="form-label">
+    <span>Max. Entfernung zur Etappe</span>
+    <select id="supplyMaxDistance">
+      <option value="0.5">500 m</option>
+      <option value="1" selected>1 km</option>
+      <option value="2">2 km</option>
+      <option value="5">5 km</option>
+    </select>
+  </label>
+
+  <div class="button-row">
+    <button id="runSupplySearchBtn" class="primary">Suchen</button>
+  </div>
+
+  <div id="supplyStatus" class="info-strip muted">Kategorie auswählen.</div>
+  <div id="supplyResults"></div>
+  <details class="manual-place">
+    <summary>Ort manuell erfassen</summary>
+    <div class="generator-grid">
+      <label class="form-label">
+        <span>Name</span>
+        <input id="manualPlaceName">
+      </label>
+      <label class="form-label">
+        <span>Kategorie</span>
+        <select id="manualPlaceCategory">
+          <option value="accommodation">Übernachten</option>
+          <option value="camping">Camping</option>
+          <option value="water">Wasser</option>
+          <option value="shop">Einkauf</option>
+          <option value="transport">ÖV</option>
+          <option value="food">Essen</option>
+          <option value="toilet">Toilette</option>
+          <option value="footwear">👟 Schuhe / Outdoor</option>
+          <option value="other">Weiteres</option>
+        </select>
+      </label>
+      <label class="form-label">
+        <span>Breitengrad</span>
+        <input id="manualPlaceLat" type="number" step="0.000001">
+      </label>
+      <label class="form-label">
+        <span>Längengrad</span>
+        <input id="manualPlaceLng" type="number" step="0.000001">
+      </label>
+    </div>
+    <div class="button-row">
+      <button id="saveManualPlaceBtn" class="secondary" type="button">Manuellen Ort speichern</button>
+    </div>
+  </details>
+
 </dialog>
 
+
+<dialog id="preferredDestinationDialog">
+  <div class="dialog-header">
+    <h2>Etappenziel ändern?</h2>
+    <button type="button" class="close-btn" data-close="preferredDestinationDialog">×</button>
+  </div>
+  <div id="preferredDestinationInfo" class="info-strip"></div>
+  <p>Der bevorzugte Stopp wird nur übernommen, wenn du diese Änderung ausdrücklich bestätigst.</p>
+  <div class="button-row">
+    <button id="confirmPreferredDestinationBtn" class="primary" type="button">Als Etappenziel übernehmen</button>
+    <button class="secondary" type="button" data-close="preferredDestinationDialog">Abbrechen</button>
+  </div>
+</dialog>
+
+
+<dialog id="preferredStartDialog">
+  <div class="dialog-header">
+    <h2>Etappenstart ändern?</h2>
+    <button type="button" class="close-btn" data-close="preferredStartDialog">×</button>
+  </div>
+  <div id="preferredStartInfo" class="info-strip"></div>
+  <p>Der bevorzugte Startort wird nur übernommen, wenn du diese Änderung ausdrücklich bestätigst.</p>
+  <div class="button-row">
+    <button id="confirmPreferredStartBtn" class="primary" type="button">Als Etappenstart übernehmen</button>
+    <button class="secondary" type="button" data-close="preferredStartDialog">Abbrechen</button>
+  </div>
+</dialog>
+
+
+<dialog id="trackEditorDialog" class="wide-dialog">
+  <div class="dialog-header">
+    <h2>Etappentrack bearbeiten</h2>
+    <button type="button" class="close-btn" data-close="trackEditorDialog">×</button>
+  </div>
+  <div id="trackEditorInfo" class="info-strip"></div>
+  <div class="button-row">
+    <label class="form-label inline-control">
+      <span>Routing</span>
+      <select id="trackRoutingMode">
+        <option value="direct">Direkte Verbindung</option>
+        <option value="foot" selected>Wander-/Fussweg</option>
+      </select>
+    </label>
+    <button id="trackEditorRouteBtn" type="button">Jetzt neu routen</button>
+    <label class="checkbox inline-check">
+      <input id="trackEditorAutoRoute" type="checkbox" checked>
+      <span>Nach Drag & Drop automatisch über Wanderwege routen</span>
+    </label>
+  </div>
+
+  <div class="track-click-toolbar">
+    <button id="trackClickModeBtn" type="button" class="secondary">＋ Punkte setzen</button>
+    <button id="trackConnectClickedBtn" type="button" class="primary" disabled>↗ Punkte verbinden</button>
+    <button id="trackClearClickedBtn" type="button" class="secondary" disabled>× Punkte löschen</button>
+    <span id="trackClickedCount" class="pill">0 Punkte</span>
+  </div>
+
+  <div id="trackRoutingStatus" class="info-strip muted">Ziehe einen blauen Punkt oder aktiviere „Punkte setzen“.</div>
+  <div id="trackEditorMap" class="track-editor-map"></div>
+  <p class="muted"><strong>Drag & Drop:</strong> Ziehe vorhandene Kontrollpunkte. <strong>Neue Route:</strong> Aktiviere „Punkte setzen“. Ein Klick direkt auf den bestehenden Track rastet auf dem Track ein; ein Klick daneben setzt einen freien Wegpunkt. Ein Klick auf einen nummerierten neuen Punkt entfernt ihn wieder. Danach „Punkte verbinden“.</p>
+  <div class="button-row">
+    <button id="trackEditorUndoBtn" type="button">Rückgängig</button>
+    <button id="trackEditorResetBtn" type="button">Original wiederherstellen</button>
+    <button id="trackEditorSaveBtn" class="primary" type="button">Track speichern</button>
+    <button class="secondary" type="button" data-close="trackEditorDialog">Abbrechen</button>
+  </div>
+</dialog>
+
+
+<dialog id="gearDialog">
+  <form id="gearForm">
+    <div class="dialog-header">
+      <h2>Ausrüstung</h2>
+      <button type="button" class="close-btn" data-close="gearDialog">×</button>
+    </div>
+    <input id="gearId" type="hidden">
+    <label class="form-label"><span>Name / Modell</span><input id="gearName" required></label>
+    <label class="form-label"><span>Marke</span><input id="gearBrand"></label>
+    <label class="form-label">
+      <span>Kategorie</span>
+      <select id="gearCategory">
+        <option value="shoes">Schuhe</option>
+        <option value="backpack">Rucksack</option>
+        <option value="sleep">Schlafen</option>
+        <option value="clothing">Bekleidung</option>
+        <option value="cooking">Kochen</option>
+        <option value="electronics">Elektronik</option>
+        <option value="hygiene">Hygiene</option>
+        <option value="firstaid">Erste Hilfe</option>
+        <option value="food">Verpflegung</option>
+        <option value="other">Weiteres</option>
+      </select>
+    </label>
+    <label class="form-label"><span>Gewicht (g)</span><input id="gearWeight" type="number" min="0" step="1"></label>
+    <label class="form-label"><span>Bestand</span><input id="gearQuantity" type="number" min="0" step="1" value="1"></label>
+    <label class="form-label"><span>Lagerort</span><input id="gearLocation"></label>
+<label class="form-label"><span>Artikelbestand</span><input id="gearStock" type="number" min="0" step="1" value="1"></label>
+<label class="checkbox"><input id="gearWishlist" type="checkbox"><span>Wunschliste</span></label>
+    <div id="wishlistDetails" class="wishlist-details">
+      <label class="form-label"><span>Preis (CHF)</span><input id="gearPrice" type="number" min="0" step="0.05" placeholder="z. B. 129.90"></label>
+      <label class="form-label"><span>Shop / Anbieter</span><input id="gearShop" placeholder="z. B. Transa"></label>
+      <label class="form-label"><span>Link zum Artikel</span><input id="gearUrl" type="url" placeholder="https://…"></label>
+      <label class="form-label"><span>Priorität</span>
+        <select id="gearPriority">
+          <option value="low">Niedrig</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">Hoch</option>
+        </select>
+      </label>
+    </div>
+    <label class="form-label"><span>Notizen</span><textarea id="gearNotes" rows="3"></textarea></label>
+    <label class="checkbox"><input id="gearFavorite" type="checkbox"><span>Favorit</span></label>
+    <div class="button-row">
+      <button type="submit" class="primary">Speichern</button>
+      <button type="button" class="secondary" data-close="gearDialog">Abbrechen</button>
+    </div>
+  </form>
+</dialog>
+
+<nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+  <button data-page-jump="dashboard">⌂<span>Übersicht</span></button>
+  <button data-page-jump="tours">🗺<span>Touren</span></button>
+  <button data-page-jump="stages">⚑<span>Etappen</span></button>
+  <button data-page-jump="map">⌖<span>Karte</span></button>
+  <button data-page-jump="gear">🎒<span>Transa</span></button>
+  <button data-page-jump="packlists">☷<span>Packlisten</span></button>
+  <button data-page-jump="settings">•••<span>Mehr</span></button>
+</nav>
 </body></html>
