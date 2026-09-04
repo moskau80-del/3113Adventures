@@ -277,38 +277,32 @@ export function getPreferredPlaceForStage(tourId,stageId){
 }
 
 
-export function setPreferredStartLocal(tourId,placeId){
+export function setPreferredStartLocal(tourId,placeId,stageId=null){
   const places=loadPlacesLocal(tourId);
   const selected=places.find(place=>place.id===placeId);
   if(!selected) return places;
-
-  return savePlacesLocal(
-    tourId,
-    places.map(place=>({
-      ...place,
-      preferredStart:place.stageId===selected.stageId
-        ? place.id===placeId
-        : Boolean(place.preferredStart),
-      preferredEnd:Boolean(place.preferredEnd)
-    }))
-  );
+  const targetStageId=stageId||selected.stageId;
+  if(!targetStageId) return places;
+  return savePlacesLocal(tourId,places.map(place=>({
+    ...place,
+    preferredStartStageId: place.id===placeId ? targetStageId : (place.preferredStartStageId===targetStageId ? null : place.preferredStartStageId),
+    preferredStart: place.id===placeId ? true : (place.preferredStartStageId===targetStageId || (place.stageId===targetStageId&&place.preferredStart) ? false : Boolean(place.preferredStart)),
+    preferredEnd:Boolean(place.preferredEnd)
+  })));
 }
 
-export function setPreferredEndLocal(tourId,placeId){
+export function setPreferredEndLocal(tourId,placeId,stageId=null){
   const places=loadPlacesLocal(tourId);
   const selected=places.find(place=>place.id===placeId);
   if(!selected) return places;
-
-  return savePlacesLocal(
-    tourId,
-    places.map(place=>({
-      ...place,
-      preferredStart:Boolean(place.preferredStart),
-      preferredEnd:place.stageId===selected.stageId
-        ? place.id===placeId
-        : Boolean(place.preferredEnd)
-    }))
-  );
+  const targetStageId=stageId||selected.stageId;
+  if(!targetStageId) return places;
+  return savePlacesLocal(tourId,places.map(place=>({
+    ...place,
+    preferredStart:Boolean(place.preferredStart),
+    preferredEndStageId: place.id===placeId ? targetStageId : (place.preferredEndStageId===targetStageId ? null : place.preferredEndStageId),
+    preferredEnd: place.id===placeId ? true : (place.preferredEndStageId===targetStageId || (place.stageId===targetStageId&&place.preferredEnd) ? false : Boolean(place.preferredEnd))
+  })));
 }
 
 export function clearPreferredStartLocal(tourId,stageId){
@@ -316,7 +310,8 @@ export function clearPreferredStartLocal(tourId,stageId){
     tourId,
     loadPlacesLocal(tourId).map(place=>({
       ...place,
-      preferredStart:place.stageId===stageId?false:Boolean(place.preferredStart),
+      preferredStart:(place.preferredStartStageId===stageId||place.stageId===stageId)?false:Boolean(place.preferredStart),
+      preferredStartStageId:place.preferredStartStageId===stageId?null:place.preferredStartStageId,
       preferredEnd:Boolean(place.preferredEnd)
     }))
   );
@@ -328,19 +323,20 @@ export function clearPreferredEndLocal(tourId,stageId){
     loadPlacesLocal(tourId).map(place=>({
       ...place,
       preferredStart:Boolean(place.preferredStart),
-      preferredEnd:place.stageId===stageId?false:Boolean(place.preferredEnd)
+      preferredEnd:(place.preferredEndStageId===stageId||place.stageId===stageId)?false:Boolean(place.preferredEnd),
+      preferredEndStageId:place.preferredEndStageId===stageId?null:place.preferredEndStageId
     }))
   );
 }
 
 export function getPreferredStartForStage(tourId,stageId){
   return loadPlacesLocal(tourId).find(
-    place=>place.stageId===stageId&&place.preferredStart
+    place=>(place.preferredStartStageId===stageId||(place.stageId===stageId&&place.preferredStart))&&place.preferredStart
   )||null;
 }
 
 export function getPreferredEndForStage(tourId,stageId){
   return loadPlacesLocal(tourId).find(
-    place=>place.stageId===stageId&&place.preferredEnd
+    place=>(place.preferredEndStageId===stageId||(place.stageId===stageId&&place.preferredEnd))&&place.preferredEnd
   )||null;
 }

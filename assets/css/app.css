@@ -709,3 +709,13 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
 
 /* Sprint 10.9 – Komoot-Verknüpfung */
 .komoot-link{font-weight:700;text-decoration:none}.komoot-import-card{margin-top:1rem}.komoot-import-card .small{font-size:.88rem}
+
+/* Sprint 10.9.1 – Orte manuell erfassen */
+.place-create-grid{display:grid;gap:0 12px}
+@media(min-width:760px){.place-create-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Sprint 10.9.2 – Etappen: Ort gezielt als Start/Ziel */
+.stage-place-assign{margin-top:12px;padding:12px;border:1px solid var(--border,#d8d8d0);border-radius:12px;background:rgba(255,255,255,.45)}
+.stage-place-assign-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.stage-place-assign-row select{min-width:220px;flex:1}
+.stage-place-assign small{display:block;margin-top:7px;opacity:.72}

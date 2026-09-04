@@ -1,21 +1,16 @@
-# 3113 Adventures – Sprint 10.9
+# 3113 Adventures v4 – Sprint 10.9.2
 
-## Komoot-Verknüpfung
-- Pro Tour kann ein **Komoot-Collection-Link** hinterlegt werden.
-- Tourkarte und Dashboard zeigen **„Komoot-Collection öffnen“**.
-- Die interne 3113-Karte mit GPX, Etappen und POIs bleibt erhalten.
+Neu: In jeder Etappenkarte kann ein gespeicherter Ort gezielt ausgewählt und für genau diese Etappe als bevorzugter Start oder bevorzugtes Ziel gesetzt werden. Bestehende Orts-/Komoot-/Cloud-Funktionen bleiben erhalten. Keine Supabase-SQL-Änderung erforderlich.
 
-## Komoot-Etappen einzeln importieren und verbinden
-- Neue Funktion unter **Karte / GPX**: „Komoot-Etappe(n) hinzufügen“.
-- Eine oder mehrere aus Komoot exportierte GPX-Dateien können importiert werden.
-- Jede GPX-Datei wird als **eigene Etappe** angelegt.
-- Weitere Dateien können später einzeln ergänzt werden; sie werden an die aktive Tour angehängt.
-- Alle importierten Etappen werden zusätzlich zu einem **Gesamttrack der Tour** verbunden und auf der Karte dargestellt.
-- Distanz/Höhenmeter pro Etappe werden aus der jeweiligen GPX-Datei berechnet.
-- Der Gesamttrack kann weiterhin als GPX exportiert werden.
-- Änderungen werden über den bestehenden Local-first-/Supabase-Sync erfasst.
+# 3113 Adventures – Sprint 10.9.2
 
-## Hinweis zu Komoot
-Komoot stellt keine öffentliche API bereit, über die 3113 Adventures eine Collection automatisch als Kartenlayer auslesen könnte. Deshalb wird die Collection verlinkt; die Streckenübernahme erfolgt zuverlässig über GPX-Dateien.
+## Neu
+- Unter **Orte** kann ein neuer Ort direkt manuell erfasst werden.
+- Felder: Name, Kategorie, optionale Etappenzuordnung, Breiten- und Längengrad.
+- In der Orte-Übersicht steht jetzt der **Name des Ortes** prominent im Vordergrund; die Koordinaten werden dort nicht mehr angezeigt.
+- Kategorien werden lesbar dargestellt (z. B. Übernachten, Wasser, Einkauf).
+- Bestehende Favoriten-, Start/Ziel- und Kartenfunktionen bleiben erhalten.
+- Sprint 10.9 Komoot-Collection und Komoot-Etappen-GPX bleiben vollständig enthalten.
 
-**Keine Supabase-SQL-Anpassung erforderlich.**
+## Cloud / Supabase
+Keine SQL-Änderung erforderlich. Orte bleiben Bestandteil des bestehenden Cloud-Snapshots.

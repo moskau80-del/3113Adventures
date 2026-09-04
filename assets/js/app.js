@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41090";
+} from "./database.js?v=41092";
 
-import { loadLanguage, translate } from "./i18n.js?v=41090";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41090";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41090";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41090";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41090";
+import { loadLanguage, translate } from "./i18n.js?v=41092";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41092";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41092";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41092";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41092";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -935,6 +935,7 @@ async function renderStages(){
   }
 
   const stages=loadStagesLocal(activeTour.id);
+  const stagePlaces=loadPlacesLocal(activeTour.id);
   const packNames=loadPackNamesLocal(activeTour.id);
   const shoePerson1=loadTourShoePersonLocal(activeTour.id,"person1");
   const shoePerson2=loadTourShoePersonLocal(activeTour.id,"person2");
@@ -1002,7 +1003,7 @@ async function renderStages(){
           ${Number(stage.endCoord.lat||0).toFixed(5)}, ${Number(stage.endCoord.lng||0).toFixed(5)}
         </div>`:""}
         ${stage.notes?`<p>${escapeHtml(stage.notes)}</p>`:""}
-        ${stage.restDay?"":`${stageShoePersonWarningHtml(stage,shoePlan,packNames)}${stageShoeChangeHtml(stage,shoeMarkers)}${stagePlanningStatusHtml(activeTour.id,stage)}${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>${stageInlineTimelineHtml(stage)}`}
+        ${stage.restDay?"":`${stageShoePersonWarningHtml(stage,shoePlan,packNames)}${stageShoeChangeHtml(stage,shoeMarkers)}${stagePlanningStatusHtml(activeTour.id,stage)}${stagePreferredHtml(activeTour.id,stage.id)}<div class="stage-place-assign"><strong>Start / Ziel festlegen</strong><div class="stage-place-assign-row"><select data-stage-place-select="${stage.id}"><option value="">Ort wählen …</option>${stagePlaces.map(place=>`<option value="${place.id}">${escapeHtml(place.name||"Unbenannter Ort")}</option>`).join("")}</select><button data-stage-set-start="${stage.id}">Als Start</button><button data-stage-set-end="${stage.id}">Als Ziel</button></div><small>Wähle einen gespeicherten Ort und lege ihn gezielt für diese Etappe als Start oder Ziel fest.</small></div><div class="stage-supply">${stageSupplyHtml(activeTour.id,stage.id)}</div>${stageInlineTimelineHtml(stage)}`}
         <div class="card-actions">
           ${stage.restDay
             ? `<button class="danger" data-delete-rest="${stage.id}">Ruhetag entfernen</button>`
@@ -1860,9 +1861,22 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
   const supplyId=event.target.dataset.supplyStage;
   const preferredDestinationId=event.target.dataset.usePreferredDestination;
   const preferredStartIdStage=event.target.dataset.usePreferredStart;
+  const setStartStageId=event.target.dataset.stageSetStart;
+  const setEndStageId=event.target.dataset.stageSetEnd;
 
-
-
+  if(setStartStageId||setEndStageId){
+    const stageId=setStartStageId||setEndStageId;
+    const select=document.querySelector(`[data-stage-place-select="${stageId}"]`);
+    const placeId=select?.value;
+    if(!placeId){ alert("Bitte zuerst einen Ort auswählen."); return; }
+    if(setStartStageId) setPreferredStartLocal(activeTour.id,placeId,stageId);
+    else setPreferredEndLocal(activeTour.id,placeId,stageId);
+    markCloudDirty();
+    await renderStages();
+    await renderPlaces();
+    await renderDashboardStats();
+    return;
+  }
 
   if(preferredStartIdStage){
     const preferred=getPreferredStartForStage(activeTour.id,preferredStartIdStage);
@@ -2305,6 +2319,19 @@ document.getElementById("supplyResults")?.addEventListener("click",async(event)=
   await renderStages();
 });
 
+function placeCategoryLabel(category){
+  const labels={
+    accommodation:"Übernachten",
+    camping:"Camping",
+    water:"Wasser",
+    shop:"Einkauf",
+    pharmacy:"Apotheke",
+    footwear:"Outdoor / Schuhe",
+    other:"Ort"
+  };
+  return labels[category]||category||"Ort";
+}
+
 async function renderPlaces(){
   const activeTour=await getActiveTour();
   const list=document.getElementById("placeList");
@@ -2316,6 +2343,15 @@ async function renderPlaces(){
   }
 
   const places=loadPlacesLocal(activeTour.id);
+  const stageSelect=document.getElementById("placeCreateStage");
+  if(stageSelect){
+    const current=stageSelect.value;
+    const stages=loadStagesLocal(activeTour.id).filter(stage=>!stage.restDay);
+    stageSelect.innerHTML='<option value="">Keine Etappe</option>'+stages.map((stage,index)=>
+      `<option value="${stage.id}">Etappe ${index+1}: ${escapeHtml(stage.from||"")} → ${escapeHtml(stage.to||"")}</option>`
+    ).join("");
+    if([...stageSelect.options].some(option=>option.value===current)) stageSelect.value=current;
+  }
   document.getElementById("placeCount").textContent=String(places.length);
   document.getElementById("campingCount").textContent=String(places.filter(p=>p.category==="camping").length);
   document.getElementById("waterCount").textContent=String(places.filter(p=>p.category==="water").length);
@@ -2326,12 +2362,20 @@ async function renderPlaces(){
 
   list.innerHTML=visiblePlaces.length
     ?visiblePlaces.map(place=>`
-      <article class="place-card ${place.favorite?"favorite":""} ${place.preferredStart?'<span class="preferred-badge">Bevorzugter Start</span>':""}${place.preferredEnd?'<span class="preferred-badge">Bevorzugtes Ziel</span>':""}<div class="card-actions">
-        <p class="stage-coordinates">${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}</p>
-        ${place.preferred?'<span class="preferred-badge">Bevorzugter Stopp</span>':""}
+      <article class="place-card ${place.favorite?"favorite":""}">
+        <h3>${escapeHtml(place.name||"Unbenannter Ort")}</h3>
+        <div class="poi-meta">
+          <span class="pill">${escapeHtml(placeCategoryLabel(place.category))}</span>
+          ${place.stageId?'<span class="pill">Etappe zugeordnet</span>':""}
+          ${place.preferredStart?'<span class="preferred-badge">Bevorzugter Start</span>':""}
+          ${place.preferredEnd?'<span class="preferred-badge">Bevorzugtes Ziel</span>':""}
+          ${place.preferred?'<span class="preferred-badge">Bevorzugter Stopp</span>':""}
+        </div>
         <div class="card-actions">
-          <button data-preferred-start="${place.id}">${place.preferredStart?"Start ✓":"Als Start"}</button><button data-preferred-end="${place.id}">${place.preferredEnd?"Ziel ✓":"Als Ziel"}</button>
-          ${place.preferredStart?`<button data-clear-preferred-start="${place.stageId}">Start entfernen</button>`:""}${place.preferredEnd?`<button data-clear-preferred-end="${place.stageId}">Ziel entfernen</button>`:""}
+          <button data-preferred-start="${place.id}">${place.preferredStart?"Start ✓":"Als Start"}</button>
+          <button data-preferred-end="${place.id}">${place.preferredEnd?"Ziel ✓":"Als Ziel"}</button>
+          ${place.preferredStart?`<button data-clear-preferred-start="${place.stageId}">Start entfernen</button>`:""}
+          ${place.preferredEnd?`<button data-clear-preferred-end="${place.stageId}">Ziel entfernen</button>`:""}
           <button data-favorite-place="${place.id}" class="favorite-star">${place.favorite?"★ Favorit":"☆ Favorit"}</button>
           <button data-show-place="${place.id}">Auf Karte</button>
           <button class="danger" data-delete-place="${place.id}">Löschen</button>
@@ -2341,6 +2385,48 @@ async function renderPlaces(){
     :'<div class="empty">Keine passenden Orte vorhanden.</div>';
 }
 
+
+document.getElementById("savePlaceFromPlacesBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+
+  const name=document.getElementById("placeCreateName")?.value.trim();
+  const category=document.getElementById("placeCreateCategory")?.value||"other";
+  const stageId=document.getElementById("placeCreateStage")?.value||"";
+  const lat=Number(document.getElementById("placeCreateLat")?.value);
+  const lng=Number(document.getElementById("placeCreateLng")?.value);
+
+  if(!name||!Number.isFinite(lat)||!Number.isFinite(lng)||lat<-90||lat>90||lng<-180||lng>180){
+    alert("Bitte Name sowie gültige Koordinaten eingeben.");
+    return;
+  }
+
+  let distanceKm=0;
+  if(stageId){
+    const stage=loadStagesLocal(activeTour.id).find(item=>item.id===stageId);
+    const track=await getTrack(activeTour.id);
+    const segment=stage&&track?.points?.length?stageTrackSegment(track.points,stage):[];
+    if(segment.length>=2) distanceKm=distanceToStageKm({lat,lng},segment);
+  }
+
+  addPlaceLocal(activeTour.id,{
+    id:`manual-${Date.now()}`,
+    stageId,
+    name,
+    category,
+    lat,
+    lng,
+    distanceKm,
+    tags:{source:"manual-places"}
+  });
+
+  document.getElementById("placeCreateName").value="";
+  document.getElementById("placeCreateLat").value="";
+  document.getElementById("placeCreateLng").value="";
+  document.getElementById("placeCreateStage").value="";
+  await renderPlaces();
+  await renderStages();
+});
 
 document.getElementById("showAllPlacesBtn")?.addEventListener("click",async()=>{
   placeFilter="all";
@@ -4934,12 +5020,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41090";
+  window.location.href = "./?v=41092";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41090");
+    navigator.serviceWorker.register("sw.js?v=41092");
   });
 }
 
