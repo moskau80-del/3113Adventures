@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41082";
+} from "./database.js?v=41090";
 
-import { loadLanguage, translate } from "./i18n.js?v=41082";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41082";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41082";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41082";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41082";
+import { loadLanguage, translate } from "./i18n.js?v=41090";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41090";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41090";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41090";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41090";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -105,6 +105,31 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#39;"
   })[character]);
+}
+
+function normalizeKomootUrl(value){
+  const raw=String(value||"").trim();
+  if(!raw) return "";
+  try{
+    const url=new URL(raw);
+    const host=url.hostname.toLowerCase();
+    if(url.protocol!=="https:" || !(host==="komoot.com" || host.endsWith(".komoot.com"))){
+      throw new Error("Bitte einen gültigen https://www.komoot.com/... Link verwenden.");
+    }
+    return url.href;
+  }catch(error){
+    throw new Error("Ungültiger Komoot-Link. Bitte den vollständigen Collection-Link einfügen.");
+  }
+}
+
+function buildCombinedGpx(name,points){
+  const esc=(v)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const trkpts=points.map(point=>`<trkpt lat="${Number(point.lat).toFixed(7)}" lon="${Number(point.lng).toFixed(7)}">${Number.isFinite(Number(point.elevation))?`<ele>${Number(point.elevation).toFixed(1)}</ele>`:""}</trkpt>`).join("");
+  return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="3113 Adventures" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${esc(name)}</name><trkseg>${trkpts}</trkseg></trk></gpx>`;
+}
+
+function cleanStageName(filename){
+  return String(filename||"Komoot-Etappe").replace(/\.gpx$/i,"").replace(/[_-]+/g," ").replace(/\s+/g," ").trim();
 }
 
 
@@ -206,6 +231,7 @@ async function renderTours() {
           <span class="pill">${Number(tour.distanceKm || 0).toFixed(1)} km</span>
         </div>
         <p>${escapeHtml(tour.description || "")}</p>
+        ${tour.komootCollectionUrl ? `<p><a class="komoot-link" href="${escapeHtml(tour.komootCollectionUrl)}" target="_blank" rel="noopener noreferrer">↗ Komoot-Collection öffnen</a></p>` : ""}
         <div class="card-actions">
           ${tour.active
             ? ""
@@ -225,6 +251,7 @@ async function renderTours() {
       <strong>${escapeHtml(activeTour.name)}</strong>
       <p>${formatDate(activeTour.startDate)} → ${formatDate(activeTour.targetDate)}</p>
       <p>${Number(activeTour.distanceKm || 0).toFixed(1)} km</p>
+      ${activeTour.komootCollectionUrl ? `<p><a class="komoot-link" href="${escapeHtml(activeTour.komootCollectionUrl)}" target="_blank" rel="noopener noreferrer">↗ Komoot-Collection</a></p>` : ""}
     `
     : translate("dashboard.noTour", "Noch keine Tour ausgewählt.");
 }
@@ -236,6 +263,7 @@ function openTourDialog(tour = {}) {
   document.getElementById("tourStart").value = tour.startDate || "";
   document.getElementById("tourTarget").value = tour.targetDate || "";
   document.getElementById("tourDistance").value = tour.distanceKm ?? "";
+  document.getElementById("tourKomootCollection").value = tour.komootCollectionUrl || "";
   document.getElementById("tourActive").checked = Boolean(tour.active);
   tourDialog.showModal();
 }
@@ -257,6 +285,7 @@ tourForm?.addEventListener("submit", async (event) => {
     startDate: document.getElementById("tourStart").value,
     targetDate: document.getElementById("tourTarget").value,
     distanceKm: Number(document.getElementById("tourDistance").value || 0),
+    komootCollectionUrl: normalizeKomootUrl(document.getElementById("tourKomootCollection").value),
     active: document.getElementById("tourActive").checked,
     createdAt: now,
     updatedAt: now
@@ -568,6 +597,101 @@ document.getElementById("gpxInput")?.addEventListener("change", async (event) =>
     console.error("GPX-Import fehlgeschlagen:",error);
     if(status) status.textContent=`GPX-Import fehlgeschlagen: ${error.message}`;
     alert(`GPX-Import fehlgeschlagen: ${error.message}`);
+  }finally{
+    input.value="";
+  }
+});
+
+document.getElementById("komootStageInput")?.addEventListener("change", async (event) => {
+  const input=event.target;
+  const files=[...(input.files||[])];
+  if(!files.length) return;
+
+  const activeTour=await getActiveTour();
+  if(!activeTour){
+    alert("Bitte zuerst eine Tour aktivieren.");
+    input.value="";
+    return;
+  }
+
+  const status=document.getElementById("komootStageStatus");
+  try{
+    if(status) status.textContent=`${files.length} Komoot-Etappe(n) werden importiert …`;
+
+    const parsedFiles=[];
+    for(const file of files){
+      const text=await file.text();
+      const parsed=parseGpx(text,file.name);
+      if(!parsed?.points?.length) throw new Error(`${file.name}: keine verwendbaren Trackpunkte.`);
+      parsedFiles.push({file,parsed,text});
+    }
+
+    const existingTrack=await getTrack(activeTour.id);
+    const existingStages=loadStagesLocal(activeTour.id);
+    let combinedPoints=existingTrack?.points?.length ? [...existingTrack.points] : [];
+    const newStages=[...existingStages];
+    let nextOrder=newStages.length+1;
+    let stageDate=activeTour.startDate ? addDays(activeTour.startDate,newStages.length) : "";
+
+    for(const {file,parsed} of parsedFiles){
+      const pts=parsed.points;
+      // Avoid an identical duplicate boundary point, but keep the true route geometry.
+      if(combinedPoints.length && pts.length){
+        const a=combinedPoints[combinedPoints.length-1], b=pts[0];
+        if(Math.abs(a.lat-b.lat)<1e-7 && Math.abs(a.lng-b.lng)<1e-7) combinedPoints.push(...pts.slice(1));
+        else combinedPoints.push(...pts);
+      }else combinedPoints.push(...pts);
+
+      const metrics=calculateStage(pts);
+      const stageName=cleanStageName(file.name);
+      newStages.push({
+        id:`${activeTour.id}-komoot-${Date.now()}-${nextOrder}`,
+        tourId:activeTour.id,
+        order:nextOrder,
+        name:stageName,
+        date:stageDate,
+        from: nextOrder>1 ? (newStages[newStages.length-1]?.to || "") : "",
+        to: stageName,
+        distanceKm:metrics.distanceKm,
+        ascentM:metrics.ascentM,
+        descentM:metrics.descentM,
+        walkingHours:metrics.walkingHours,
+        startCoord:{lat:pts[0].lat,lng:pts[0].lng},
+        endCoord:{lat:pts[pts.length-1].lat,lng:pts[pts.length-1].lng},
+        notes:`Komoot-GPX: ${file.name}`,
+        completed:false,
+        restDay:false
+      });
+      nextOrder++;
+      if(stageDate) stageDate=addDays(stageDate,1);
+    }
+
+    const whole=calculateStage(combinedPoints);
+    const combinedName=`${activeTour.name} – Komoot Etappen.gpx`;
+    await saveTrack({
+      id:activeTour.id,
+      tourId:activeTour.id,
+      name:combinedName,
+      points:combinedPoints,
+      distanceKm:whole.distanceKm,
+      originalText:buildCombinedGpx(combinedName,combinedPoints),
+      importedAt:existingTrack?.importedAt||new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    });
+    saveStagesLocal(activeTour.id,newStages);
+
+    await saveTour({...activeTour,distanceKm:whole.distanceKm,updatedAt:new Date().toISOString()});
+    await markIndexedDbChangeAndSync();
+    await renderTours();
+    await renderGpx();
+    await renderStages();
+    initMap();
+    if(map){ setTimeout(async()=>{map.invalidateSize(); await renderMapTrack();},80); }
+    if(status) status.textContent=`Verbunden: ${parsedFiles.length} neue Etappe(n) · total ${newStages.length} Etappen · ${whole.distanceKm.toFixed(1)} km.`;
+  }catch(error){
+    console.error("Komoot-Etappenimport fehlgeschlagen:",error);
+    if(status) status.textContent=`Import fehlgeschlagen: ${error.message}`;
+    alert(`Komoot-Etappenimport fehlgeschlagen: ${error.message}`);
   }finally{
     input.value="";
   }
@@ -4810,12 +4934,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41082";
+  window.location.href = "./?v=41090";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41082");
+    navigator.serviceWorker.register("sw.js?v=41090");
   });
 }
 

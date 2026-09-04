@@ -706,3 +706,6 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
   outline:2px solid rgba(11,77,135,.18);
   outline-offset:-2px;
 }
+
+/* Sprint 10.9 – Komoot-Verknüpfung */
+.komoot-link{font-weight:700;text-decoration:none}.komoot-import-card{margin-top:1rem}.komoot-import-card .small{font-size:.88rem}
