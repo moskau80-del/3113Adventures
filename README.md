@@ -1,18 +1,22 @@
-# 3113 Adventures v4 – Sprint 10.9.6
+# 3113 Adventures v4 – Sprint 10.9.8
 
-## Neu in Sprint 10.9.6
-- Im Etappentrack-Editor gibt es jetzt den Routingmodus **„Frei / weglos“**.
-- In diesem Modus darf der Track beliebig verlaufen und muss keinem in OpenStreetMap vorhandenen Weg folgen.
-- Drag & Drop auf der Tracklinie bleibt exakt in der manuell gezogenen Form; es erfolgt kein automatisches Zurückrouten auf Wanderwege.
-- Mit **„Wander-/Fussweg“** bleibt das bisherige automatische Valhalla-Routing über vorhandene Wege verfügbar.
-- Die Option „Nach Drag & Drop automatisch über Wanderwege routen“ wird im freien Modus deaktiviert, damit klar ist, welches Verhalten aktiv ist.
-- Auch mit „Punkte setzen“ können im freien Modus wegelose Abschnitte direkt verbunden werden.
-- Keine Supabase-/SQL-Änderung erforderlich.
-
-
-## Neu
-- In jeder Etappenkarte werden der festgelegte Start und das festgelegte Ziel zusätzlich deutlich als eigene Angaben angezeigt.
-- Im Roadbook erscheint die Route Start → Ziel direkt unter dem Etappentitel.
-- Im Roadbook sind die übernommenen Werte ausdrücklich als „Festgelegter Start“ und „Festgelegtes Ziel“ bezeichnet.
-- Bevorzugter Start/Ziel bleiben separat sichtbar, damit Planung und tatsächlich übernommene Werte nicht verwechselt werden.
+## Neu in Sprint 10.9.8
+- Start- und Zielmarker im Etappentrack-Editor sind jetzt gezielt per Drag & Drop verschiebbar.
+- Beim Ziehen der Tracklinie bleiben Start und Ziel weiterhin fix; nur ein direkt gegriffener Start-/Zielmarker verändert den Endpunkt.
+- Wander-/Fussweg-Modus routet nach dem Verschieben zum neuen Endpunkt; Frei/weglos behält die freie Geometrie.
+- Ein manuell verschobener Endpunkt wird als „Manueller Start“ bzw. „Manuelles Ziel“ gekennzeichnet.
+- Anschluss zur vorherigen/nächsten Wanderetappe wird beim Speichern mitgeführt.
 - Keine Supabase-SQL-Änderung erforderlich.
+
+## Neu in Sprint 10.9.7
+
+- Im Etappentrack-Editor bleiben **Etappen-Start und Etappen-Ziel fest verankert**.
+- Beim Drag & Drop direkt an der Tracklinie wird nur der **Weg zwischen Start und Ziel** verschoben.
+- Auch im Modus **Frei / weglos** kann das festgelegte Ziel nicht mehr versehentlich mitgezogen werden.
+- Start- und Zielmarker sind im Track-Editor nicht mehr draggable; Änderungen von Start/Ziel erfolgen weiterhin bewusst über die Etappenfunktion „Start / Ziel festlegen“.
+- Kontrollpunkte können weiterhin verschoben werden; ihre weiche Verschiebung beeinflusst Start und Ziel nicht.
+- Fussweg-Routing behält dieselben Start-/Zielanker bei.
+
+## Supabase
+
+Keine SQL-Änderung erforderlich.

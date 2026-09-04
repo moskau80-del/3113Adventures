@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41096";
+} from "./database.js?v=41098";
 
-import { loadLanguage, translate } from "./i18n.js?v=41096";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41096";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41096";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41096";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41096";
+import { loadLanguage, translate } from "./i18n.js?v=41098";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41098";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41098";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41098";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41098";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -1343,7 +1343,7 @@ async function rerouteTrackEditorAfterDrag(){
   const status=document.getElementById("trackRoutingStatus");
 
   if(mode!=="foot"||!autoRoute){
-    if(status) status.textContent="Punkt verschoben · freie/wegelose Trackform aktiv · noch nicht gespeichert";
+    if(status) status.textContent="Weg verschoben · Start/Ziel fix · freie/wegelose Trackform aktiv · noch nicht gespeichert";
     return;
   }
 
@@ -1410,7 +1410,7 @@ function redrawTrackEditor(options={}){
     trackEditorLineDrag={pointIndex,last:{lat:ll.lat,lng:ll.lng}};
     trackEditorMap.dragging.disable();
     const status=document.getElementById("trackRoutingStatus");
-    if(status) status.textContent="Track gegriffen – ziehen und loslassen zum Neurouten …";
+    if(status) status.textContent="Track gegriffen – Weg ziehen; Start und Ziel bleiben fix …";
     if(event.originalEvent){
       L.DomEvent.stopPropagation(event.originalEvent);
       L.DomEvent.preventDefault(event.originalEvent);
@@ -1425,6 +1425,8 @@ function redrawTrackEditor(options={}){
     const isEnd=pointIndex===trackEditorWorkingPoints.length-1;
 
     const marker=L.marker([point.lat,point.lng],{
+      // Sprint 10.9.8: Start und Ziel dürfen bewusst über ihre Marker verschoben werden.
+      // Beim Ziehen der Tracklinie selbst bleiben die Endpunkte weiterhin fix.
       draggable:true,
       keyboard:false,
       title:isStart?"Start":isEnd?"Ziel":`Kontrollpunkt ${controlIndex}`
@@ -1460,13 +1462,25 @@ function redrawTrackEditor(options={}){
       const dLat=ll.lat-old.lat;
       const dLng=ll.lng-old.lng;
 
+      // Start/Ziel: nur den bewusst gegriffenen Endpunkt verschieben.
+      // Die Tracklinie selbst verschiebt Start/Ziel weiterhin nie.
+      if(isStart||isEnd){
+        trackEditorWorkingPoints[pointIndex]={...old,lat:ll.lat,lng:ll.lng};
+        const polylines=trackEditorLayer.getLayers().filter(layer=>layer instanceof L.Polyline);
+        if(polylines[0]) polylines[0].setLatLngs(trackEditorWorkingPoints.map(p=>[p.lat,p.lng]));
+        const info=document.getElementById("trackEditorInfo");
+        if(info) info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · ${isStart?"Start":"Ziel"} verschoben · noch nicht gespeichert`;
+        return;
+      }
+
       // Move the selected point plus nearby track points with a smooth falloff.
       // This makes dragging feel like moving the route rather than breaking
       // a single vertex out of a dense GPX line.
       const radius=Math.max(4,Math.min(40,Math.round(trackEditorWorkingPoints.length/20)));
 
       for(let i=Math.max(0,pointIndex-radius);i<=Math.min(trackEditorWorkingPoints.length-1,pointIndex+radius);i++){
-        if((i===0&&!isStart)||(i===trackEditorWorkingPoints.length-1&&!isEnd)) continue;
+        // Start und Ziel nie als Nebenwirkung eines Kontrollpunkt-Drags verschieben.
+        if(i===0||i===trackEditorWorkingPoints.length-1) continue;
 
         const distance=Math.abs(i-pointIndex);
         const influence=Math.cos((distance/(radius+1))*Math.PI/2);
@@ -1572,6 +1586,9 @@ async function openTrackEditor(stage){
         const dLng=event.latlng.lng-last.lng;
         const radius=Math.max(4,Math.min(40,Math.round(trackEditorWorkingPoints.length/20)));
         for(let i=Math.max(0,pointIndex-radius);i<=Math.min(trackEditorWorkingPoints.length-1,pointIndex+radius);i++){
+          // Sprint 10.9.8: Etappen-Start und -Ziel bleiben fest verankert.
+          // Beim Ziehen verändert sich nur der Weg dazwischen.
+          if(i===0||i===trackEditorWorkingPoints.length-1) continue;
           const distance=Math.abs(i-pointIndex);
           const influence=Math.cos((distance/(radius+1))*Math.PI/2);
           if(influence<=0) continue;
@@ -1832,26 +1849,27 @@ document.getElementById("trackEditorSaveBtn")?.addEventListener("click",async()=
   await saveTrack({...track,points:updatedPoints,edited:true,updatedAt:new Date().toISOString()});
   await markIndexedDbChangeAndSync();
 
-  const editedEndCoord={
-    lat:trackEditorWorkingPoints.at(-1).lat,
-    lng:trackEditorWorkingPoints.at(-1).lng
-  };
+  const editedStartCoord={lat:trackEditorWorkingPoints[0].lat,lng:trackEditorWorkingPoints[0].lng};
+  const editedEndCoord={lat:trackEditorWorkingPoints.at(-1).lat,lng:trackEditorWorkingPoints.at(-1).lng};
+  const moved=(a,b)=>!a||Math.abs(Number(a.lat)-Number(b.lat))>1e-7||Math.abs(Number(a.lng)-Number(b.lng))>1e-7;
+  const startMoved=moved(stage.startCoord,editedStartCoord);
+  const endMoved=moved(stage.endCoord,editedEndCoord);
+  const startName=startMoved?"Manueller Start":stage.from;
+  const endName=endMoved?"Manuelles Ziel":stage.to;
 
   updateStageLocal(activeTour.id,{
     ...stage,
-    startCoord:{lat:trackEditorWorkingPoints[0].lat,lng:trackEditorWorkingPoints[0].lng},
+    from:startName,
+    to:endName,
+    startCoord:editedStartCoord,
     endCoord:editedEndCoord,
     distanceKm:trackDistanceKm(trackEditorWorkingPoints),
-    notes:[stage.notes,"Track manuell bearbeitet"].filter(Boolean).join(" · ")
+    notes:[stage.notes,"Track manuell bearbeitet",startMoved?"Start auf Karte verschoben":"",endMoved?"Ziel auf Karte verschoben":""].filter(Boolean).join(" · ")
   });
 
-  // Keep the geometry continuous when the end of a stage is moved.
-  propagateStageDestinationToNext(
-    activeTour.id,
-    stage.id,
-    stage.to,
-    editedEndCoord
-  );
+  // Anschluss an Nachbar-Etappen geometrisch und namentlich konsistent halten.
+  if(startMoved) propagateStageStartToPrevious(activeTour.id,stage.id,startName,editedStartCoord);
+  propagateStageDestinationToNext(activeTour.id,stage.id,endName,editedEndCoord);
 
   document.getElementById("trackEditorDialog").close();
   trackEditorStageId=null;
@@ -2182,6 +2200,20 @@ function propagateStageDestinationToNext(tourId,stageId,destinationName,destinat
 
   updateStageLocal(tourId,updatedNext);
   return updatedNext;
+}
+
+function propagateStageStartToPrevious(tourId,stageId,startName,startCoord=null){
+  const stages=loadStagesLocal(tourId);
+  const currentIndex=stages.findIndex(stage=>stage.id===stageId);
+  if(currentIndex<0) return null;
+  const previousStage=stages.slice(0,currentIndex).reverse().find(stage=>!stage.restDay);
+  if(!previousStage) return null;
+  const updatedPrevious={...previousStage,to:startName||previousStage.to};
+  if(startCoord && Number.isFinite(Number(startCoord.lat)) && Number.isFinite(Number(startCoord.lng))){
+    updatedPrevious.endCoord={lat:Number(startCoord.lat),lng:Number(startCoord.lng)};
+  }
+  updateStageLocal(tourId,updatedPrevious);
+  return updatedPrevious;
 }
 
 stageForm?.addEventListener("submit",async(event)=>{
@@ -5159,12 +5191,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41096";
+  window.location.href = "./?v=41098";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41096");
+    navigator.serviceWorker.register("sw.js?v=41098");
   });
 }
 
