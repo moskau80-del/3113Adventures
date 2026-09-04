@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41093";
+} from "./database.js?v=41094";
 
-import { loadLanguage, translate } from "./i18n.js?v=41093";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41093";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41093";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41093";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41093";
+import { loadLanguage, translate } from "./i18n.js?v=41094";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41094";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41094";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41094";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41094";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -1211,6 +1211,7 @@ let trackEditorDragSnapshot=null;
 let trackEditorClickMode=false;
 let trackEditorClickedPoints=[];
 let trackEditorClickedLayer=null;
+let trackEditorLineDrag=null;
 
 
 function cloneTrackPoints(points){
@@ -1391,6 +1392,30 @@ function redrawTrackEditor(options={}){
     addClickedTrackPoint(event.latlng,{snapToTrack:true});
   });
 
+  // Sprint 10.9.4: grab the visible track itself and drag it.
+  // Leaflet polylines are not draggable by default, so we temporarily move
+  // the nearest track vertex (and its neighbours) while the pointer is held.
+  line.on("mousedown",event=>{
+    if(trackEditorClickMode||trackEditorRoutingBusy||!trackEditorWorkingPoints.length) return;
+    const ll=event.latlng;
+    let pointIndex=0;
+    let best=Infinity;
+    trackEditorWorkingPoints.forEach((p,i)=>{
+      const d=(Number(p.lat)-ll.lat)**2+(Number(p.lng)-ll.lng)**2;
+      if(d<best){best=d;pointIndex=i;}
+    });
+    trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+    if(trackEditorHistory.length>30) trackEditorHistory.shift();
+    trackEditorLineDrag={pointIndex,last:{lat:ll.lat,lng:ll.lng}};
+    trackEditorMap.dragging.disable();
+    const status=document.getElementById("trackRoutingStatus");
+    if(status) status.textContent="Track gegriffen – ziehen und loslassen zum Neurouten …";
+    if(event.originalEvent){
+      L.DomEvent.stopPropagation(event.originalEvent);
+      L.DomEvent.preventDefault(event.originalEvent);
+    }
+  });
+
   const indices=trackEditorControlIndices(trackEditorWorkingPoints.length);
 
   indices.forEach((pointIndex,controlIndex)=>{
@@ -1535,6 +1560,30 @@ async function openTrackEditor(stage){
       trackEditorMap.on("click",event=>{
         if(!trackEditorStageId||!trackEditorClickMode) return;
         addClickedTrackPoint(event.latlng,{snapToTrack:false});
+      });
+      trackEditorMap.on("mousemove",event=>{
+        if(!trackEditorLineDrag||trackEditorRoutingBusy) return;
+        const {pointIndex,last}=trackEditorLineDrag;
+        const dLat=event.latlng.lat-last.lat;
+        const dLng=event.latlng.lng-last.lng;
+        const radius=Math.max(4,Math.min(40,Math.round(trackEditorWorkingPoints.length/20)));
+        for(let i=Math.max(0,pointIndex-radius);i<=Math.min(trackEditorWorkingPoints.length-1,pointIndex+radius);i++){
+          const distance=Math.abs(i-pointIndex);
+          const influence=Math.cos((distance/(radius+1))*Math.PI/2);
+          if(influence<=0) continue;
+          trackEditorWorkingPoints[i]={...trackEditorWorkingPoints[i],lat:Number(trackEditorWorkingPoints[i].lat)+dLat*influence,lng:Number(trackEditorWorkingPoints[i].lng)+dLng*influence};
+        }
+        trackEditorLineDrag.last={lat:event.latlng.lat,lng:event.latlng.lng};
+        const polylines=trackEditorLayer?.getLayers().filter(layer=>layer instanceof L.Polyline)||[];
+        if(polylines[0]) polylines[0].setLatLngs(trackEditorWorkingPoints.map(p=>[p.lat,p.lng]));
+        const info=document.getElementById("trackEditorInfo");
+        if(info) info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · Track verschoben · noch nicht gespeichert`;
+      });
+      trackEditorMap.on("mouseup",async()=>{
+        if(!trackEditorLineDrag) return;
+        trackEditorLineDrag=null;
+        trackEditorMap.dragging.enable();
+        await rerouteTrackEditorAfterDrag();
       });
       trackEditorMap._3113EditorClickBound=true;
     }
@@ -5089,12 +5138,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41093";
+  window.location.href = "./?v=41094";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41093");
+    navigator.serviceWorker.register("sw.js?v=41094");
   });
 }
 
