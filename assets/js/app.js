@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41081";
+} from "./database.js?v=41082";
 
-import { loadLanguage, translate } from "./i18n.js?v=41081";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41081";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41081";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41081";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41081";
+import { loadLanguage, translate } from "./i18n.js?v=41082";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41082";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41082";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41082";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41082";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -3853,7 +3853,7 @@ function cloudSetStatus(message,error=false){
 }
 
 function cloudSetBusy(busy){
-  ["cloudUploadBtn","cloudDownloadBtn","cloudSignInBtn","cloudSignUpBtn","cloudSignOutBtn"]
+  ["cloudUploadBtn","cloudDownloadBtn","cloudSignInBtn","cloudSignUpBtn","cloudSignOutBtn","cloudForgotPasswordBtn","cloudSetNewPasswordBtn"]
     .forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.disabled=Boolean(busy);
@@ -3879,10 +3879,12 @@ async function renderCloudState(){
 
   const badge=document.getElementById("cloudStateBadge");
   const label=document.getElementById("cloudUserLabel");
+  const accountInfo=document.getElementById("cloudAccountInfo");
 
   if(!cloudClient){
     if(badge) badge.textContent=config.url?"Verbindung prüfen":"Nicht verbunden";
     if(label) label.textContent="Nicht angemeldet";
+    if(accountInfo) accountInfo.textContent="Nicht angemeldet · Supabase-Verbindung nicht bereit.";
     cloudSetStatus(config.url
       ?"Supabase-Konfiguration gefunden, Verbindung konnte aber nicht initialisiert werden."
       :"Cloud ist noch nicht eingerichtet.",Boolean(config.url));
@@ -3892,11 +3894,15 @@ async function renderCloudState(){
   const user=await cloudCurrentUser();
   if(user){
     if(badge) badge.textContent="Cloud aktiv";
-    if(label) label.textContent=user.email||"Angemeldet";
+    if(label) label.textContent=`Angemeldet als ${user.email||"Benutzer"}`;
+    if(accountInfo) accountInfo.textContent=`✓ Angemeldet als: ${user.email||"Benutzer"}`;
+    const emailInput=document.getElementById("cloudEmail");
+    if(emailInput&&!emailInput.value&&user.email) emailInput.value=user.email;
     cloudSetStatus(`Cloud verbunden · angemeldet als ${user.email||"Benutzer"}. Die Anmeldung bleibt auf diesem Gerät gespeichert.`);
   }else{
     if(badge) badge.textContent="Bereit";
     if(label) label.textContent="Nicht angemeldet";
+    if(accountInfo) accountInfo.textContent="Nicht angemeldet. Verwende dieselbe E-Mail-Adresse wie auf deinem bereits angemeldeten Gerät.";
     cloudSetStatus("Supabase-Verbindung ist eingerichtet. Bitte anmelden.");
   }
 }
@@ -4545,6 +4551,37 @@ document.getElementById("cloudSignInBtn")?.addEventListener("click",async()=>{
   }
 });
 
+document.getElementById("cloudForgotPasswordBtn")?.addEventListener("click",async()=>{
+  try{
+    cloudSetBusy(true);
+    if(!cloudClient) createCloudClient();
+    if(!cloudClient) throw new Error("Bitte zuerst die Supabase-Verbindung einrichten.");
+    const email=document.getElementById("cloudEmail")?.value.trim();
+    if(!email) throw new Error("Bitte zuerst deine E-Mail-Adresse eingeben.");
+    const redirectTo=`${window.location.origin}${window.location.pathname}`;
+    const {error}=await cloudClient.auth.resetPasswordForEmail(email,{redirectTo});
+    if(error) throw error;
+    cloudSetStatus(`Passwort-Link wurde an ${email} angefordert. Öffne die E-Mail auf diesem Gerät und folge dem Link.`);
+  }catch(error){
+    cloudSetStatus(`Passwort-Wiederherstellung fehlgeschlagen: ${error.message}`,true);
+  }finally{ cloudSetBusy(false); }
+});
+
+document.getElementById("cloudSetNewPasswordBtn")?.addEventListener("click",async()=>{
+  try{
+    cloudSetBusy(true);
+    const password=document.getElementById("cloudNewPassword")?.value||"";
+    if(password.length<6) throw new Error("Das neue Passwort muss mindestens 6 Zeichen lang sein.");
+    const {error}=await cloudClient.auth.updateUser({password});
+    if(error) throw error;
+    document.getElementById("cloudRecoveryPanel").hidden=true;
+    document.getElementById("cloudNewPassword").value="";
+    await renderCloudState();
+    cloudSetStatus("Neues Passwort gespeichert. Dieses Gerät ist jetzt angemeldet.");
+  }catch(error){ cloudSetStatus(`Passwort konnte nicht gespeichert werden: ${error.message}`,true); }
+  finally{ cloudSetBusy(false); }
+});
+
 document.getElementById("cloudSignOutBtn")?.addEventListener("click",async()=>{
   try{
     cloudSetBusy(true);
@@ -4625,7 +4662,12 @@ async function initializeCloud(){
   }
 
   if(cloudClient){
-    cloudClient.auth.onAuthStateChange(()=>{
+    cloudClient.auth.onAuthStateChange((event)=>{
+      if(event==="PASSWORD_RECOVERY"){
+        const panel=document.getElementById("cloudRecoveryPanel");
+        if(panel) panel.hidden=false;
+        cloudSetStatus("Passwort-Link erkannt. Bitte jetzt ein neues Passwort festlegen.");
+      }
       setTimeout(async()=>{
         await renderCloudState();
         if(autoSyncEnabled()) runCloudAutoSync("auth");
@@ -4768,12 +4810,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41081";
+  window.location.href = "./?v=41082";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41081");
+    navigator.serviceWorker.register("sw.js?v=41082");
   });
 }
 

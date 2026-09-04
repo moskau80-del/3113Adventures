@@ -1,12 +1,13 @@
-# 3113 Adventures – Sprint 10.8.1
+# 3113 Adventures – Sprint 10.8.2
 
-## Punkte-setzen Hotfix
-- Klick direkt auf den bestehenden Track funktioniert jetzt explizit.
-- Ein Track-Klick setzt einen neuen Wegpunkt auf den nächstgelegenen vorhandenen Trackpunkt.
-- Klick neben den Track setzt einen freien Wegpunkt.
-- Ein Klick auf einen neu gesetzten nummerierten Punkt entfernt ihn wieder.
-- Normale Kartenklicks außerhalb des Modus `Punkte setzen` verändern den Track nicht mehr.
-- Dadurch bleiben keine versehentlich gesetzten Punkte im Track hängen.
-- Nach `Punkte verbinden` werden die temporären Punkte sauber entfernt.
+## Cloud-Login-Hotfix
+- Zeigt im Cloud-Bereich deutlich **„Angemeldet als: E-Mail“** an.
+- Bei bestehender Session wird die E-Mail ins Loginfeld übernommen; das Passwort wird weiterhin nie angezeigt oder gespeichert.
+- Neuer Button **„Passwort vergessen“** fordert über Supabase eine Reset-E-Mail an.
+- Ein über den Reset-Link geöffneter PASSWORD_RECOVERY-Flow zeigt ein Feld zum Setzen eines neuen Passworts.
+- Bestehende Session-Persistenz, Auto-Refresh und lokaler Cloud-Sync bleiben erhalten.
+- Keine lokalen Tour-/GPX-/Packlisten-Daten werden beim Login-Fix gelöscht.
 
 Keine Supabase-SQL-Anpassung erforderlich.
+
+Hinweis: Für Passwort-Reset muss die veröffentlichte App-URL in Supabase Auth unter den erlaubten Redirect URLs zugelassen sein.

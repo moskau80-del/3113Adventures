@@ -698,7 +698,7 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
   }
 }
 
-/* ===== Sprint 10.8.1 Punktmodus Hotfix ===== */
+/* ===== Sprint 10.8.2 Punktmodus Hotfix ===== */
 #trackEditorMap.point-mode .leaflet-interactive{
   cursor:crosshair;
 }
