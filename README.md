@@ -1,11 +1,12 @@
-# 3113 Adventures v4 – Sprint 10.9.8
+# 3113 Adventures v4 – Sprint 10.9.9
 
-## Neu in Sprint 10.9.8
-- Start- und Zielmarker im Etappentrack-Editor sind jetzt gezielt per Drag & Drop verschiebbar.
-- Beim Ziehen der Tracklinie bleiben Start und Ziel weiterhin fix; nur ein direkt gegriffener Start-/Zielmarker verändert den Endpunkt.
-- Wander-/Fussweg-Modus routet nach dem Verschieben zum neuen Endpunkt; Frei/weglos behält die freie Geometrie.
-- Ein manuell verschobener Endpunkt wird als „Manueller Start“ bzw. „Manuelles Ziel“ gekennzeichnet.
-- Anschluss zur vorherigen/nächsten Wanderetappe wird beim Speichern mitgeführt.
+## Neu in Sprint 10.9.9
+- **Trackabschnitte wirklich verkürzen:** Beim Greifen der Tracklinie wird nicht mehr ein grosser Teil der Route wie ein Gummiband verschoben. Stattdessen werden vor und nach der Griffstelle zwei lokale Anker gesetzt und nur der Abschnitt dazwischen ersetzt.
+- **Wander-/Fussweg:** Nur der bearbeitete Abschnitt wird über `Anker → gezogener Punkt → Anker` neu geroutet. Der restliche Track bleibt exakt erhalten.
+- **Frei / weglos:** Der bearbeitete Abschnitt wird direkt über den gezogenen Punkt verbunden. Damit lassen sich Schleifen abschneiden und echte Abkürzungen erzeugen.
+- Start und Ziel bleiben beim Bearbeiten eines Zwischenabschnitts unverändert; die in 10.9.8 eingeführten verschiebbaren Start-/Zielmarker bleiben erhalten.
+- **Neue To-Do-Liste pro Tour:** Jede Tour hat ihre eigene Aufgabenliste mit Aufgabe, Termin und Priorität. Aufgaben können erledigt, wieder geöffnet und gelöscht werden. Filter „Offen“ / „Alle“.
+- Die To-Do-Daten werden lokal pro Tour gespeichert und über den bestehenden Cloud-Snapshot mit synchronisiert.
 - Keine Supabase-SQL-Änderung erforderlich.
 
 ## Neu in Sprint 10.9.7

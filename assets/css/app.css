@@ -725,3 +725,13 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
 .stage-endpoints-summary{display:flex;flex-wrap:wrap;gap:.45rem 1rem;margin-top:.28rem;font-size:.92rem;color:var(--muted,#667085)}
 .stage-endpoints-summary span{display:inline-flex;gap:.3rem;align-items:baseline}
 .roadbook-route{margin:.22rem 0 .3rem;font-size:1rem;line-height:1.35}
+
+/* Sprint 10.9.9 – Tour To Do */
+.todo-add-grid{display:grid;grid-template-columns:minmax(260px,2fr) minmax(150px,.7fr) minmax(140px,.6fr) auto;gap:10px;align-items:end}
+.todo-add-grid .form-label{margin:0}.todo-add-grid button{min-height:42px}
+.todo-list{display:grid;gap:9px}
+.todo-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--border,#d8d8d0);border-radius:12px;background:rgba(255,255,255,.55)}
+.todo-item.done{opacity:.62}.todo-item.done .todo-item-text{text-decoration:line-through}
+.todo-check{width:22px;height:22px;margin:0}.todo-item-main{min-width:0}.todo-item-text{font-weight:800;overflow-wrap:anywhere}.todo-item-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:5px;font-size:.8rem;color:var(--ui-muted)}
+.todo-priority-high{font-weight:800}.todo-actions{display:flex;gap:6px}.todo-actions button{white-space:nowrap}.todo-filter-row{margin:0}.todo-filter-row button.active{box-shadow:inset 0 0 0 2px currentColor}
+@media(max-width:800px){.todo-add-grid{grid-template-columns:1fr 1fr}.todo-text-field{grid-column:1/-1}.todo-add-grid button{grid-column:1/-1}.todo-item{grid-template-columns:auto minmax(0,1fr)}.todo-actions{grid-column:2;justify-content:flex-end}}

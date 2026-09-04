@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41098";
+} from "./database.js?v=41099";
 
-import { loadLanguage, translate } from "./i18n.js?v=41098";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41098";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41098";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41098";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41098";
+import { loadLanguage, translate } from "./i18n.js?v=41099";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41099";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41099";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41099";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41099";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -301,6 +301,7 @@ tourForm?.addEventListener("submit", async (event) => {
   }
 
   await renderStages();
+  await renderTourTodos();
   if (document.getElementById('map').classList.contains('active')) {
     await renderMapTrack();
   }
@@ -347,6 +348,7 @@ document.getElementById("tourList")?.addEventListener("click", async (event) => 
   }
 
   await renderStages();
+  await renderTourTodos();
   if (document.getElementById('map').classList.contains('active')) {
     await renderMapTrack();
   }
@@ -1026,6 +1028,7 @@ async function renderStages(){
     ["Mein Transa",()=>renderGear()],
     ["Schuhe",()=>renderTourShoes()],
     ["Orte",()=>renderPlaces()],
+    ["To Do",()=>renderTourTodos()],
     ["Roadbook",()=>typeof renderRoadbook==="function"?renderRoadbook():Promise.resolve()],
     ["Seitenleiste",()=>typeof renderSidebarSummary==="function"?renderSidebarSummary():Promise.resolve()]
   ];
@@ -1213,6 +1216,7 @@ let trackEditorClickMode=false;
 let trackEditorClickedPoints=[];
 let trackEditorClickedLayer=null;
 let trackEditorLineDrag=null;
+let trackEditorDragSegment=null;
 
 
 function cloneTrackPoints(points){
@@ -1242,6 +1246,52 @@ function trackEditorControlIndices(length){
   return [...new Set(indices)];
 }
 
+function trackPointDistanceKm(a,b){
+  const R=6371;
+  const dLat=(Number(b.lat)-Number(a.lat))*Math.PI/180;
+  const dLng=(Number(b.lng)-Number(a.lng))*Math.PI/180;
+  const lat1=Number(a.lat)*Math.PI/180;
+  const lat2=Number(b.lat)*Math.PI/180;
+  const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(Math.max(0,h)));
+}
+
+function trackEditorSegmentAnchors(points,centerIndex){
+  if(points.length<3) return {left:0,right:Math.max(0,points.length-1)};
+  const stageKm=Math.max(.1,trackDistanceKm(points));
+  // Etwa 4 % der Etappe je Seite, aber nicht winzig und nicht riesig.
+  // So bleibt der übrige Track unangetastet und Schleifen können tatsächlich abgeschnitten werden.
+  const targetKm=Math.max(.25,Math.min(1.5,stageKm*.04));
+  let left=Math.max(0,Math.min(points.length-2,centerIndex-1));
+  let right=Math.min(points.length-1,Math.max(1,centerIndex+1));
+  let km=0;
+  for(let i=centerIndex;i>0&&km<targetKm;i--){
+    km+=trackPointDistanceKm(points[i],points[i-1]);
+    left=i-1;
+  }
+  km=0;
+  for(let i=centerIndex;i<points.length-1&&km<targetKm;i++){
+    km+=trackPointDistanceKm(points[i],points[i+1]);
+    right=i+1;
+  }
+  if(left===right){
+    left=Math.max(0,centerIndex-1);
+    right=Math.min(points.length-1,centerIndex+1);
+  }
+  return {left,right};
+}
+
+function replaceTrackEditorSegment(snapshot,left,right,replacement){
+  const before=snapshot.slice(0,left);
+  const after=snapshot.slice(right+1);
+  return before.concat(replacement.map(point=>({...point})),after);
+}
+
+function previewTrackEditorSegment(snapshot,left,right,dragged){
+  const a={...snapshot[left]};
+  const b={...snapshot[right]};
+  return replaceTrackEditorSegment(snapshot,left,right,[a,{lat:Number(dragged.lat),lng:Number(dragged.lng)},b]);
+}
 
 
 function updateClickedPointUi(){
@@ -1335,12 +1385,46 @@ function redrawClickedPoints(){
   updateClickedPointUi();
 }
 
-async function rerouteTrackEditorAfterDrag(){
+async function rerouteTrackEditorAfterDrag(segmentEdit=null){
   if(trackEditorRoutingBusy) return;
 
   const mode=document.getElementById("trackRoutingMode")?.value||"direct";
   const autoRoute=document.getElementById("trackEditorAutoRoute")?.checked!==false;
   const status=document.getElementById("trackRoutingStatus");
+
+  // Sprint 10.9.9: Bei einem Drag auf der Tracklinie wird nur der lokale
+  // Abschnitt zwischen zwei Ankerpunkten ersetzt. Dadurch kann die Route
+  // länger ODER kürzer werden, ohne dass der restliche Track mitwandert.
+  if(segmentEdit?.snapshot&&Number.isInteger(segmentEdit.left)&&Number.isInteger(segmentEdit.right)&&segmentEdit.target){
+    const {snapshot,left,right,target}=segmentEdit;
+    if(mode!=="foot"||!autoRoute){
+      trackEditorWorkingPoints=previewTrackEditorSegment(snapshot,left,right,target);
+      redrawTrackEditor({fit:false});
+      if(status) status.textContent=`✓ Abschnitt frei neu geformt · ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · Start/Ziel und übriger Track unverändert · noch nicht gespeichert`;
+      return;
+    }
+
+    trackEditorRoutingBusy=true;
+    if(status) status.textContent="Nur der gewählte Abschnitt wird über Wander-/Fusswege neu geroutet …";
+    try{
+      const routed=await routeBetweenWaypoints([snapshot[left],target,snapshot[right]]);
+      if(!routed?.length||routed.length<2) throw new Error("Keine verwertbare Route erhalten.");
+      // Routing-Endpunkte exakt auf die unveränderten Anker setzen.
+      routed[0]={...snapshot[left]};
+      routed[routed.length-1]={...snapshot[right]};
+      trackEditorWorkingPoints=replaceTrackEditorSegment(snapshot,left,right,routed);
+      redrawTrackEditor({fit:false});
+      if(status) status.textContent=`✓ Abschnitt neu geroutet · ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · übriger Track unverändert · noch nicht gespeichert`;
+    }catch(error){
+      console.warn("Abschnitts-Routing fehlgeschlagen:",error);
+      trackEditorWorkingPoints=previewTrackEditorSegment(snapshot,left,right,target);
+      redrawTrackEditor({fit:false});
+      if(status) status.textContent=`Abschnitts-Routing nicht möglich: ${error.message}. Die freie Verkürzung bleibt als Vorschau erhalten.`;
+    }finally{
+      trackEditorRoutingBusy=false;
+    }
+    return;
+  }
 
   if(mode!=="foot"||!autoRoute){
     if(status) status.textContent="Weg verschoben · Start/Ziel fix · freie/wegelose Trackform aktiv · noch nicht gespeichert";
@@ -1349,26 +1433,19 @@ async function rerouteTrackEditorAfterDrag(){
 
   const indices=trackEditorWaypointIndices();
   const waypoints=indices.map(index=>trackEditorWorkingPoints[index]);
-
   if(waypoints.length<2) return;
 
   trackEditorRoutingBusy=true;
   if(status) status.textContent="Neuplanung über Wander-/Fusswege …";
-
   try{
     const routed=await routeBetweenWaypoints(waypoints);
     if(!routed?.length||routed.length<2) throw new Error("Keine verwertbare Route erhalten.");
-
     trackEditorWorkingPoints=routed;
     redrawTrackEditor({fit:false});
-    if(status){
-      status.textContent=`✓ Route neu berechnet · ${trackDistanceKm(routed).toFixed(1)} km · noch nicht gespeichert`;
-    }
+    if(status) status.textContent=`✓ Route neu berechnet · ${trackDistanceKm(routed).toFixed(1)} km · noch nicht gespeichert`;
   }catch(error){
     console.warn("Automatisches Drag-&-Drop-Routing fehlgeschlagen:",error);
-    if(status){
-      status.textContent=`Automatisches Routing nicht möglich: ${error.message}. Die verschobene Vorschau bleibt erhalten.`;
-    }
+    if(status) status.textContent=`Automatisches Routing nicht möglich: ${error.message}. Die verschobene Vorschau bleibt erhalten.`;
   }finally{
     trackEditorRoutingBusy=false;
   }
@@ -1405,12 +1482,14 @@ function redrawTrackEditor(options={}){
       const d=(Number(p.lat)-ll.lat)**2+(Number(p.lng)-ll.lng)**2;
       if(d<best){best=d;pointIndex=i;}
     });
-    trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
+    const snapshot=cloneTrackPoints(trackEditorWorkingPoints);
+    trackEditorHistory.push(snapshot);
     if(trackEditorHistory.length>30) trackEditorHistory.shift();
-    trackEditorLineDrag={pointIndex,last:{lat:ll.lat,lng:ll.lng}};
+    const anchors=trackEditorSegmentAnchors(snapshot,pointIndex);
+    trackEditorLineDrag={pointIndex,snapshot,left:anchors.left,right:anchors.right,target:{lat:ll.lat,lng:ll.lng}};
     trackEditorMap.dragging.disable();
     const status=document.getElementById("trackRoutingStatus");
-    if(status) status.textContent="Track gegriffen – Weg ziehen; Start und Ziel bleiben fix …";
+    if(status) status.textContent="Track gegriffen – nur dieser Abschnitt wird neu geformt; der übrige Weg bleibt stehen …";
     if(event.originalEvent){
       L.DomEvent.stopPropagation(event.originalEvent);
       L.DomEvent.preventDefault(event.originalEvent);
@@ -1442,6 +1521,11 @@ function redrawTrackEditor(options={}){
       trackEditorDragSnapshot=cloneTrackPoints(trackEditorWorkingPoints);
       trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
       if(trackEditorHistory.length>30) trackEditorHistory.shift();
+      trackEditorDragSegment=null;
+      if(!isStart&&!isEnd){
+        const anchors=trackEditorSegmentAnchors(trackEditorDragSnapshot,pointIndex);
+        trackEditorDragSegment={snapshot:trackEditorDragSnapshot,left:anchors.left,right:anchors.right,target:{...trackEditorDragSnapshot[pointIndex]}};
+      }
 
       const status=document.getElementById("trackRoutingStatus");
       if(status) status.textContent="Punkt verschieben …";
@@ -1473,30 +1557,20 @@ function redrawTrackEditor(options={}){
         return;
       }
 
-      // Move the selected point plus nearby track points with a smooth falloff.
-      // This makes dragging feel like moving the route rather than breaking
-      // a single vertex out of a dense GPX line.
-      const radius=Math.max(4,Math.min(40,Math.round(trackEditorWorkingPoints.length/20)));
-
-      for(let i=Math.max(0,pointIndex-radius);i<=Math.min(trackEditorWorkingPoints.length-1,pointIndex+radius);i++){
-        // Start und Ziel nie als Nebenwirkung eines Kontrollpunkt-Drags verschieben.
-        if(i===0||i===trackEditorWorkingPoints.length-1) continue;
-
-        const distance=Math.abs(i-pointIndex);
-        const influence=Math.cos((distance/(radius+1))*Math.PI/2);
-        if(influence<=0) continue;
-
-        trackEditorWorkingPoints[i]={
-          ...trackEditorWorkingPoints[i],
-          lat:Number(trackEditorWorkingPoints[i].lat)+dLat*influence,
-          lng:Number(trackEditorWorkingPoints[i].lng)+dLng*influence
-        };
+      // Sprint 10.9.9: Der Kontrollpunkt formt nur einen lokalen Abschnitt.
+      // Der Track vor/nach den Ankern bleibt unverändert; so sind echte
+      // Abkürzungen möglich statt eines Verschiebens des ganzen Weges.
+      if(trackEditorDragSegment){
+        trackEditorDragSegment.target={lat:ll.lat,lng:ll.lng};
+        trackEditorWorkingPoints=previewTrackEditorSegment(
+          trackEditorDragSegment.snapshot,
+          trackEditorDragSegment.left,
+          trackEditorDragSegment.right,
+          trackEditorDragSegment.target
+        );
       }
 
-      marker.setLatLng([
-        trackEditorWorkingPoints[pointIndex].lat,
-        trackEditorWorkingPoints[pointIndex].lng
-      ]);
+      marker.setLatLng([ll.lat,ll.lng]);
 
       const polylines=trackEditorLayer.getLayers().filter(layer=>layer instanceof L.Polyline);
       if(polylines[0]){
@@ -1511,7 +1585,9 @@ function redrawTrackEditor(options={}){
 
     marker.on("dragend",async()=>{
       if(trackEditorRoutingBusy) return;
-      await rerouteTrackEditorAfterDrag();
+      const segment=trackEditorDragSegment;
+      trackEditorDragSegment=null;
+      await rerouteTrackEditorAfterDrag(segment);
     });
   });
 
@@ -1581,30 +1657,20 @@ async function openTrackEditor(stage){
       });
       trackEditorMap.on("mousemove",event=>{
         if(!trackEditorLineDrag||trackEditorRoutingBusy) return;
-        const {pointIndex,last}=trackEditorLineDrag;
-        const dLat=event.latlng.lat-last.lat;
-        const dLng=event.latlng.lng-last.lng;
-        const radius=Math.max(4,Math.min(40,Math.round(trackEditorWorkingPoints.length/20)));
-        for(let i=Math.max(0,pointIndex-radius);i<=Math.min(trackEditorWorkingPoints.length-1,pointIndex+radius);i++){
-          // Sprint 10.9.8: Etappen-Start und -Ziel bleiben fest verankert.
-          // Beim Ziehen verändert sich nur der Weg dazwischen.
-          if(i===0||i===trackEditorWorkingPoints.length-1) continue;
-          const distance=Math.abs(i-pointIndex);
-          const influence=Math.cos((distance/(radius+1))*Math.PI/2);
-          if(influence<=0) continue;
-          trackEditorWorkingPoints[i]={...trackEditorWorkingPoints[i],lat:Number(trackEditorWorkingPoints[i].lat)+dLat*influence,lng:Number(trackEditorWorkingPoints[i].lng)+dLng*influence};
-        }
-        trackEditorLineDrag.last={lat:event.latlng.lat,lng:event.latlng.lng};
+        const drag=trackEditorLineDrag;
+        drag.target={lat:event.latlng.lat,lng:event.latlng.lng};
+        trackEditorWorkingPoints=previewTrackEditorSegment(drag.snapshot,drag.left,drag.right,drag.target);
         const polylines=trackEditorLayer?.getLayers().filter(layer=>layer instanceof L.Polyline)||[];
         if(polylines[0]) polylines[0].setLatLngs(trackEditorWorkingPoints.map(p=>[p.lat,p.lng]));
         const info=document.getElementById("trackEditorInfo");
-        if(info) info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · Track verschoben · noch nicht gespeichert`;
+        if(info) info.textContent=`Vorschau: ${trackDistanceKm(trackEditorWorkingPoints).toFixed(1)} km · Abschnitt neu geformt · restlicher Track unverändert · noch nicht gespeichert`;
       });
       trackEditorMap.on("mouseup",async()=>{
         if(!trackEditorLineDrag) return;
+        const segment={...trackEditorLineDrag};
         trackEditorLineDrag=null;
         trackEditorMap.dragging.enable();
-        await rerouteTrackEditorAfterDrag();
+        await rerouteTrackEditorAfterDrag(segment);
       });
       trackEditorMap._3113EditorClickBound=true;
     }
@@ -4039,6 +4105,127 @@ function roadbookShoeWarnings(tourId,stage,stages){
     : "<li>Kein Schuhwechsel auf dieser Etappe prognostiziert.</li>";
 }
 
+const TOUR_TODO_KEY_PREFIX="3113-tour-todos-v1:";
+let todoFilter="open";
+
+function todoStorageKey(tourId){
+  return `${TOUR_TODO_KEY_PREFIX}${tourId}`;
+}
+
+function loadTourTodosLocal(tourId){
+  if(!tourId) return [];
+  try{
+    const parsed=JSON.parse(localStorage.getItem(todoStorageKey(tourId))||"[]");
+    return Array.isArray(parsed)?parsed:[];
+  }catch{
+    return [];
+  }
+}
+
+function saveTourTodosLocal(tourId,todos){
+  localStorage.setItem(todoStorageKey(tourId),JSON.stringify(todos));
+}
+
+function todoPriorityLabel(priority){
+  if(priority==="high") return "Hoch";
+  if(priority==="low") return "Niedrig";
+  return "Normal";
+}
+
+async function renderTourTodos(){
+  const list=document.getElementById("todoList");
+  const summary=document.getElementById("todoSummary");
+  const status=document.getElementById("todoStatus");
+  if(!list) return;
+
+  const activeTour=await getActiveTour();
+  if(!activeTour){
+    list.innerHTML='<div class="empty">Keine aktive Tour.</div>';
+    if(summary) summary.textContent="0 offen";
+    if(status) status.textContent="Aktiviere zuerst eine Tour.";
+    return;
+  }
+
+  const todos=loadTourTodosLocal(activeTour.id)
+    .sort((a,b)=>Number(Boolean(a.done))-Number(Boolean(b.done)) || String(a.dueDate||"9999").localeCompare(String(b.dueDate||"9999")) || Number(b.createdAt||0)-Number(a.createdAt||0));
+  const open=todos.filter(item=>!item.done).length;
+  if(summary) summary.textContent=`${open} offen · ${todos.length} insgesamt · ${activeTour.name}`;
+  if(status) status.textContent=`To-Do-Liste für: ${activeTour.name}`;
+
+  const visible=todoFilter==="open"?todos.filter(item=>!item.done):todos;
+  list.innerHTML=visible.length?visible.map(item=>{
+    const due=item.dueDate?formatDate(item.dueDate):"Kein Termin";
+    return `<article class="todo-item ${item.done?"done":""}">
+      <input class="todo-check" type="checkbox" data-todo-toggle="${item.id}" ${item.done?"checked":""} aria-label="Erledigt">
+      <div class="todo-item-main">
+        <div class="todo-item-text">${escapeHtml(item.text)}</div>
+        <div class="todo-item-meta">
+          <span>${escapeHtml(due)}</span>
+          <span class="${item.priority==="high"?"todo-priority-high":""}">Priorität: ${todoPriorityLabel(item.priority)}</span>
+        </div>
+      </div>
+      <div class="todo-actions"><button class="danger" type="button" data-todo-delete="${item.id}">Löschen</button></div>
+    </article>`;
+  }).join(""):'<div class="empty">Keine offenen Aufgaben für diese Tour.</div>';
+
+  document.querySelectorAll("[data-todo-filter]").forEach(button=>button.classList.toggle("active",button.dataset.todoFilter===todoFilter));
+}
+
+document.getElementById("todoAddBtn")?.addEventListener("click",async()=>{
+  const activeTour=await getActiveTour();
+  if(!activeTour){ alert("Bitte zuerst eine Tour aktivieren."); return; }
+  const input=document.getElementById("todoText");
+  const text=String(input?.value||"").trim();
+  if(!text){ input?.focus(); return; }
+  const todos=loadTourTodosLocal(activeTour.id);
+  todos.push({
+    id:`todo-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+    text,
+    dueDate:document.getElementById("todoDueDate")?.value||"",
+    priority:document.getElementById("todoPriority")?.value||"normal",
+    done:false,
+    createdAt:Date.now(),
+    updatedAt:Date.now()
+  });
+  saveTourTodosLocal(activeTour.id,todos);
+  if(input) input.value="";
+  const date=document.getElementById("todoDueDate"); if(date) date.value="";
+  const priority=document.getElementById("todoPriority"); if(priority) priority.value="normal";
+  await renderTourTodos();
+});
+
+document.getElementById("todoText")?.addEventListener("keydown",event=>{
+  if(event.key==="Enter"){
+    event.preventDefault();
+    document.getElementById("todoAddBtn")?.click();
+  }
+});
+
+document.getElementById("todoList")?.addEventListener("change",async event=>{
+  const id=event.target.dataset.todoToggle;
+  if(!id) return;
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+  const todos=loadTourTodosLocal(activeTour.id);
+  const item=todos.find(todo=>todo.id===id);
+  if(item){ item.done=Boolean(event.target.checked); item.updatedAt=Date.now(); saveTourTodosLocal(activeTour.id,todos); }
+  await renderTourTodos();
+});
+
+document.getElementById("todoList")?.addEventListener("click",async event=>{
+  const id=event.target.dataset.todoDelete;
+  if(!id) return;
+  const activeTour=await getActiveTour();
+  if(!activeTour) return;
+  saveTourTodosLocal(activeTour.id,loadTourTodosLocal(activeTour.id).filter(todo=>todo.id!==id));
+  await renderTourTodos();
+});
+
+document.querySelectorAll("[data-todo-filter]").forEach(button=>button.addEventListener("click",async()=>{
+  todoFilter=button.dataset.todoFilter||"open";
+  await renderTourTodos();
+}));
+
 async function renderRoadbook(){
   const preview=document.getElementById("roadbookPreview");
   const select=document.getElementById("roadbookStageSelect");
@@ -5102,6 +5289,7 @@ async function initialize() {
     ["Packlisten",()=>renderTourPack()],
     ["Schuhe",()=>renderTourShoes()],
     ["Orte",()=>renderPlaces()],
+    ["To Do",()=>renderTourTodos()],
     ["Roadbook",()=>typeof renderRoadbook==="function"?renderRoadbook():Promise.resolve()],
     ["Seitenleiste",()=>typeof renderSidebarSummary==="function"?renderSidebarSummary():Promise.resolve()]
   ];
@@ -5169,6 +5357,7 @@ document.getElementById("saveSettings")?.addEventListener("click", async () => {
   }
 
   await renderStages();
+  await renderTourTodos();
   if (document.getElementById('map').classList.contains('active')) {
     await renderMapTrack();
   }
@@ -5191,12 +5380,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41098";
+  window.location.href = "./?v=41099";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41098");
+    navigator.serviceWorker.register("sw.js?v=41099");
   });
 }
 
