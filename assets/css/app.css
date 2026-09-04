@@ -719,3 +719,9 @@ main,.main-content{margin-left:245px;padding:24px;max-width:none}
 .stage-place-assign-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .stage-place-assign-row select{min-width:220px;flex:1}
 .stage-place-assign small{display:block;margin-top:7px;opacity:.72}
+
+
+/* Sprint 10.9.5: festgelegten Start/Ziel deutlich anzeigen */
+.stage-endpoints-summary{display:flex;flex-wrap:wrap;gap:.45rem 1rem;margin-top:.28rem;font-size:.92rem;color:var(--muted,#667085)}
+.stage-endpoints-summary span{display:inline-flex;gap:.3rem;align-items:baseline}
+.roadbook-route{margin:.22rem 0 .3rem;font-size:1rem;line-height:1.35}

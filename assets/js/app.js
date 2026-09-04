@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41094";
+} from "./database.js?v=41096";
 
-import { loadLanguage, translate } from "./i18n.js?v=41094";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41094";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41094";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41094";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41094";
+import { loadLanguage, translate } from "./i18n.js?v=41096";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41096";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41096";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41096";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41096";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -985,6 +985,7 @@ async function renderStages(){
           <div class="stage-title-block">
             <div class="stage-date-line">${formatDate(stage.date)}${stage.restDay?" · Ruhetag":""}</div>
             <h3>${escapeHtml(stageDisplayTitle(stage))}</h3>
+            ${stage.restDay?"":`<div class="stage-endpoints-summary"><span><strong>Start:</strong> ${escapeHtml(stage.from||"–")}</span><span><strong>Ziel:</strong> ${escapeHtml(stage.to||"–")}</span></div>`}
             ${stage.name&&!stage.restDay?`<div class="stage-name-sub">${escapeHtml(stage.name)}</div>`:""}
           </div>
         </div>
@@ -1342,7 +1343,7 @@ async function rerouteTrackEditorAfterDrag(){
   const status=document.getElementById("trackRoutingStatus");
 
   if(mode!=="foot"||!autoRoute){
-    if(status) status.textContent="Punkt verschoben · direkte Trackform aktiv · noch nicht gespeichert";
+    if(status) status.textContent="Punkt verschoben · freie/wegelose Trackform aktiv · noch nicht gespeichert";
     return;
   }
 
@@ -1392,7 +1393,7 @@ function redrawTrackEditor(options={}){
     addClickedTrackPoint(event.latlng,{snapToTrack:true});
   });
 
-  // Sprint 10.9.4: grab the visible track itself and drag it.
+  // Sprint 10.9.5: grab the visible track itself and drag it.
   // Leaflet polylines are not draggable by default, so we temporarily move
   // the nearest track vertex (and its neighbours) while the pointer is held.
   line.on("mousedown",event=>{
@@ -1533,6 +1534,9 @@ async function openTrackEditor(stage){
 
   const routingStatus=document.getElementById("trackRoutingStatus");
   if(routingStatus) routingStatus.textContent="";
+  const routingMode=document.getElementById("trackRoutingMode")?.value||"foot";
+  const autoRouteControl=document.getElementById("trackEditorAutoRoute");
+  if(autoRouteControl) autoRouteControl.disabled=routingMode!=="foot";
   const dialog=document.getElementById("trackEditorDialog");
   dialog.showModal();
 
@@ -1670,6 +1674,22 @@ async function routeBetweenWaypoints(points){
   }
 }
 
+document.getElementById("trackRoutingMode")?.addEventListener("change",()=>{
+  const mode=document.getElementById("trackRoutingMode")?.value||"direct";
+  const auto=document.getElementById("trackEditorAutoRoute");
+  const status=document.getElementById("trackRoutingStatus");
+  if(auto){
+    auto.disabled=mode!=="foot";
+    if(mode!=="foot") auto.checked=false;
+    else auto.checked=true;
+  }
+  if(status){
+    status.textContent=mode==="foot"
+      ?"Wander-/Fussweg: Nach Drag & Drop wird über vorhandene Wege neu geroutet."
+      :"Frei / weglos: Der Track darf beliebig verlaufen. Drag & Drop bleibt exakt dort, wo du ihn hinziehst.";
+  }
+});
+
 document.getElementById("trackEditorRouteBtn")?.addEventListener("click",async()=>{
   if(!trackEditorWorkingPoints.length||trackEditorRoutingBusy) return;
 
@@ -1677,7 +1697,7 @@ document.getElementById("trackEditorRouteBtn")?.addEventListener("click",async()
   const status=document.getElementById("trackRoutingStatus");
 
   if(mode==="direct"){
-    if(status) status.textContent="Direkte Verbindung aktiv. Für Wanderweg-Routing bitte «Wander-/Fussweg» wählen.";
+    if(status) status.textContent="Freies/wegeloses Routing aktiv. Deine manuelle Trackform bleibt unverändert und muss keinem vorhandenen Weg folgen.";
     return;
   }
 
@@ -1734,7 +1754,7 @@ document.getElementById("trackConnectClickedBtn")?.addEventListener("click",asyn
   trackEditorRoutingBusy=true;
 
   try{
-    if(status) status.textContent="Gesetzte Punkte werden über Wander-/Fusswege verbunden …";
+    if(status) status.textContent=(document.getElementById("trackRoutingMode")?.value==="direct")?"Gesetzte Punkte werden frei/weglos verbunden …":"Gesetzte Punkte werden über Wander-/Fusswege verbunden …";
 
     trackEditorHistory.push(cloneTrackPoints(trackEditorWorkingPoints));
 
@@ -4027,6 +4047,7 @@ async function renderRoadbook(){
       <div class="roadbook-head">
         <div>
           <h3>${escapeHtml(stage.name||`Etappe ${stage.order}`)}</h3>
+          <div class="roadbook-route"><strong>${escapeHtml(stage.from||"–")}</strong> → <strong>${escapeHtml(stage.to||"–")}</strong></div>
           <div class="muted">${escapeHtml(activeTour.name||"Tour")} · ${escapeHtml(stage.date||"")}</div>
         </div>
         <div class="pill">${Number(stage.distanceKm||0).toFixed(1)} km</div>
@@ -4042,8 +4063,8 @@ async function renderRoadbook(){
       <div class="roadbook-grid">
         <div class="roadbook-box">
           <h4>Start & Ziel</h4>
-          <p><strong>Start:</strong> ${escapeHtml(stage.from||"–")}</p>
-          <p><strong>Ziel:</strong> ${escapeHtml(stage.to||"–")}</p>
+          <p><strong>Festgelegter Start:</strong> ${escapeHtml(stage.from||"–")}</p>
+          <p><strong>Festgelegtes Ziel:</strong> ${escapeHtml(stage.to||"–")}</p>
           <p><strong>Bevorzugter Start:</strong> ${preferredStart?escapeHtml(preferredStart.name):"–"}</p>
           <p><strong>Bevorzugtes Ziel:</strong> ${preferredEnd?escapeHtml(preferredEnd.name):"–"}</p>
         </div>
@@ -5138,12 +5159,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41094";
+  window.location.href = "./?v=41096";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41094");
+    navigator.serviceWorker.register("sw.js?v=41096");
   });
 }
 
