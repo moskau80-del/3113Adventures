@@ -1,4 +1,9 @@
-# 3113 Adventures v4 – Sprint 10.9.9
+# 3113 Adventures v4 – Sprint 10.9.11
+
+## Neu in Sprint 10.9.11
+- Unter «Mein Transa» können Kategorien unabhängig von Artikeln verwaltet werden. Neue Kategorien sind danach in der Artikelauswahl und im Filter verfügbar.
+- Kategorienamen in Ausrüstung, Packliste und Ortsansichten erscheinen auf Deutsch. Die App verwendet Deutsch auch bei einer zuvor gespeicherten englischen Spracheinstellung.
+- Kategorien werden lokal gespeichert und vom bestehenden Cloud-Snapshot erfasst; keine neue Supabase-Tabelle oder SQL-Änderung.
 
 ## Neu in Sprint 10.9.9
 - **Trackabschnitte wirklich verkürzen:** Beim Greifen der Tracklinie wird nicht mehr ein grosser Teil der Route wie ein Gummiband verschoben. Stattdessen werden vor und nach der Griffstelle zwei lokale Anker gesetzt und nur der Abschnitt dazwischen ersetzt.

@@ -1,5 +1,5 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#41513d"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="assets/css/app.css?v=41100"><title>3113 Adventures</title>  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="assets/css/app.css?v=41101"><title>3113 Adventures</title>  <link rel="icon" type="image/png" href="./icons/icon-192.png">
 </head><body><header class="topbar">
 <div class="app-brand">
   <img src="./icons/icon-192.png" alt="3113ADVENTURE">
@@ -8,12 +8,12 @@
     <span>Touren · Etappen · Ausrüstung</span>
   </div>
 </div>
-<div class="topbar-center"><span class="version-badge">v4.0.0 · Sprint 10.8.2</span></div>
+<div class="topbar-center"><span class="version-badge">v4.0.0 · Sprint 10.9.11</span></div>
 <div class="topbar-actions">
   <button class="icon-button" type="button" data-page-jump="print" title="Drucken">🖨</button>
   <button class="icon-button" type="button" data-page-jump="settings" title="Einstellungen">⚙</button>
 </div>
-</header><nav class="main-nav sidebar-nav"><button class="active" data-page="dashboard" data-i18n="nav.dashboard">Übersicht</button><button data-page="tours" data-i18n="nav.tours">Touren</button><button data-page="stages" data-i18n="nav.stages">Etappen</button><button data-page="map" data-i18n="nav.map">Karte</button><button data-page="places" data-i18n="nav.places">Orte</button><button data-page="todo">To Do</button><button data-page="gear">Mein Transa</button><button data-page="packlists">Packlisten</button><button data-page="data">Daten</button><button data-page="roadbook">Roadbook</button><button data-page="print">Drucken</button><button data-page="settings" data-i18n="nav.settings">Einstellungen</button></nav>
+</header><nav class="main-nav sidebar-nav"><button class="active" data-page="dashboard" data-i18n="nav.dashboard">Übersicht</button><button data-page="tours" data-i18n="nav.tours">Touren</button><button data-page="stages" data-i18n="nav.stages">Etappen</button><button data-page="map" data-i18n="nav.map">Karte</button><button data-page="places" data-i18n="nav.places">Orte</button><button data-page="todo">Aufgaben</button><button data-page="gear">Mein Transa</button><button data-page="packlists">Packlisten</button><button data-page="data">Daten</button><button data-page="roadbook">Tourenbuch</button><button data-page="print">Drucken</button><button data-page="settings" data-i18n="nav.settings">Einstellungen</button></nav>
 <div class="sidebar-tour-card">
   <strong id="sidebarTourName">Keine aktive Tour</strong>
   <span id="sidebarTourDates">–</span>
@@ -250,7 +250,7 @@
       <h2>Mein Transa</h2>
       <p class="muted">Deine zentrale Artikelliste.</p>
     </div>
-    <button id="addGearBtn" class="primary">Artikel hinzufügen</button>
+    <div class="button-row"><button id="manageGearCategoriesBtn" class="secondary" type="button">Kategorien verwalten</button><button id="addGearBtn" class="primary">Artikel hinzufügen</button></div>
   </div>
 
   <article class="card">
@@ -432,7 +432,7 @@
 <section id="todo" class="page">
   <div class="section-header">
     <div>
-      <h2>To Do</h2>
+      <h2>Aufgaben</h2>
       <p class="muted">Aufgaben für die aktuell ausgewählte Tour.</p>
     </div>
   </div>
@@ -463,7 +463,7 @@
 <section id="roadbook" class="page">
   <div class="section-header">
     <div>
-      <h2>Roadbook</h2>
+      <h2>Tourenbuch</h2>
       <p class="muted">Kompakte Tagesansicht für jede geplante Etappe.</p>
     </div>
   </div>
@@ -477,7 +477,7 @@
     </div>
     <div class="button-row">
       <button id="roadbookRefreshBtn" class="secondary" type="button">Aktualisieren</button>
-      <button id="roadbookPrintBtn" class="primary" type="button">Roadbook drucken</button>
+      <button id="roadbookPrintBtn" class="primary" type="button">Tourenbuch drucken</button>
     </div>
   </article>
 
@@ -511,7 +511,7 @@
 
   <div id="printPreview" class="print-preview"></div>
 </section>
-<section id="settings" class="page"><article class="card"><h2 data-i18n="settings.title">Einstellungen</h2><label class="form-label"><span data-i18n="settings.language">Sprache</span><select id="languageSelect"><option value="de">Deutsch</option><option value="en">English</option></select></label><label class="form-label"><span data-i18n="settings.appearance">Darstellung</span><select id="themeSelect"><option value="system" data-i18n="settings.system">System</option><option value="light" data-i18n="settings.light">Hell</option><option value="dark" data-i18n="settings.dark">Dunkel</option></select></label><div class="button-row"><button id="saveSettings" class="primary" data-i18n="settings.save">Speichern</button><button id="refreshApp" class="secondary" data-i18n="settings.refresh">App-Dateien aktualisieren</button></div><p id="settingsStatus" class="muted"></p></article><article class="card"><h3 data-i18n="database.title">Lokale Datenbank</h3><p data-i18n="database.text">IndexedDB ist vorbereitet und speichert Einstellungen lokal auf diesem Gerät.</p><p id="databaseStatus" class="muted"></p></article>
+<section id="settings" class="page"><article class="card"><h2 data-i18n="settings.title">Einstellungen</h2><label class="form-label"><span data-i18n="settings.language">Sprache</span><select id="languageSelect"><option value="de">Deutsch</option></select></label><label class="form-label"><span data-i18n="settings.appearance">Darstellung</span><select id="themeSelect"><option value="system" data-i18n="settings.system">System</option><option value="light" data-i18n="settings.light">Hell</option><option value="dark" data-i18n="settings.dark">Dunkel</option></select></label><div class="button-row"><button id="saveSettings" class="primary" data-i18n="settings.save">Speichern</button><button id="refreshApp" class="secondary" data-i18n="settings.refresh">App-Dateien aktualisieren</button></div><p id="settingsStatus" class="muted"></p></article><article class="card"><h3 data-i18n="database.title">Lokale Datenbank</h3><p data-i18n="database.text">IndexedDB ist vorbereitet und speichert Einstellungen lokal auf diesem Gerät.</p><p id="databaseStatus" class="muted"></p></article>
 <article class="card">
   <h3>Tour sichern & wiederherstellen</h3>
   <p class="muted">Exportiert die aktive Tour inklusive GPX, Etappen, Orte, Favoriten, bevorzugtem Start/Ziel und Schuhintervall.</p>
@@ -605,7 +605,7 @@
   </article>
 </section></main><script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script type="module" src="assets/js/app.js?v=41100"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="form-label"><span>Komoot-Collection</span><input id="tourKomootCollection" type="url" inputmode="url" placeholder="https://www.komoot.com/..." autocomplete="off"><small class="muted">Link zur Komoot-Collection dieser Tour. Die 3113-Karte bleibt unabhängig davon erhalten.</small></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
+<script type="module" src="assets/js/app.js?v=41101"></script><dialog id="tourDialog"><form id="tourForm"><div class="dialog-header"><h2 data-i18n="tours.dialogTitle">Tour</h2><button type="button" class="close-btn" data-close="tourDialog">×</button></div><input id="tourId" type="hidden"><label class="form-label"><span data-i18n="tours.name">Name</span><input id="tourName" required></label><label class="form-label"><span data-i18n="tours.description">Beschreibung</span><textarea id="tourDescription" rows="3"></textarea></label><label class="form-label"><span data-i18n="tours.start">Startdatum</span><input id="tourStart" type="date"></label><label class="form-label"><span data-i18n="tours.target">Zieldatum</span><input id="tourTarget" type="date"></label><label class="form-label"><span data-i18n="tours.distance">Gesamtdistanz km</span><input id="tourDistance" type="number" min="0" step="0.1"></label><label class="form-label"><span>Komoot-Collection</span><input id="tourKomootCollection" type="url" inputmode="url" placeholder="https://www.komoot.com/..." autocomplete="off"><small class="muted">Link zur Komoot-Collection dieser Tour. Die 3113-Karte bleibt unabhängig davon erhalten.</small></label><label class="checkbox"><input id="tourActive" type="checkbox"><span data-i18n="tours.active">Als aktive Tour verwenden</span></label><div class="button-row"><button type="submit" class="primary" data-i18n="settings.save">Speichern</button><button type="button" class="secondary" data-close="tourDialog" data-i18n="tours.cancel">Abbrechen</button></div></form></dialog>
 <dialog id="stageDialog">
   <form id="stageForm">
     <div class="dialog-header">
@@ -815,6 +815,7 @@
 </dialog>
 
 
+<dialog id="gearCategoriesDialog"><div class="dialog-header"><h2>Kategorien verwalten</h2><button type="button" class="close-btn" data-close="gearCategoriesDialog">×</button></div><p class="muted">Erfasse hier eine Kategorie. Danach kannst du sie jedem Artikel zuordnen.</p><form id="gearCategoriesForm"><label class="form-label"><span>Neue Kategorie (Deutsch)</span><input id="newGearCategory" maxlength="60" required autocomplete="off" placeholder="z. B. Zelte"></label><div class="button-row"><button class="primary" type="submit">Kategorie hinzufügen</button></div></form><p id="gearCategoryStatus" class="muted" role="status"></p><h3>Vorhandene Kategorien</h3><div id="gearCategoriesList"></div></dialog>
 <dialog id="gearDialog">
   <form id="gearForm">
     <div class="dialog-header">
@@ -839,7 +840,6 @@
         <option value="other">Weiteres</option>
       </select>
     </label>
-    <div class="button-row"><input id="newGearCategory" aria-label="Neue Kategorie" placeholder="Neue Kategorie auf Deutsch" maxlength="60"><button id="addGearCategoryBtn" class="secondary" type="button">Kategorie hinzufügen</button></div>
     <label class="form-label"><span>Gewicht (g)</span><input id="gearWeight" type="number" min="0" step="1"></label>
     <label class="form-label"><span>Bestand</span><input id="gearQuantity" type="number" min="0" step="1" value="1"></label>
     <label class="form-label"><span>Lagerort</span><input id="gearLocation"></label>
@@ -873,7 +873,7 @@
   <button data-page-jump="map">⌖<span>Karte</span></button>
   <button data-page-jump="gear">🎒<span>Transa</span></button>
   <button data-page-jump="packlists">☷<span>Packlisten</span></button>
-  <button data-page-jump="todo">✓<span>To Do</span></button>
+  <button data-page-jump="todo">✓<span>Aufgaben</span></button>
   <button data-page-jump="settings">•••<span>Mehr</span></button>
 </nav>
 </body></html>

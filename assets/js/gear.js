@@ -1,4 +1,31 @@
 const GEAR_KEY="3113-v4-gear";
+const CATEGORY_KEY="3113-v4-gear-categories";
+export const DEFAULT_GEAR_CATEGORIES={
+  shoes:"Schuhe",backpack:"Rucksack",sleep:"Schlafen",clothing:"Bekleidung",
+  cooking:"Kochen",electronics:"Elektronik",hygiene:"Hygiene",
+  firstaid:"Erste Hilfe",food:"Verpflegung",other:"Weiteres"
+};
+
+export function loadGearCategoriesLocal(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(CATEGORY_KEY)||"{}");
+    return {...DEFAULT_GEAR_CATEGORIES,...(saved&&typeof saved==="object"&&!Array.isArray(saved)?saved:{})};
+  }catch{
+    return {...DEFAULT_GEAR_CATEGORIES};
+  }
+}
+
+export function addGearCategoryLocal(name){
+  const label=String(name||"").trim().replace(/\s+/g," ");
+  if(!label) return null;
+  const categories=loadGearCategoriesLocal();
+  const existing=Object.entries(categories).find(([,value])=>value.toLocaleLowerCase("de-CH")===label.toLocaleLowerCase("de-CH"));
+  if(existing) return existing[0];
+  const id=`custom-${globalThis.crypto?.randomUUID?.()||Date.now().toString(36)}`;
+  categories[id]=label;
+  localStorage.setItem(CATEGORY_KEY,JSON.stringify(categories));
+  return id;
+}
 
 export function loadGearLocal(){
   try{

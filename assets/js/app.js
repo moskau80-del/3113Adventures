@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41099";
+} from "./database.js?v=41101";
 
-import { loadLanguage, translate } from "./i18n.js?v=41099";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41099";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41099";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41099";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41099";
+import { loadLanguage, translate } from "./i18n.js?v=41101";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41101";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41101";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41101";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41101";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -201,7 +201,7 @@ async function renderDashboardStats(){
   const preferredPlace=getPreferredEndForStage(activeTour.id,next.id);
   if(nextPreferredPlace){
     nextPreferredPlace.innerHTML=preferredPlace
-      ? `<div class="next-stage-card"><strong>${escapeHtml(preferredPlace.name)}</strong><span>${escapeHtml(preferredPlace.category)}</span><span>${Number(preferredPlace.distanceKm||0).toFixed(2)} km von der Etappe</span></div>`
+      ? `<div class="next-stage-card"><strong>${escapeHtml(preferredPlace.name)}</strong><span>${escapeHtml(placeCategoryLabel(preferredPlace.category))}</span><span>${Number(preferredPlace.distanceKm||0).toFixed(2)} km von der Etappe</span></div>`
       : "Für die nächste Etappe ist noch kein bevorzugter Ort festgelegt.";
   }
 
@@ -491,7 +491,7 @@ async function renderMapTrack() {
       if(Number.isFinite(Number(place.lat))&&Number.isFinite(Number(place.lon))){
         L.marker([Number(place.lat),Number(place.lon)])
           .addTo(trackLayer)
-          .bindPopup(`<div class="map-popup"><strong>★ ${escapeHtml(place.name)}</strong>${escapeHtml(place.category||"Bevorzugter Ort")}<br>Etappe ${index+1}</div>`);
+          .bindPopup(`<div class="map-popup"><strong>★ ${escapeHtml(place.name)}</strong>${escapeHtml(placeCategoryLabel(place.category))}<br>Etappe ${index+1}</div>`);
       }
     });
   });
@@ -838,11 +838,11 @@ function stagePreferredHtml(tourId,stageId){
   const end=getPreferredEndForStage(tourId,stageId);
 
   const startHtml=start
-    ? `<div class="stage-preferred-start"><strong>★ Bevorzugter Start: ${escapeHtml(start.name)}</strong><span>${escapeHtml(start.category)} · ${Number(start.distanceKm||0).toFixed(2)} km von der Etappe</span><span class="stage-destination">Nur nach ausdrücklicher Bestätigung übernehmen.</span></div>`
+    ? `<div class="stage-preferred-start"><strong>★ Bevorzugter Start: ${escapeHtml(start.name)}</strong><span>${escapeHtml(placeCategoryLabel(start.category))} · ${Number(start.distanceKm||0).toFixed(2)} km von der Etappe</span><span class="stage-destination">Nur nach ausdrücklicher Bestätigung übernehmen.</span></div>`
     : "";
 
   const endHtml=end
-    ? `<div class="stage-preferred-end"><strong>★ Bevorzugtes Ziel: ${escapeHtml(end.name)}</strong><span>${escapeHtml(end.category)} · ${Number(end.distanceKm||0).toFixed(2)} km von der Etappe</span><span class="stage-destination">Nur nach ausdrücklicher Bestätigung übernehmen.</span></div>`
+    ? `<div class="stage-preferred-end"><strong>★ Bevorzugtes Ziel: ${escapeHtml(end.name)}</strong><span>${escapeHtml(placeCategoryLabel(end.category))} · ${Number(end.distanceKm||0).toFixed(2)} km von der Etappe</span><span class="stage-destination">Nur nach ausdrücklicher Bestätigung übernehmen.</span></div>`
     : "";
 
   return startHtml+endHtml;
@@ -1181,7 +1181,7 @@ async function showStageOnMap(stage){
         <div class="map-popup">
           <strong>${escapeHtml(place.name)}</strong>
           ${place.category==="footwear"?`<br><span>${escapeHtml(footwearBrandHint(place))}</span>`:""}
-          <br>${escapeHtml(place.category)}
+          <br>${escapeHtml(placeCategoryLabel(place.category))}
           <br>${Number(place.distanceKm||0).toFixed(2)} km von der Etappe
           ${place.favorite?"<br>★ Favorit":""}
           ${isStart?'<br><span class="map-popup-badge start">★ Bevorzugter Start</span>':""}
@@ -2102,7 +2102,7 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
       document.getElementById("preferredStartInfo").innerHTML=
         `<strong>${escapeHtml(stage.name)}</strong><br>`+
         `${escapeHtml(stage.from)} → ${escapeHtml(preferred.name)}<br>`+
-        `${escapeHtml(preferred.category)} · ${Number(preferred.distanceKm||0).toFixed(2)} km von der Etappe`;
+        `${escapeHtml(placeCategoryLabel(preferred.category))} · ${Number(preferred.distanceKm||0).toFixed(2)} km von der Etappe`;
       document.getElementById("preferredStartDialog").showModal();
     }
     return;
@@ -2117,7 +2117,7 @@ document.getElementById("stageList")?.addEventListener("click",async(event)=>{
       document.getElementById("preferredDestinationInfo").innerHTML=
         `<strong>${escapeHtml(stage.name)}</strong><br>` +
         `${escapeHtml(stage.to)} → ${escapeHtml(preferred.name)}<br>` +
-        `${escapeHtml(preferred.category)} · ${Number(preferred.distanceKm||0).toFixed(2)} km von der Etappe`;
+        `${escapeHtml(placeCategoryLabel(preferred.category))} · ${Number(preferred.distanceKm||0).toFixed(2)} km von der Etappe`;
 
       document.getElementById("preferredDestinationDialog").showModal();
     }
@@ -2368,7 +2368,7 @@ function renderSupplyResults(results){
       <article class="poi-row">
         <h4>${escapeHtml(place.name)}</h4>
         <div class="poi-meta">
-          <span class="pill">${escapeHtml(place.category)}</span>
+          <span class="pill">${escapeHtml(placeCategoryLabel(place.category))}</span>
           <span class="pill">${Number(place.distanceKm||0).toFixed(2)} km von der Etappe</span>
         </div>
         <button data-save-supply="${index}" class="primary">Speichern</button>
@@ -2556,6 +2556,9 @@ function placeCategoryLabel(category){
     shop:"Einkauf",
     pharmacy:"Apotheke",
     footwear:"Outdoor / Schuhe",
+    transport:"Öffentlicher Verkehr",
+    food:"Essen",
+    toilet:"Toilette",
     other:"Ort"
   };
   return labels[category]||category||"Ort";
@@ -2789,7 +2792,7 @@ document.getElementById("confirmPreferredStartBtn")?.addEventListener("click",as
   updateStageLocal(activeTour.id,{
     ...stage,
     from:preferred.name,
-    notes:[stage.notes,`Bevorzugter Start nach ausdrücklicher Bestätigung übernommen (${preferred.category})`]
+    notes:[stage.notes,`Bevorzugter Start nach ausdrücklicher Bestätigung übernommen (${placeCategoryLabel(preferred.category)})`]
       .filter(Boolean).join(" · ")
   });
 
@@ -2822,7 +2825,7 @@ document.getElementById("confirmPreferredDestinationBtn")?.addEventListener("cli
     to:preferred.name,
     notes:[
       stage.notes,
-      `Bevorzugter Stopp nach ausdrücklicher Bestätigung als Etappenziel übernommen (${preferred.category})`
+      `Bevorzugter Stopp nach ausdrücklicher Bestätigung als Etappenziel übernommen (${placeCategoryLabel(preferred.category)})`
     ].filter(Boolean).join(" · ")
   });
 
@@ -3258,11 +3261,59 @@ async function saveTourShoeFromControls(personKey){
 });
 
 function gearCategoryLabel(category){
-  const de={shoes:"Schuhe",backpack:"Rucksack",sleep:"Schlafen",clothing:"Bekleidung",cooking:"Kochen",electronics:"Elektronik",hygiene:"Hygiene",firstaid:"Erste Hilfe",food:"Verpflegung",other:"Weiteres"};
-  const en={shoes:"Shoes",backpack:"Backpack",sleep:"Sleep",clothing:"Clothing",cooking:"Cooking",electronics:"Electronics",hygiene:"Hygiene",firstaid:"First aid",food:"Food",other:"Other"};
-  const language=document.getElementById("languageSelect")?.value||"de";
-  return (language==="de"?de:en)[category]||category||((language==="de")?"Weiteres":"Other");
+  return loadGearCategoriesLocal()[category]||category||"Weiteres";
 }
+
+function categoryIdFromLabel(label){
+  if(!label) return "other";
+  const entries=Object.entries(loadGearCategoriesLocal());
+  const match=entries.find(([id,name])=>id===label||name.toLocaleLowerCase("de-CH")===label.toLocaleLowerCase("de-CH"));
+  return match?.[0]||addGearCategoryLocal(label)||"other";
+}
+
+function renderGearCategoryOptions(selected){
+  const categories=loadGearCategoriesLocal();
+  // Preserve categories imported in older CSV files even if they were never registered.
+  loadGearLocal().forEach(item=>{
+    if(item.category&&!categories[item.category]) categories[item.category]=item.category;
+  });
+  const options=Object.entries(categories).map(([id,label])=>
+    `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join("");
+  const select=document.getElementById("gearCategory");
+  const filter=document.getElementById("gearCategoryFilter");
+  if(select){select.innerHTML=options;select.value=selected&&categories[selected]?selected:"other";}
+  if(filter){
+    const current=filter.value;
+    filter.innerHTML='<option value="all">Alle</option><option value="wishlist">♡ Wunschliste</option>'+options;
+    filter.value=current==="all"||current==="wishlist"||categories[current]?current:"all";
+  }
+}
+
+function renderGearCategoryManagement(){
+  const list=document.getElementById("gearCategoriesList");
+  if(!list) return;
+  list.innerHTML=Object.values(loadGearCategoriesLocal())
+    .map(label=>`<span class="pill">${escapeHtml(label)}</span>`).join(" ");
+}
+
+document.getElementById("manageGearCategoriesBtn")?.addEventListener("click",()=>{
+  renderGearCategoryManagement();
+  document.getElementById("gearCategoryStatus").textContent="";
+  document.getElementById("gearCategoriesDialog").showModal();
+});
+document.getElementById("gearCategoriesForm")?.addEventListener("submit",event=>{
+  event.preventDefault();
+  const input=document.getElementById("newGearCategory");
+  const label=input.value.trim();
+  const id=addGearCategoryLocal(label);
+  if(!id) return;
+  renderGearCategoryManagement();
+  renderGearCategoryOptions(document.getElementById("gearCategory")?.value);
+  document.getElementById("gearCategoryStatus").textContent=`${gearCategoryLabel(id)} ist in der Artikelauswahl verfügbar.`;
+  input.value="";
+  input.focus();
+  renderGear();
+});
 
 async function renderTourPack(){
   const activeTour=await getActiveTour();
@@ -3306,7 +3357,7 @@ async function renderTourPack(){
   });
 
   rows.sort((a,b)=>
-    String(a.item.category||"Weiteres").localeCompare(String(b.item.category||"Weiteres")) ||
+    gearCategoryLabel(a.item.category).localeCompare(gearCategoryLabel(b.item.category),"de-CH") ||
     String(a.item.name||"").localeCompare(String(b.item.name||""))
   );
 
@@ -3505,7 +3556,7 @@ function exportGearItems(){
       item.id,
       item.name,
       item.brand,
-      item.category,
+      gearCategoryLabel(item.category),
       Number(item.weightG||0),
       Number(item.stock??item.quantity??1),
       item.location,
@@ -3648,7 +3699,7 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
         id,
         name:String(val(idx.name)).trim(),
         brand:String(val(idx.brand)).trim(),
-        category:String(val(idx.category)).trim()||"other",
+        category:categoryIdFromLabel(String(val(idx.category)).trim()),
         weightG:Number(String(val(idx.weight)).replace(",","."))||0,
         stock:Number(val(idx.qty)||1),
         quantity:Number(val(idx.qty)||1),
@@ -3687,7 +3738,7 @@ function openGearDialog(item=null){
   document.getElementById("gearId").value=item?.id||"";
   document.getElementById("gearName").value=item?.name||"";
   document.getElementById("gearBrand").value=item?.brand||"";
-  document.getElementById("gearCategory").value=item?.category||"other";
+  renderGearCategoryOptions(item?.category||"other");
   document.getElementById("gearWeight").value=item?.weightG??"";
   document.getElementById("gearQuantity").value=item?.quantity??1;
   document.getElementById("gearLocation").value=item?.location||"";
@@ -3726,6 +3777,7 @@ async function renderGear(){
   if(!list) return;
 
   const items=loadGearLocal();
+  renderGearCategoryOptions(document.getElementById("gearCategory")?.value);
   const activeTour=await getActiveTour();
   const query=(document.getElementById("gearSearch")?.value||"").trim().toLowerCase();
   const category=document.getElementById("gearCategoryFilter")?.value||"all";
@@ -3733,14 +3785,14 @@ async function renderGear(){
 
   let filtered=items.filter(item=>{
     const matchesCategory=category==="all"||(category==="wishlist"?Boolean(item.wishlist):item.category===category);
-    const text=[item.name,item.brand,item.category,item.location,item.notes].filter(Boolean).join(" ").toLowerCase();
+    const text=[item.name,item.brand,gearCategoryLabel(item.category),item.location,item.notes].filter(Boolean).join(" ").toLowerCase();
     return matchesCategory&&(!query||text.includes(query));
   });
 
   filtered=[...filtered].sort((a,b)=>{
     if(sort==="weightAsc") return Number(a.weightG||0)-Number(b.weightG||0);
     if(sort==="weightDesc") return Number(b.weightG||0)-Number(a.weightG||0);
-    if(sort==="category") return String(a.category||"").localeCompare(String(b.category||""))||String(a.name||"").localeCompare(String(b.name||""));
+    if(sort==="category") return gearCategoryLabel(a.category).localeCompare(gearCategoryLabel(b.category),"de-CH")||String(a.name||"").localeCompare(String(b.name||""));
     return String(a.name||"").localeCompare(String(b.name||""));
   });
 
@@ -3793,7 +3845,7 @@ async function renderGear(){
           ${item.favorite?'<span>★ Favorit</span>':""}
           ${item.wishlist?'<span>Wunschliste</span>':""}
         </td>
-        <td>${escapeHtml(item.category||"")}</td>
+        <td>${escapeHtml(gearCategoryLabel(item.category))}</td>
         <td>
           <strong>${Number(item.weightG||0)} g</strong>
           <span class="muted small">${Number(item.stock??item.quantity??1)} × ${Number(item.weightG||0)} g</span>
@@ -4001,7 +4053,7 @@ async function renderPrintPreview(){
           <tr>
             <td>${escapeHtml(item.name)}</td>
             <td>${escapeHtml(item.brand||"")}</td>
-            <td>${escapeHtml(item.category||"")}</td>
+            <td>${escapeHtml(gearCategoryLabel(item.category))}</td>
             <td>${Number(item.weightG||0)} g</td>
             <td>${Number(item.stock??item.quantity??1)}</td>
             <td>${escapeHtml(item.location||"")}</td>
@@ -5263,7 +5315,7 @@ async function initialize() {
   try {
     await openDatabase();
     await seedDefaultTour();
-    language = await getSetting("language", "de");
+    language = "de";
     theme = await getSetting("theme", "system");
   } catch (error) {
     console.error("Initialisierung der lokalen Datenbank fehlgeschlagen:", error);
@@ -5338,10 +5390,10 @@ async function initialize() {
 }
 
 document.getElementById("saveSettings")?.addEventListener("click", async () => {
-  const language = languageSelect.value;
+  const language = "de";
   const theme = themeSelect.value;
 
-  await setSetting("language", language);
+  await setSetting("language", "de");
   await setSetting("theme", theme);
   await loadLanguage(language);
   applyTheme(theme);
@@ -5380,12 +5432,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41099";
+  window.location.href = "./?v=41101";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41099");
+    navigator.serviceWorker.register("sw.js?v=41101");
   });
 }
 
