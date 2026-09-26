@@ -9,7 +9,9 @@ export const DEFAULT_GEAR_CATEGORIES={
 export function loadGearCategoriesLocal(){
   try{
     const saved=JSON.parse(localStorage.getItem(CATEGORY_KEY)||"{}");
-    return {...DEFAULT_GEAR_CATEGORIES,...(saved&&typeof saved==="object"&&!Array.isArray(saved)?saved:{})};
+    const categories={...DEFAULT_GEAR_CATEGORIES,...(saved&&typeof saved==="object"&&!Array.isArray(saved)?saved:{})};
+    Object.keys(categories).forEach(id=>{if(categories[id]===null) delete categories[id];});
+    return categories;
   }catch{
     return {...DEFAULT_GEAR_CATEGORIES};
   }
@@ -22,9 +24,21 @@ export function addGearCategoryLocal(name){
   const existing=Object.entries(categories).find(([,value])=>value.toLocaleLowerCase("de-CH")===label.toLocaleLowerCase("de-CH"));
   if(existing) return existing[0];
   const id=`custom-${globalThis.crypto?.randomUUID?.()||Date.now().toString(36)}`;
-  categories[id]=label;
-  localStorage.setItem(CATEGORY_KEY,JSON.stringify(categories));
+  const saved=JSON.parse(localStorage.getItem(CATEGORY_KEY)||"{}");
+  saved[id]=label;
+  localStorage.setItem(CATEGORY_KEY,JSON.stringify(saved));
   return id;
+}
+
+export function deleteGearCategoryLocal(id){
+  if(id==="other") return false;
+  const categories=loadGearCategoriesLocal();
+  if(!Object.hasOwn(categories,id)) return false;
+  // Keep a tombstone for built-in categories so they stay deleted after reload.
+  const saved=JSON.parse(localStorage.getItem(CATEGORY_KEY)||"{}");
+  saved[id]=null;
+  localStorage.setItem(CATEGORY_KEY,JSON.stringify(saved));
+  return true;
 }
 
 export function loadGearLocal(){

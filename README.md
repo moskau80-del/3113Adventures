@@ -1,4 +1,7 @@
-# 3113 Adventures v4 – Sprint 10.9.11
+# 3113 Adventures v4 – Sprint 10.9.12
+
+## Neu in Sprint 10.9.12
+- Kategorien können in der Kategorieverwaltung gelöscht werden. Zugeordnete Artikel werden nach Bestätigung zu «Weiteres» verschoben.
 
 ## Neu in Sprint 10.9.11
 - Unter «Mein Transa» können Kategorien unabhängig von Artikeln verwaltet werden. Neue Kategorien sind danach in der Artikelauswahl und im Filter verfügbar.

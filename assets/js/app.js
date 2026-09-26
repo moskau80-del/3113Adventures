@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41101";
+} from "./database.js?v=41102";
 
-import { loadLanguage, translate } from "./i18n.js?v=41101";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41101";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41101";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41101";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41101";
+import { loadLanguage, translate } from "./i18n.js?v=41102";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41102";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41102";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, deleteGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41102";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41102";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -3292,9 +3292,36 @@ function renderGearCategoryOptions(selected){
 function renderGearCategoryManagement(){
   const list=document.getElementById("gearCategoriesList");
   if(!list) return;
-  list.innerHTML=Object.values(loadGearCategoriesLocal())
-    .map(label=>`<span class="pill">${escapeHtml(label)}</span>`).join(" ");
+  const items=loadGearLocal();
+  list.innerHTML=Object.entries(loadGearCategoriesLocal()).map(([id,label])=>{
+    const count=items.filter(item=>item.category===id).length;
+    return `<div class="button-row" style="justify-content:space-between;align-items:center;margin-bottom:.5rem">
+      <span>${escapeHtml(label)} <small class="muted">(${count} Artikel)</small></span>
+      ${id==="other"?"":`<button type="button" class="danger" data-delete-gear-category="${escapeHtml(id)}" aria-label="${escapeHtml(label)} löschen">Löschen</button>`}
+    </div>`;
+  }).join("");
 }
+
+document.getElementById("gearCategoriesList")?.addEventListener("click",async event=>{
+  const button=event.target.closest("[data-delete-gear-category]");
+  if(!button) return;
+  const id=button.dataset.deleteGearCategory;
+  const label=loadGearCategoriesLocal()[id];
+  if(!label) return;
+  const items=loadGearLocal();
+  const count=items.filter(item=>item.category===id).length;
+  const question=count
+    ? `Kategorie „${label}“ löschen? ${count} Artikel werden der Kategorie „Weiteres“ zugeordnet.`
+    : `Kategorie „${label}“ löschen?`;
+  if(!window.confirm(question)) return;
+  if(!deleteGearCategoryLocal(id)) return;
+  if(count) saveGearLocal(items.map(item=>item.category===id?{...item,category:"other"}:item));
+  renderGearCategoryManagement();
+  renderGearCategoryOptions(document.getElementById("gearCategory")?.value);
+  document.getElementById("gearCategoryStatus").textContent=`Kategorie „${label}“ gelöscht.`;
+  await renderGear();
+  await renderTourPack();
+});
 
 document.getElementById("manageGearCategoriesBtn")?.addEventListener("click",()=>{
   renderGearCategoryManagement();
@@ -5432,12 +5459,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41101";
+  window.location.href = "./?v=41102";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41101");
+    navigator.serviceWorker.register("sw.js?v=41102");
   });
 }
 
