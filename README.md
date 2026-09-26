@@ -1,4 +1,7 @@
-# 3113 Adventures v4 – Sprint 10.9.13
+# 3113 Adventures v4 – Sprint 10.9.14
+
+## Neu in Sprint 10.9.14
+- Artikelgewichte in Gramm erlauben zwei Dezimalstellen. Listen zeigen 0.01 g Genauigkeit; kg-Summen zeigen bei Bedarf fünf Dezimalstellen. CSV-Import und Export behalten die Nachkommastellen.
 
 ## Neu in Sprint 10.9.13
 - Die Kategorieverwaltung zeigt jetzt auch Kategorien, die bereits an Artikeln vorkommen, aber noch nicht separat gespeichert waren. Diese können ebenfalls gelöscht werden.

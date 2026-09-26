@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41103";
+} from "./database.js?v=41104";
 
-import { loadLanguage, translate } from "./i18n.js?v=41103";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41103";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41103";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, deleteGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41103";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41103";
+import { loadLanguage, translate } from "./i18n.js?v=41104";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41104";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41104";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, deleteGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41104";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41104";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -783,7 +783,13 @@ document.getElementById("locateBtn")?.addEventListener("click", () => {
 
 
 function formatKg3FromGrams(grams){
-  return `${(Number(grams||0)/1000).toFixed(3)} kg`;
+  const value=Number(grams||0);
+  const decimals=Math.abs(value-Math.round(value))>0.000001?5:3;
+  return `${(value/1000).toFixed(decimals)} kg`;
+}
+
+function formatGearGrams(grams){
+  return Number(grams||0).toFixed(2);
 }
 
 function formatHours(value){
@@ -3427,7 +3433,7 @@ async function renderTourPack(){
           <div class="pack-item-row ${item.consumable?"consumable":""} ${entry.worn?"worn":""}">
             <div class="pack-item-main">
               <strong>${escapeHtml(item.brand?`${item.brand} ${item.name}`:item.name)}</strong>
-              <span>${Number(item.weightG||0)} g pro Stück</span>
+              <span>${formatGearGrams(item.weightG)} g pro Stück</span>
               ${item.consumable?'<span class="pack-consumable">Verbrauchsartikel</span>':""}
               ${entry.worn?'<span class="pack-worn-badge">am Körper</span>':""}
             </div>
@@ -3723,7 +3729,7 @@ document.getElementById("importGearInput")?.addEventListener("change",async(even
         name:String(val(idx.name)).trim(),
         brand:String(val(idx.brand)).trim(),
         category:categoryIdFromLabel(String(val(idx.category)).trim()),
-        weightG:Number(String(val(idx.weight)).replace(",","."))||0,
+        weightG:Math.round((Number(String(val(idx.weight)).replace(",","."))||0)*100)/100,
         stock:Number(val(idx.qty)||1),
         quantity:Number(val(idx.qty)||1),
         location:String(val(idx.location)).trim(),
@@ -3841,7 +3847,7 @@ async function renderGear(){
           <div class="wishlist-item">
             <div>
               <strong>${escapeHtml(item.name)}</strong>
-              <span>${escapeHtml(item.brand||"")}${item.weightG?` · ${Number(item.weightG)} g`:""}</span>
+              <span>${escapeHtml(item.brand||"")}${item.weightG?` · ${formatGearGrams(item.weightG)} g`:""}</span>
               <div class="wishlist-meta">
                 ${Number(item.price||0)>0?`<span class="pill">CHF ${Number(item.price).toFixed(2)}</span>`:""}
                 ${item.shop?`<span class="pill">${escapeHtml(item.shop)}</span>`:""}
@@ -3870,8 +3876,8 @@ async function renderGear(){
         </td>
         <td>${escapeHtml(gearCategoryLabel(item.category))}</td>
         <td>
-          <strong>${Number(item.weightG||0)} g</strong>
-          <span class="muted small">${Number(item.stock??item.quantity??1)} × ${Number(item.weightG||0)} g</span>
+          <strong>${formatGearGrams(item.weightG)} g</strong>
+          <span class="muted small">${Number(item.stock??item.quantity??1)} × ${formatGearGrams(item.weightG)} g</span>
         </td>
         <td>${activeTour?(()=>{
           const info=gearAvailabilityInfo(activeTour.id,item);
@@ -3902,7 +3908,7 @@ gearForm?.addEventListener("submit",(event)=>{
     name:document.getElementById("gearName").value.trim(),
     brand:document.getElementById("gearBrand").value.trim(),
     category:document.getElementById("gearCategory").value,
-    weightG:Number(document.getElementById("gearWeight").value||0),
+    weightG:Math.round(Number(document.getElementById("gearWeight").value||0)*100)/100,
     quantity:Number(document.getElementById("gearQuantity").value||1),
     location:document.getElementById("gearLocation").value.trim(),
     stock:Number(document.getElementById("gearStock").value||0),
@@ -4077,7 +4083,7 @@ async function renderPrintPreview(){
             <td>${escapeHtml(item.name)}</td>
             <td>${escapeHtml(item.brand||"")}</td>
             <td>${escapeHtml(gearCategoryLabel(item.category))}</td>
-            <td>${Number(item.weightG||0)} g</td>
+            <td>${formatGearGrams(item.weightG)} g</td>
             <td>${Number(item.stock??item.quantity??1)}</td>
             <td>${escapeHtml(item.location||"")}</td>
           </tr>`).join("")}</tbody>
@@ -5455,12 +5461,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41103";
+  window.location.href = "./?v=41104";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41103");
+    navigator.serviceWorker.register("sw.js?v=41104");
   });
 }
 
