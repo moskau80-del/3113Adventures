@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41104";
+} from "./database.js?v=41105";
 
-import { loadLanguage, translate } from "./i18n.js?v=41104";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41104";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41104";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, deleteGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41104";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41104";
+import { loadLanguage, translate } from "./i18n.js?v=41105";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41105";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41105";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, deleteGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41105";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41105";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -46,6 +46,14 @@ let pendingPreferredDestinationStageId=null;
 let pendingPreferredStartStageId=null;
 let placeFilter="all";
 
+// Browsers may restore the previous scroll position when reopening the PWA.
+if("scrollRestoration" in history) history.scrollRestoration="manual";
+function scrollPageToTop(){
+  window.scrollTo(0,0);
+  if(document.scrollingElement) document.scrollingElement.scrollTop=0;
+}
+window.addEventListener("pageshow",()=>requestAnimationFrame(scrollPageToTop));
+
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
     navButtons.forEach((item) => {
@@ -55,6 +63,7 @@ navButtons.forEach((button) => {
     pages.forEach((page) => {
       page.classList.toggle("active", page.id === button.dataset.page);
     });
+    requestAnimationFrame(scrollPageToTop);
 
     if (button.dataset.page === "map") {
       setTimeout(async () => {
@@ -4402,6 +4411,7 @@ function activatePage(pageId){
   pages.forEach(page=>{
     page.classList.toggle("active",page.id===pageId);
   });
+  requestAnimationFrame(scrollPageToTop);
 
   if(pageId==="map"){
     setTimeout(async()=>{
@@ -5416,6 +5426,7 @@ async function initialize() {
   }catch(error){
     console.warn("Cloud konnte nicht initialisiert werden:",error);
   }
+  requestAnimationFrame(scrollPageToTop);
 }
 
 document.getElementById("saveSettings")?.addEventListener("click", async () => {
@@ -5461,12 +5472,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41104";
+  window.location.href = "./?v=41105";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41104");
+    navigator.serviceWorker.register("sw.js?v=41105");
   });
 }
 

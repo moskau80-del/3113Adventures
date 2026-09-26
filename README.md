@@ -1,4 +1,7 @@
-# 3113 Adventures v4 – Sprint 10.9.14
+# 3113 Adventures v4 – Sprint 10.9.15
+
+## Neu in Sprint 10.9.15
+- Beim Neustart der App und beim Öffnen einer anderen Seite beginnt die Ansicht wieder oben, insbesondere in der Artikelliste unter «Mein Transa».
 
 ## Neu in Sprint 10.9.14
 - Artikelgewichte in Gramm erlauben zwei Dezimalstellen. Listen zeigen 0.01 g Genauigkeit; kg-Summen zeigen bei Bedarf fünf Dezimalstellen. CSV-Import und Export behalten die Nachkommastellen.
