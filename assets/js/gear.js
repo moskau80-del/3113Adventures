@@ -11,6 +11,12 @@ export function loadGearCategoriesLocal(){
     const saved=JSON.parse(localStorage.getItem(CATEGORY_KEY)||"{}");
     const categories={...DEFAULT_GEAR_CATEGORIES,...(saved&&typeof saved==="object"&&!Array.isArray(saved)?saved:{})};
     Object.keys(categories).forEach(id=>{if(categories[id]===null) delete categories[id];});
+    // Older data can contain category values directly on articles. Show them
+    // in management and selectors even without a separate category record.
+    loadGearLocal().forEach(item=>{
+      const id=String(item.category||"").trim();
+      if(id&&!Object.hasOwn(categories,id)&&saved[id]!==null) categories[id]=id;
+    });
     return categories;
   }catch{
     return {...DEFAULT_GEAR_CATEGORIES};

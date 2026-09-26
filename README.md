@@ -1,4 +1,7 @@
-# 3113 Adventures v4 – Sprint 10.9.12
+# 3113 Adventures v4 – Sprint 10.9.13
+
+## Neu in Sprint 10.9.13
+- Die Kategorieverwaltung zeigt jetzt auch Kategorien, die bereits an Artikeln vorkommen, aber noch nicht separat gespeichert waren. Diese können ebenfalls gelöscht werden.
 
 ## Neu in Sprint 10.9.12
 - Kategorien können in der Kategorieverwaltung gelöscht werden. Zugeordnete Artikel werden nach Bestätigung zu «Weiteres» verschoben.

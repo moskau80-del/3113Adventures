@@ -12,13 +12,13 @@ import {
   deleteTrack,
   getAllSettings,
   clearAppDatabase
-} from "./database.js?v=41102";
+} from "./database.js?v=41103";
 
-import { loadLanguage, translate } from "./i18n.js?v=41102";
-import { parseGpx, createPreviewSvg } from "./gpx.js?v=41102";
-import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41102";
-import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, deleteGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41102";
-import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41102";
+import { loadLanguage, translate } from "./i18n.js?v=41103";
+import { parseGpx, createPreviewSvg } from "./gpx.js?v=41103";
+import { splitTrack, calculateStage, addDays, saveStagesLocal, loadStagesLocal, deleteStagesLocal, updateStageLocal, deleteStageLocal, recalculateStageDates, insertRestDayLocal, deleteRestDayLocal, splitStageLocal, mergeStageWithNextLocal, distributeRestDays, getStageStorageInfo, saveShoeIntervalLocal, loadShoeIntervalLocal, getShoeChangeMarkers, getNextShoeChangeKm } from "./stages.js?v=41103";
+import { loadGearLocal, saveGearLocal, upsertGearLocal, deleteGearLocal, loadGearCategoriesLocal, addGearCategoryLocal, deleteGearCategoryLocal, loadPackNamesLocal, savePackNamesLocal, loadTourPersonPackLocal, toggleGearInPersonPackLocal, updatePersonPackItemLocal, packedQuantityAcrossPersons, availableQuantityForPerson, loadTourShoePersonLocal, saveTourShoePersonLocal } from "./gear.js?v=41103";
+import { loadPlacesLocal, savePlacesLocal, addPlaceLocal, deletePlaceLocal, toggleFavoriteLocal, setPreferredStartLocal, setPreferredEndLocal, clearPreferredStartLocal, clearPreferredEndLocal, getPreferredStartForStage, getPreferredEndForStage, getPlacesForStage, distanceToStageKm, buildOverpassQuery, boundsForStage, normalizeOverpassElement, stageSearchWindows, dedupePlaces } from "./places.js?v=41103";
 
 const navButtons = document.querySelectorAll(".main-nav button");
 const pages = document.querySelectorAll(".page");
@@ -3273,10 +3273,6 @@ function categoryIdFromLabel(label){
 
 function renderGearCategoryOptions(selected){
   const categories=loadGearCategoriesLocal();
-  // Preserve categories imported in older CSV files even if they were never registered.
-  loadGearLocal().forEach(item=>{
-    if(item.category&&!categories[item.category]) categories[item.category]=item.category;
-  });
   const options=Object.entries(categories).map(([id,label])=>
     `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join("");
   const select=document.getElementById("gearCategory");
@@ -5459,12 +5455,12 @@ document.getElementById("refreshApp")?.addEventListener("click", async () => {
     }
   }
 
-  window.location.href = "./?v=41102";
+  window.location.href = "./?v=41103";
 });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js?v=41102");
+    navigator.serviceWorker.register("sw.js?v=41103");
   });
 }
 
